@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -61,6 +62,8 @@ fun CollectionDetailScreen(
     val screenshotsInCollection = allScreenshots.filter { it.collectionIds.contains(collectionId) }
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    BackHandler(onBack = onNavigateBack)
 
     if (collection == null) {
         Scaffold { padding ->

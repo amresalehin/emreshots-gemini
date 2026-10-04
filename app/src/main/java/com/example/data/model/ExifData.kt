@@ -25,6 +25,8 @@ data class ExifData(
                 !userComment.isNullOrBlank() ||
                 !imageDescription.isNullOrBlank() ||
                 !software.isNullOrBlank() ||
-                !artist.isNullOrBlank()
+                !artist.isNullOrBlank() ||
+                latitude != null ||
+                longitude != null
     }
 }

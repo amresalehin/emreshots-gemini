@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Shots Studio"
+rootProject.name = "EmreShots"
 
 include(":app")

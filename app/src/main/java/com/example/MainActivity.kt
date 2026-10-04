@@ -5,13 +5,18 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.FolderSpecial
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Collections
+import androidx.compose.material.icons.outlined.FolderSpecial
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -25,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -74,6 +80,7 @@ class MainActivity : ComponentActivity() {
 
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
+                    contentWindowInsets = WindowInsets(0, 0, 0, 0),
                     snackbarHost = { SnackbarHost(snackbarHostState) },
                     bottomBar = {
                         if (isRootDestination) {
@@ -171,19 +178,24 @@ class MainActivity : ComponentActivity() {
 data class NavigationItem(
     val route: String,
     val title: String,
-    val icon: ImageVector,
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector,
     val testTag: String
 )
 
 @Composable
 fun BottomNavigationBar(navController: NavHostController, currentRoute: String?) {
     val items = listOf(
-        NavigationItem(Screen.Gallery.route, "Gallery", Icons.Default.Collections, "nav_gallery"),
-        NavigationItem(Screen.Collections.route, "Collections", Icons.Default.FolderSpecial, "nav_collections"),
-        NavigationItem(Screen.Settings.route, "Settings", Icons.Default.Settings, "nav_settings")
+        NavigationItem(Screen.Gallery.route, "Gallery", Icons.Filled.Collections, Icons.Outlined.Collections, "nav_gallery"),
+        NavigationItem(Screen.Collections.route, "Collections", Icons.Filled.FolderSpecial, Icons.Outlined.FolderSpecial, "nav_collections"),
+        NavigationItem(Screen.Settings.route, "Settings", Icons.Filled.Settings, Icons.Outlined.Settings, "nav_settings")
     )
 
-    NavigationBar(modifier = Modifier.testTag("bottom_nav_bar")) {
+    NavigationBar(
+        modifier = Modifier.testTag("bottom_nav_bar"),
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 4.dp
+    ) {
         items.forEach { item ->
             val selected = currentRoute == item.route
             NavigationBarItem(
@@ -199,8 +211,18 @@ fun BottomNavigationBar(navController: NavHostController, currentRoute: String?)
                         }
                     }
                 },
-                icon = { Icon(item.icon, contentDescription = item.title) },
-                label = { Text(item.title) },
+                icon = {
+                    Icon(
+                        imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                        contentDescription = item.title
+                    )
+                },
+                label = {
+                    Text(
+                        text = item.title,
+                        fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
+                    )
+                },
                 modifier = Modifier.testTag(item.testTag)
             )
         }

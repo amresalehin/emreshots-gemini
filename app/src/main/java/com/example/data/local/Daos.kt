@@ -70,7 +70,7 @@ interface CollectionDao {
 
 @Dao
 interface ProviderDao {
-    @Query("SELECT * FROM cloud_providers ORDER BY isDefaultGemini DESC, name ASC")
+    @Query("SELECT * FROM cloud_providers ORDER BY isActive DESC, name ASC")
     fun getAllProviders(): Flow<List<CustomCloudProvider>>
 
     @Query("SELECT * FROM cloud_providers WHERE isActive = 1 LIMIT 1")
@@ -90,6 +90,12 @@ interface ProviderDao {
 
     @Delete
     suspend fun delete(provider: CustomCloudProvider)
+
+    @Query("DELETE FROM cloud_providers WHERE id = :id")
+    suspend fun deleteById(id: String)
+
+    @Query("DELETE FROM cloud_providers WHERE id LIKE 'prov-%'")
+    suspend fun deletePresetProviders()
 
     @Query("UPDATE cloud_providers SET isActive = 0")
     suspend fun clearActiveProviders()

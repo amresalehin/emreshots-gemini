@@ -18,11 +18,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.ViewAgenda
@@ -121,24 +122,24 @@ fun ViewOrganizeBottomSheet(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                val isGrid2 = currentViewMode == GalleryViewMode.GRID && currentGridCols == 2
-                val isGrid3 = currentViewMode == GalleryViewMode.GRID && currentGridCols >= 3
+                val isGrid = currentViewMode == GalleryViewMode.GRID
+                val isMasonry = currentViewMode == GalleryViewMode.MASONRY
                 val isFeed = currentViewMode == GalleryViewMode.FEED
                 val isList = currentViewMode == GalleryViewMode.LIST
 
                 LayoutOptionPill(
                     icon = Icons.Default.GridView,
-                    label = "Grid (2x)",
-                    isSelected = isGrid2,
-                    onClick = { onSelectViewMode(GalleryViewMode.GRID, 2) },
+                    label = "Grid",
+                    isSelected = isGrid,
+                    onClick = { onSelectViewMode(GalleryViewMode.GRID, currentGridCols.coerceIn(2, 5)) },
                     modifier = Modifier.weight(1f)
                 )
 
                 LayoutOptionPill(
-                    icon = Icons.Default.ViewModule,
-                    label = "Compact (3x)",
-                    isSelected = isGrid3,
-                    onClick = { onSelectViewMode(GalleryViewMode.GRID, 3) },
+                    icon = Icons.Default.Dashboard,
+                    label = "Masonry",
+                    isSelected = isMasonry,
+                    onClick = { onSelectViewMode(GalleryViewMode.MASONRY, currentGridCols.coerceIn(2, 5)) },
                     modifier = Modifier.weight(1f)
                 )
 
@@ -151,12 +152,52 @@ fun ViewOrganizeBottomSheet(
                 )
 
                 LayoutOptionPill(
-                    icon = Icons.Default.FormatListBulleted,
+                    icon = Icons.AutoMirrored.Filled.FormatListBulleted,
                     label = "List",
                     isSelected = isList,
                     onClick = { onSelectViewMode(GalleryViewMode.LIST, 1) },
                     modifier = Modifier.weight(1f)
                 )
+            }
+
+            // Columns Density (2, 3, 4, 5 Columns)
+            if (currentViewMode == GalleryViewMode.GRID || currentViewMode == GalleryViewMode.MASONRY) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Columns Density:",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf(2, 3, 4, 5).forEach { cols ->
+                            val isSelected = currentGridCols == cols
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { onSelectViewMode(currentViewMode, cols) }
+                                    .testTag("btn_grid_cols_$cols")
+                            ) {
+                                Text(
+                                    text = "${cols}x",
+                                    fontSize = 12.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             // SECTION 2: SORT BY

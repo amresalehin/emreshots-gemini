@@ -19,8 +19,8 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.Folder
@@ -243,7 +243,7 @@ fun CreateCollectionDialog(
         "palette" to Icons.Default.Palette,
         "code" to Icons.Default.Code,
         "flight" to Icons.Default.Flight,
-        "chat" to Icons.Default.Chat
+        "chat" to Icons.AutoMirrored.Filled.Chat
     )
 
     val colorOptions = listOf("#6366F1", "#3B82F6", "#10B981", "#F59E0B", "#EC4899", "#8B5CF6")
@@ -353,7 +353,7 @@ fun getIconForName(name: String): ImageVector {
         "palette" -> Icons.Default.Palette
         "code" -> Icons.Default.Code
         "flight" -> Icons.Default.Flight
-        "chat" -> Icons.Default.Chat
+        "chat" -> Icons.AutoMirrored.Filled.Chat
         else -> Icons.Default.Folder
     }
 }

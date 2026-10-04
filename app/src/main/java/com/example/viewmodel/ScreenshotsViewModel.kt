@@ -64,6 +64,18 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     private val _hasMediaPermissions = MutableStateFlow(com.example.service.media.DeviceMediaScanner.hasPermissions(application))
     val hasMediaPermissions: StateFlow<Boolean> = _hasMediaPermissions.asStateFlow()
 
+    private val _hasMediaLocationPermission = MutableStateFlow(com.example.service.media.DeviceMediaScanner.hasMediaLocationPermission(application))
+    val hasMediaLocationPermission: StateFlow<Boolean> = _hasMediaLocationPermission.asStateFlow()
+
+    private val _hasAllMetadataPermissions = MutableStateFlow(com.example.service.media.DeviceMediaScanner.hasAllMetadataPermissions(application))
+    val hasAllMetadataPermissions: StateFlow<Boolean> = _hasAllMetadataPermissions.asStateFlow()
+
+    private val _pendingWriteIntentSender = MutableStateFlow<android.content.IntentSender?>(null)
+    val pendingWriteIntentSender: StateFlow<android.content.IntentSender?> = _pendingWriteIntentSender.asStateFlow()
+
+    private var pendingWriteScreenshot: ScreenshotItem? = null
+    private var pendingWriteExifData: ExifData? = null
+
     val allScreenshots: StateFlow<List<ScreenshotItem>> = screenshotRepository.allScreenshots
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -118,6 +130,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     fun setAutoWriteExifSetting(enabled: Boolean) { autoWriteExifSetting.value = enabled }
     fun setGridColumns(cols: Int) { gridColumns.value = cols }
 
+    @OptIn(coil.annotation.ExperimentalCoilApi::class)
     fun clearThumbnailCache() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -230,24 +243,30 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     init {
-        // Ensure initial seed data is loaded if first run
+        // Ensure initial seed data is loaded if first run, and purge legacy preset providers
         viewModelScope.launch(Dispatchers.IO) {
             seedInitialData(database, getApplication())
+            try {
+                database.providerDao().deletePresetProviders()
+            } catch (_: Exception) {}
         }
         checkPermissions()
     }
 
     fun checkPermissions() {
-        _hasMediaPermissions.value = com.example.service.media.DeviceMediaScanner.hasPermissions(getApplication())
+        val app = getApplication<Application>()
+        _hasMediaPermissions.value = com.example.service.media.DeviceMediaScanner.hasPermissions(app)
+        _hasMediaLocationPermission.value = com.example.service.media.DeviceMediaScanner.hasMediaLocationPermission(app)
+        _hasAllMetadataPermissions.value = com.example.service.media.DeviceMediaScanner.hasAllMetadataPermissions(app)
     }
 
     fun onPermissionsResult(granted: Boolean) {
-        _hasMediaPermissions.value = granted
+        checkPermissions()
         if (granted) {
-            _snackbarMessage.value = "Media permissions granted! Syncing device media..."
+            _snackbarMessage.value = "Media and metadata permissions updated!"
             syncDeviceMedia()
         } else {
-            _snackbarMessage.value = "Media permission denied. You can still pick files individually."
+            _snackbarMessage.value = "Permission denied. Some metadata features may be restricted."
         }
     }
 
@@ -302,8 +321,109 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    fun clearPendingWriteIntent() {
+        _pendingWriteIntentSender.value = null
+        pendingWriteScreenshot = null
+        pendingWriteExifData = null
+    }
+
+    fun onWriteConsentGranted() {
+        val shot = pendingWriteScreenshot ?: return
+        val data = pendingWriteExifData ?: return
+        pendingWriteScreenshot = null
+        pendingWriteExifData = null
+        _pendingWriteIntentSender.value = null
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val uri = Uri.parse(shot.uriString)
+                getApplication<Application>().contentResolver.openFileDescriptor(uri, "rw")?.use { pfd ->
+                    val exifInterface = androidx.exifinterface.media.ExifInterface(pfd.fileDescriptor)
+                    exifManager.applyDataToExifInterface(exifInterface, data)
+                    exifInterface.saveAttributes()
+                }
+                val localFile = File(shot.filePath)
+                if (localFile.exists() && localFile.canWrite()) {
+                    exifManager.writeExif(localFile, data)
+                }
+                val updatedScreenshot = shot.copy(
+                    title = data.imageDescription?.takeIf { it.isNotBlank() } ?: shot.title,
+                    description = data.userComment?.takeIf { it.isNotBlank() } ?: shot.description
+                )
+                screenshotRepository.update(updatedScreenshot)
+                val updatedExif = exifManager.readExif(getApplication(), updatedScreenshot)
+                val current = _exifDataState.value.toMutableMap()
+                current[shot.id] = updatedExif
+                _exifDataState.value = current
+                _snackbarMessage.value = "Write consent granted: EXIF saved to original media!"
+            } catch (e: Exception) {
+                // Fallback to safe file write
+                saveExif(shot, data)
+            }
+        }
+    }
+
+    fun onWriteConsentDenied() {
+        val shot = pendingWriteScreenshot
+        val data = pendingWriteExifData
+        pendingWriteScreenshot = null
+        pendingWriteExifData = null
+        _pendingWriteIntentSender.value = null
+        if (shot != null && data != null) {
+            // Save safe working copy instead
+            saveExif(shot, data)
+        }
+    }
+
     fun saveExif(screenshot: ScreenshotItem, exifData: ExifData, onComplete: ((Boolean) -> Unit)? = null) {
         viewModelScope.launch(Dispatchers.IO) {
+            // If it's a MediaStore item, test if direct write needs Scoped Storage user permission
+            if (!screenshot.uriString.isNullOrBlank() && screenshot.uriString.startsWith("content://media/")) {
+                val uri = Uri.parse(screenshot.uriString)
+                try {
+                    val pfd = getApplication<Application>().contentResolver.openFileDescriptor(uri, "rw")
+                    if (pfd != null) {
+                        pfd.use {
+                            val exifInterface = androidx.exifinterface.media.ExifInterface(it.fileDescriptor)
+                            exifManager.applyDataToExifInterface(exifInterface, exifData)
+                            exifInterface.saveAttributes()
+                        }
+                        val localFile = File(screenshot.filePath)
+                        if (localFile.exists() && localFile.canWrite()) {
+                            exifManager.writeExif(localFile, exifData)
+                        }
+                        val updatedScreenshot = screenshot.copy(
+                            title = exifData.imageDescription?.takeIf { it.isNotBlank() } ?: screenshot.title,
+                            description = exifData.userComment?.takeIf { it.isNotBlank() } ?: screenshot.description
+                        )
+                        screenshotRepository.update(updatedScreenshot)
+                        val updatedExif = exifManager.readExif(getApplication(), updatedScreenshot)
+                        val current = _exifDataState.value.toMutableMap()
+                        current[screenshot.id] = updatedExif
+                        _exifDataState.value = current
+                        _snackbarMessage.value = "EXIF metadata saved directly to device gallery image!"
+                        onComplete?.invoke(true)
+                        return@launch
+                    }
+                } catch (e: Exception) {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R && e is SecurityException) {
+                        try {
+                            val pi = android.provider.MediaStore.createWriteRequest(getApplication<Application>().contentResolver, listOf(uri))
+                            pendingWriteScreenshot = screenshot
+                            pendingWriteExifData = exifData
+                            _pendingWriteIntentSender.value = pi.intentSender
+                            return@launch
+                        } catch (_: Exception) {}
+                    } else if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q && e is android.app.RecoverableSecurityException) {
+                        val pi = e.userAction.actionIntent.intentSender
+                        pendingWriteScreenshot = screenshot
+                        pendingWriteExifData = exifData
+                        _pendingWriteIntentSender.value = pi
+                        return@launch
+                    }
+                }
+            }
+
             val result = exifManager.writeExifSafe(getApplication(), screenshot, exifData)
             if (result.isSuccess) {
                 val savedFile = result.getOrThrow()
@@ -361,15 +481,15 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         onComplete: ((AiAnalysisResult) -> Unit)? = null
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            _isAnalyzing.value = true
-            _analysisStatusText.value = "Analyzing with ${activeProvider.value?.name ?: "Cloud AI"}..."
+            val provider = activeProvider.value
+            if (provider == null) {
+                _snackbarMessage.value = "No AI provider configured. Please set up your endpoint in Settings."
+                onComplete?.invoke(AiAnalysisResult(isSuccess = false, errorMessage = "No AI provider configured. Please set up your endpoint in Settings."))
+                return@launch
+            }
 
-            val provider = activeProvider.value ?: CustomCloudProvider(
-                name = "Google Gemini",
-                baseUrl = "https://generativelanguage.googleapis.com",
-                selectedModel = "gemini-2.5-flash",
-                isDefaultGemini = true
-            )
+            _isAnalyzing.value = true
+            _analysisStatusText.value = "Analyzing with ${provider.name}..."
 
             val file = File(screenshot.filePath).takeIf { it.exists() }
             val geminiKey = try {
@@ -437,15 +557,16 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     fun extractOcr(screenshot: ScreenshotItem, onComplete: ((String?) -> Unit)? = null) {
         viewModelScope.launch(Dispatchers.IO) {
+            val provider = activeProvider.value
+            if (provider == null) {
+                _snackbarMessage.value = "No AI provider configured. Please set up your endpoint in Settings."
+                onComplete?.invoke(null)
+                return@launch
+            }
+
             isExtractingOcr.value = true
             ocrStatusText.value = "Extracting text from image..."
 
-            val provider = activeProvider.value ?: CustomCloudProvider(
-                name = "Google Gemini",
-                baseUrl = "https://generativelanguage.googleapis.com",
-                selectedModel = "gemini-2.5-flash",
-                isDefaultGemini = true
-            )
             val file = File(screenshot.filePath).takeIf { it.exists() }
             val geminiKey = try {
                 BuildConfig::class.java.getField("GEMINI_API_KEY").get(null) as? String ?: ""
@@ -480,15 +601,16 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         onComplete: ((AiAnalysisResult) -> Unit)? = null
     ) {
         viewModelScope.launch(Dispatchers.IO) {
+            val provider = activeProvider.value
+            if (provider == null) {
+                _snackbarMessage.value = "No AI provider configured. Please set up your endpoint in Settings."
+                onComplete?.invoke(AiAnalysisResult(isSuccess = false, errorMessage = "No AI provider configured."))
+                return@launch
+            }
+
             _isAnalyzing.value = true
             _analysisStatusText.value = "Processing OCR text with AI..."
 
-            val provider = activeProvider.value ?: CustomCloudProvider(
-                name = "Google Gemini",
-                baseUrl = "https://generativelanguage.googleapis.com",
-                selectedModel = "gemini-2.5-flash",
-                isDefaultGemini = true
-            )
             val geminiKey = try {
                 BuildConfig::class.java.getField("GEMINI_API_KEY").get(null) as? String ?: ""
             } catch (_: Exception) { "" }

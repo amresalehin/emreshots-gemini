@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,9 +24,10 @@ import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -56,15 +59,26 @@ import coil.request.videoFrameMillis
 import com.example.data.model.ScreenshotItem
 import com.example.service.media.VideoThumbnailHelper
 import java.io.File
+import kotlin.math.abs
 
 @Composable
-fun ScreenshotCard(
+fun ScreenshotMasonryCard(
     screenshot: ScreenshotItem,
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+
+    // Compute dynamic, organic masonry aspect ratio
+    val dynamicAspectRatio = remember(screenshot.id, screenshot.width, screenshot.height) {
+        if (screenshot.width > 0 && screenshot.height > 0) {
+            (screenshot.width.toFloat() / screenshot.height.toFloat()).coerceIn(0.6f, 1.4f)
+        } else {
+            val variants = floatArrayOf(0.72f, 0.88f, 1.15f, 1.35f, 0.95f)
+            variants[abs(screenshot.id.hashCode()) % variants.size]
+        }
+    }
 
     var videoThumbnailBitmap by remember(screenshot.id) {
         mutableStateOf<Bitmap?>(VideoThumbnailHelper.getCachedThumbnail(screenshot.id))
@@ -94,7 +108,7 @@ fun ScreenshotCard(
         val builder = ImageRequest.Builder(context)
             .data(imageModel)
             .crossfade(true)
-            .size(360, 360)
+            .size(480, 480)
 
         if (screenshot.isVideo) {
             builder.decoderFactory(VideoFrameDecoder.Factory())
@@ -104,22 +118,25 @@ fun ScreenshotCard(
         builder.build()
     }
 
-    Surface(
+    Card(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
-            .testTag("screenshot_card_${screenshot.id}"),
+            .testTag("screenshot_masonry_card_${screenshot.id}"),
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        tonalElevation = 1.dp
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(0.92f)
+                .aspectRatio(dynamicAspectRatio)
+                .background(Color.Black.copy(alpha = 0.1f))
         ) {
-            // Media Image / Video Thumbnail
+            // Display video thumbnail directly from cache/retriever if ready, or via Coil's VideoFrameDecoder
             if (screenshot.isVideo && videoThumbnailBitmap != null) {
                 Image(
                     bitmap = videoThumbnailBitmap!!.asImageBitmap(),
@@ -145,7 +162,7 @@ fun ScreenshotCard(
             ) {
                 if (screenshot.aiProcessed) {
                     Surface(
-                        color = Color.Black.copy(alpha = 0.55f),
+                        color = Color.Black.copy(alpha = 0.6f),
                         shape = RoundedCornerShape(6.dp)
                     ) {
                         Row(
@@ -188,7 +205,7 @@ fun ScreenshotCard(
                 }
             }
 
-            // Top Right: Minimal Favorite Toggle
+            // Top Right Favorite Button
             IconButton(
                 onClick = onToggleFavorite,
                 modifier = Modifier
@@ -200,7 +217,7 @@ fun ScreenshotCard(
                 if (screenshot.isFavorite) {
                     Surface(
                         shape = CircleShape,
-                        color = Color.Black.copy(alpha = 0.4f),
+                        color = Color.Black.copy(alpha = 0.45f),
                         modifier = Modifier.size(28.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -213,73 +230,91 @@ fun ScreenshotCard(
                         }
                     }
                 } else {
-                    // Subtle tap target that doesn't distract visually
                     Icon(
                         imageVector = Icons.Default.FavoriteBorder,
                         contentDescription = "Add to Favorites",
-                        tint = Color.White.copy(alpha = 0.4f),
+                        tint = Color.White.copy(alpha = 0.5f),
                         modifier = Modifier.size(16.dp)
                     )
                 }
             }
 
-            // Bottom Badges: Video Duration Pill or Links Pill (Minimal & Clean)
-            if (screenshot.isVideo) {
-                val secs = (screenshot.durationMs / 1000) % 60
-                val mins = (screenshot.durationMs / 1000) / 60
-                val durStr = if (screenshot.durationMs > 0) String.format("%d:%02d", mins, secs) else "Video"
-
-                Surface(
-                    color = Color.Black.copy(alpha = 0.65f),
-                    shape = RoundedCornerShape(6.dp),
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(6.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(12.dp)
+            // Bottom Gradient Scrim & Metadata
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f))
                         )
-                        Spacer(modifier = Modifier.width(2.dp))
+                    )
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
+            ) {
+                Column {
+                    if (screenshot.title.isNotBlank()) {
                         Text(
-                            text = durStr,
+                            text = screenshot.title,
                             color = Color.White,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
-                }
-            } else if (screenshot.links.isNotEmpty()) {
-                Surface(
-                    color = Color.Black.copy(alpha = 0.55f),
-                    shape = RoundedCornerShape(6.dp),
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(6.dp)
-                ) {
+
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Link,
-                            contentDescription = "Links",
-                            tint = Color.White,
-                            modifier = Modifier.size(11.dp)
-                        )
-                        Spacer(modifier = Modifier.width(2.dp))
-                        Text(
-                            text = "${screenshot.links.size}",
-                            color = Color.White,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        if (screenshot.isVideo) {
+                            val secs = (screenshot.durationMs / 1000) % 60
+                            val mins = (screenshot.durationMs / 1000) / 60
+                            val durStr = if (screenshot.durationMs > 0) String.format("%d:%02d", mins, secs) else "Video"
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text(
+                                    text = durStr,
+                                    color = Color.White,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        } else if (screenshot.links.isNotEmpty()) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Link,
+                                    contentDescription = null,
+                                    tint = Color.White.copy(alpha = 0.8f),
+                                    modifier = Modifier.size(11.dp)
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text(
+                                    text = "${screenshot.links.size}",
+                                    color = Color.White.copy(alpha = 0.8f),
+                                    fontSize = 10.sp
+                                )
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.width(1.dp))
+                        }
+
+                        if (screenshot.tags.isNotEmpty()) {
+                            Text(
+                                text = "#${screenshot.tags.first()}",
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                        }
                     }
                 }
             }

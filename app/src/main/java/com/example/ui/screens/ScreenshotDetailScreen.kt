@@ -5,6 +5,10 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -82,11 +86,14 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.data.model.ExifData
 import com.example.ui.components.ExifEditorDialog
+import com.example.ui.components.InAppVideoPlayer
 import com.example.ui.components.OcrAiSheet
 import com.example.viewmodel.ScreenshotsViewModel
 import kotlinx.coroutines.launch
@@ -108,9 +115,41 @@ fun ScreenshotDetailScreen(
     val activeProvider by viewModel.activeProvider.collectAsStateWithLifecycle()
     val isAnalyzing by viewModel.isAnalyzing.collectAsStateWithLifecycle()
     val exifDataMap by viewModel.exifDataState.collectAsStateWithLifecycle()
+    val hasMediaLocationPermission by viewModel.hasMediaLocationPermission.collectAsStateWithLifecycle()
+    val hasAllMetadataPermissions by viewModel.hasAllMetadataPermissions.collectAsStateWithLifecycle()
+    val pendingIntentSender by viewModel.pendingWriteIntentSender.collectAsStateWithLifecycle()
 
     val screenshot = allScreenshots.find { it.id == screenshotId }
     val exifData = exifDataMap[screenshotId] ?: ExifData()
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissionsMap ->
+        val isGranted = permissionsMap.values.any { it }
+        viewModel.onPermissionsResult(isGranted)
+        if (screenshot != null) {
+            viewModel.loadExif(screenshot)
+        }
+    }
+
+    val writePermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            viewModel.onWriteConsentGranted()
+        } else {
+            viewModel.onWriteConsentDenied()
+        }
+    }
+
+    LaunchedEffect(pendingIntentSender) {
+        pendingIntentSender?.let { sender ->
+            val request = IntentSenderRequest.Builder(sender).build()
+            writePermissionLauncher.launch(request)
+        }
+    }
+
+    BackHandler(onBack = onNavigateBack)
 
     var showExifEditor by remember { mutableStateOf(false) }
     var showOcrSheet by remember { mutableStateOf(false) }
@@ -119,6 +158,7 @@ fun ScreenshotDetailScreen(
     val isExtractingOcr by viewModel.isExtractingOcr.collectAsStateWithLifecycle()
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showFullscreenImage by remember { mutableStateOf(false) }
     var showAddTagDialog by remember { mutableStateOf(false) }
     var showReminderDialog by remember { mutableStateOf(false) }
     var showCollectionsSheet by remember { mutableStateOf(false) }
@@ -208,65 +248,54 @@ fun ScreenshotDetailScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Immersive Media Header
+            // Smart Adaptive Media Header (in-app video player or zoomable photo)
+            val headerAspectRatio = if (screenshot.width > 0 && screenshot.height > 0) {
+                (screenshot.width.toFloat() / screenshot.height.toFloat()).coerceIn(0.75f, 1.78f)
+            } else if (screenshot.isVideo) {
+                1.777f
+            } else {
+                1.25f
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1.25f)
+                    .aspectRatio(headerAspectRatio)
                     .background(Color.Black)
             ) {
-                if (imageFile.exists()) {
+                if (screenshot.isVideo) {
+                    InAppVideoPlayer(
+                        screenshot = screenshot,
+                        modifier = Modifier.fillMaxSize(),
+                        onExternalPlayerRequested = {
+                            try {
+                                val uri = if (!screenshot.uriString.isNullOrBlank()) {
+                                    Uri.parse(screenshot.uriString)
+                                } else {
+                                    Uri.fromFile(imageFile)
+                                }
+                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                    setDataAndType(uri, "video/*")
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(intent)
+                            } catch (_: Exception) {
+                                viewModel.showMessage("No external video player found")
+                            }
+                        }
+                    )
+                } else if (imageFile.exists() || !screenshot.uriString.isNullOrBlank()) {
                     AsyncImage(
                         model = ImageRequest.Builder(context)
-                            .data(imageFile)
+                            .data(if (imageFile.exists()) imageFile else screenshot.uriString)
                             .crossfade(true)
                             .build(),
                         contentDescription = screenshot.title,
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-
-                if (screenshot.isVideo) {
-                    Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.35f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clickable {
-                                    try {
-                                        val uri = if (!screenshot.uriString.isNullOrBlank()) {
-                                            Uri.parse(screenshot.uriString)
-                                        } else {
-                                            Uri.fromFile(imageFile)
-                                        }
-                                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                                            setDataAndType(uri, "video/*")
-                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                        }
-                                        context.startActivity(intent)
-                                    } catch (_: Exception) {
-                                        viewModel.showMessage("No video player app found")
-                                    }
-                                }
-                                .testTag("btn_play_video")
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.PlayArrow,
-                                    contentDescription = "Play Video",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(36.dp)
-                                )
-                            }
-                        }
-                    }
+                            .clickable { showFullscreenImage = true }
+                    )
                 }
             }
 
@@ -319,7 +348,12 @@ fun ScreenshotDetailScreen(
 
                     if (!screenshot.isVideo) {
                         OutlinedButton(
-                            onClick = { showExifEditor = true },
+                            onClick = {
+                                if (!hasMediaLocationPermission) {
+                                    permissionLauncher.launch(com.example.service.media.DeviceMediaScanner.getRequiredPermissions())
+                                }
+                                showExifEditor = true
+                            },
                             shape = RoundedCornerShape(20.dp),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                             modifier = Modifier.testTag("btn_open_exif_editor")
@@ -350,6 +384,51 @@ fun ScreenshotDetailScreen(
                             contentDescription = "Collections",
                             tint = if (screenshot.collectionIds.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
+                }
+            }
+
+            // Permission Banner if Location or Media Permissions are not yet fully granted
+            if (!hasMediaLocationPermission) {
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                        .testTag("banner_detail_permission")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.CameraAlt,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Grant Media Location permission to access unredacted GPS & EXIF camera metadata.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        Button(
+                            onClick = {
+                                permissionLauncher.launch(com.example.service.media.DeviceMediaScanner.getRequiredPermissions())
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                            modifier = Modifier
+                                .height(28.dp)
+                                .testTag("btn_grant_detail_permission")
+                        ) {
+                            Text("Grant", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
@@ -689,8 +768,16 @@ fun ScreenshotDetailScreen(
                             } else {
                                 DetailRow("Camera", exifData.cameraModel ?: (exifData.cameraMake ?: "Android Device"))
                                 DetailRow("Date", exifData.dateTaken ?: SimpleDateFormat("yyyy:MM:dd HH:mm", Locale.US).format(Date(screenshot.addedOn)))
+                                if (exifData.latitude != null && exifData.longitude != null) {
+                                    DetailRow("GPS Location", String.format(Locale.US, "%.5f, %.5f", exifData.latitude, exifData.longitude))
+                                }
                                 if (exifData.iso != null) DetailRow("Settings", "ISO ${exifData.iso} • ƒ/${exifData.fNumber ?: "N/A"} • ${exifData.exposureTime ?: "N/A"}s")
                                 if (exifData.software != null) DetailRow("Software", exifData.software)
+                                if (!exifData.artist.isNullOrBlank()) DetailRow("Artist", exifData.artist)
+                                if (!exifData.imageDescription.isNullOrBlank() && exifData.imageDescription != screenshot.title) {
+                                    DetailRow("EXIF Title", exifData.imageDescription)
+                                }
+                                if (!exifData.userComment.isNullOrBlank()) DetailRow("EXIF Notes", exifData.userComment)
                             }
                             if (screenshot.aiModelUsed != null) {
                                 DetailRow("Indexed With", screenshot.aiModelUsed)
@@ -706,6 +793,7 @@ fun ScreenshotDetailScreen(
     if (showExifEditor) {
         ExifEditorDialog(
             initialData = exifData,
+            screenshot = screenshot,
             onDismiss = { showExifEditor = false },
             onSave = { updated ->
                 viewModel.saveExif(screenshot, updated) { success ->
@@ -871,6 +959,48 @@ fun ScreenshotDetailScreen(
                 }
             }
         )
+    }
+
+    if (showFullscreenImage) {
+        Dialog(
+            onDismissRequest = { showFullscreenImage = false },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false
+            )
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+            ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(if (imageFile.exists()) imageFile else screenshot.uriString)
+                        .build(),
+                    contentDescription = screenshot.title,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize()
+                )
+                IconButton(
+                    onClick = { showFullscreenImage = false },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 44.dp, end = 16.dp)
+                        .size(44.dp)
+                        .testTag("btn_close_fullscreen_image")
+                ) {
+                    Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.6f)) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = Color.White,
+                            modifier = Modifier.padding(8.dp)
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

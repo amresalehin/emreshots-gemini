@@ -38,6 +38,16 @@ class MetadataPermissionTest {
     }
 
     @Test
+    fun testHasPermissionsHelperFunctions() {
+        // Under Robolectric, ContextCompat.checkSelfPermission can be queried
+        val hasLoc = DeviceMediaScanner.hasMediaLocationPermission(context)
+        val hasAll = DeviceMediaScanner.hasAllMetadataPermissions(context)
+        // Verify functions evaluate safely without crash
+        assertNotNull(hasLoc)
+        assertNotNull(hasAll)
+    }
+
+    @Test
     fun testSafeWriteExifCreatesWorkingFileAndSavesAttributes() {
         val testDir = File(context.filesDir, "test_images").apply { mkdirs() }
         val testFile = File(testDir, "sample.jpg")
@@ -68,5 +78,43 @@ class MetadataPermissionTest {
         val writtenFile = result.getOrNull()
         assertNotNull(writtenFile)
         assertTrue(writtenFile!!.exists())
+
+        // Verify that readExif reads back the attributes accurately
+        val readBack = exifManager.readExif(context, item.copy(filePath = writtenFile.absolutePath))
+        assertEquals("Pixel 8 Pro", readBack.cameraModel)
+        assertEquals("Google", readBack.cameraMake)
+        assertEquals("Sunset at the beach", readBack.imageDescription)
+    }
+
+    @Test
+    fun testExtensionDetectionForPng() {
+        val testDir = File(context.filesDir, "test_images").apply { mkdirs() }
+        val testPngFile = File(testDir, "screenshot_1.png")
+        val bitmap = android.graphics.Bitmap.createBitmap(10, 10, android.graphics.Bitmap.Config.ARGB_8888)
+        FileOutputStream(testPngFile).use { out ->
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
+        }
+
+        val item = ScreenshotItem(
+            id = "test-png-item",
+            filePath = testPngFile.absolutePath,
+            title = "Screenshot PNG",
+            description = "PNG format test",
+            addedOn = System.currentTimeMillis()
+        )
+
+        val extension = exifManager.determineImageExtension(context, item, testPngFile)
+        assertEquals("png", extension)
+    }
+
+    @Test
+    fun testDateNormalization() {
+        val inputDashed = "2026-10-03 14:30:00"
+        val normalized = exifManager.normalizeExifDate(inputDashed)
+        assertEquals("2026:10:03 14:30:00", normalized)
+
+        val inputSlashed = "2026/10/03 14:30:00"
+        val normalizedSlash = exifManager.normalizeExifDate(inputSlashed)
+        assertEquals("2026:10:03 14:30:00", normalizedSlash)
     }
 }

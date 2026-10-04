@@ -1,14 +1,14 @@
 package com.example.service.ai
 
 data class AiAnalysisResult(
-    val title: String,
-    val description: String,
-    val tags: List<String>,
+    val title: String = "",
+    val description: String = "",
+    val tags: List<String> = emptyList(),
     val detectedLinks: List<String> = emptyList(),
     val suggestedCollection: String? = null,
     val exifUserComment: String? = null,
     val ocrText: String? = null,
-    val modelUsed: String,
+    val modelUsed: String = "",
     val processingTimeMs: Long = 0L,
     val isSuccess: Boolean = true,
     val errorMessage: String? = null

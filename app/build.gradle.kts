@@ -98,6 +98,7 @@ dependencies {
   implementation(libs.androidx.room.ktx)
   implementation(libs.androidx.room.runtime)
   implementation(libs.coil.compose)
+  implementation(libs.coil.video)
   implementation(libs.androidx.exifinterface)
   implementation(libs.converter.moshi)
   implementation(libs.firebase.ai)

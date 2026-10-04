@@ -1,0 +1,6 @@
+{
+  "name": "Shots Studio",
+  "description": "AI-powered photo, video, and screenshot manager with custom cloud API provider support and EXIF metadata tools",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

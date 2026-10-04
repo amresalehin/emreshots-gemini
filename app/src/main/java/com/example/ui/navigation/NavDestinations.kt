@@ -1,0 +1,15 @@
+package com.example.ui.navigation
+
+sealed class Screen(val route: String) {
+    data object Gallery : Screen("gallery")
+    data object Collections : Screen("collections")
+    data object Settings : Screen("settings")
+    data object AiStudio : Screen("ai_studio")
+    data object CloudProviders : Screen("cloud_providers")
+    data object ScreenshotDetail : Screen("screenshot_detail/{screenshotId}") {
+        fun createRoute(screenshotId: String) = "screenshot_detail/$screenshotId"
+    }
+    data object CollectionDetail : Screen("collection_detail/{collectionId}") {
+        fun createRoute(collectionId: String) = "collection_detail/$collectionId"
+    }
+}

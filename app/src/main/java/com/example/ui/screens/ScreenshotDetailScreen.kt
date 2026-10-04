@@ -47,9 +47,11 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -84,6 +86,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -95,6 +98,7 @@ import com.example.data.model.ExifData
 import com.example.ui.components.ExifEditorDialog
 import com.example.ui.components.InAppVideoPlayer
 import com.example.ui.components.OcrAiSheet
+import com.example.ui.components.ZoomableImageViewer
 import com.example.viewmodel.ScreenshotsViewModel
 import kotlinx.coroutines.launch
 import java.io.File
@@ -197,7 +201,22 @@ fun ScreenshotDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { },
+                title = {
+                    Column {
+                        Text(
+                            text = screenshot.title.ifBlank { "Media Details" },
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = if (screenshot.isVideo) "Video File" else "Photo Viewer",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(
                         onClick = onNavigateBack,
@@ -248,7 +267,7 @@ fun ScreenshotDetailScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Smart Adaptive Media Header (in-app video player or zoomable photo)
+            // Smart Adaptive Media Header (cinematic container with interactive zoom)
             val headerAspectRatio = if (screenshot.width > 0 && screenshot.height > 0) {
                 (screenshot.width.toFloat() / screenshot.height.toFloat()).coerceIn(0.75f, 1.78f)
             } else if (screenshot.isVideo) {
@@ -295,7 +314,116 @@ fun ScreenshotDetailScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .clickable { showFullscreenImage = true }
+                            .testTag("img_media_detail_header")
                     )
+
+                    // Top-Left: AI Status Badge Overlay
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (screenshot.aiProcessed)
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
+                        else
+                            Color.Black.copy(alpha = 0.6f),
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(12.dp)
+                            .testTag("badge_ai_status")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                tint = if (screenshot.aiProcessed)
+                                    MaterialTheme.colorScheme.primary
+                                else Color.White,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = if (screenshot.aiProcessed)
+                                    (screenshot.aiModelUsed ?: "AI Indexed")
+                                else "Not Indexed",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (screenshot.aiProcessed)
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                else Color.White
+                            )
+                        }
+                    }
+
+                    // Top-Right: Fullscreen Zoom Button Overlay
+                    IconButton(
+                        onClick = { showFullscreenImage = true },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                            .testTag("btn_open_fullscreen_viewer")
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.Black.copy(alpha = 0.65f),
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.ZoomIn,
+                                    contentDescription = "Zoom & Pan",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    // Bottom-Right: Interactive "Tap to Zoom" hint pill
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.Black.copy(alpha = 0.65f),
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(12.dp)
+                            .clickable { showFullscreenImage = true }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ZoomIn,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Tap to Zoom",
+                                fontSize = 11.sp,
+                                color = Color.White
+                            )
+                        }
+                    }
+
+                    // Bottom-Left: Resolution Pill
+                    if (screenshot.width > 0 && screenshot.height > 0) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color.Black.copy(alpha = 0.65f),
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(12.dp)
+                        ) {
+                            Text(
+                                text = "${screenshot.width} × ${screenshot.height}",
+                                fontSize = 11.sp,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
                 }
             }
 
@@ -769,7 +897,41 @@ fun ScreenshotDetailScreen(
                                 DetailRow("Camera", exifData.cameraModel ?: (exifData.cameraMake ?: "Android Device"))
                                 DetailRow("Date", exifData.dateTaken ?: SimpleDateFormat("yyyy:MM:dd HH:mm", Locale.US).format(Date(screenshot.addedOn)))
                                 if (exifData.latitude != null && exifData.longitude != null) {
-                                    DetailRow("GPS Location", String.format(Locale.US, "%.5f, %.5f", exifData.latitude, exifData.longitude))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column {
+                                            Text(
+                                                text = "GPS Location",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Text(
+                                                text = String.format(Locale.US, "%.5f, %.5f", exifData.latitude, exifData.longitude),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontWeight = FontWeight.Medium,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                        TextButton(
+                                            onClick = {
+                                                try {
+                                                    val geoUri = Uri.parse("geo:${exifData.latitude},${exifData.longitude}?q=${exifData.latitude},${exifData.longitude}(${Uri.encode(screenshot.title)})")
+                                                    context.startActivity(Intent(Intent.ACTION_VIEW, geoUri))
+                                                } catch (_: Exception) {
+                                                    viewModel.showMessage("No map application available")
+                                                }
+                                            },
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                            modifier = Modifier.testTag("btn_view_map_gps")
+                                        ) {
+                                            Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(14.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("Open Map", fontSize = 11.sp)
+                                        }
+                                    }
                                 }
                                 if (exifData.iso != null) DetailRow("Settings", "ISO ${exifData.iso} • ƒ/${exifData.fNumber ?: "N/A"} • ${exifData.exposureTime ?: "N/A"}s")
                                 if (exifData.software != null) DetailRow("Software", exifData.software)
@@ -962,45 +1124,12 @@ fun ScreenshotDetailScreen(
     }
 
     if (showFullscreenImage) {
-        Dialog(
-            onDismissRequest = { showFullscreenImage = false },
-            properties = DialogProperties(
-                usePlatformDefaultWidth = false,
-                decorFitsSystemWindows = false
-            )
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black)
-            ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(if (imageFile.exists()) imageFile else screenshot.uriString)
-                        .build(),
-                    contentDescription = screenshot.title,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize()
-                )
-                IconButton(
-                    onClick = { showFullscreenImage = false },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 44.dp, end = 16.dp)
-                        .size(44.dp)
-                        .testTag("btn_close_fullscreen_image")
-                ) {
-                    Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.6f)) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = Color.White,
-                            modifier = Modifier.padding(8.dp)
-                        )
-                    }
-                }
-            }
-        }
+        ZoomableImageViewer(
+            screenshot = screenshot,
+            exifData = exifData,
+            onDismiss = { showFullscreenImage = false },
+            onToggleFavorite = { viewModel.toggleFavorite(screenshot) }
+        )
     }
 }
 

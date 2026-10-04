@@ -42,6 +42,12 @@ interface ScreenshotDao {
 
     @Query("DELETE FROM screenshots WHERE id = :id")
     suspend fun deleteById(id: String)
+
+    @Query("SELECT * FROM screenshots ORDER BY addedOn DESC")
+    suspend fun getAllScreenshotsSync(): List<ScreenshotItem>
+
+    @Query("DELETE FROM screenshots")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -66,12 +72,21 @@ interface CollectionDao {
 
     @Query("DELETE FROM collections WHERE id = :id")
     suspend fun deleteById(id: String)
+
+    @Query("SELECT * FROM collections ORDER BY createdAt ASC")
+    suspend fun getAllCollectionsSync(): List<CollectionItem>
+
+    @Query("DELETE FROM collections")
+    suspend fun deleteAll()
 }
 
 @Dao
 interface ProviderDao {
     @Query("SELECT * FROM cloud_providers ORDER BY isActive DESC, name ASC")
     fun getAllProviders(): Flow<List<CustomCloudProvider>>
+
+    @Query("SELECT * FROM cloud_providers ORDER BY isActive DESC, name ASC")
+    suspend fun getAllProvidersList(): List<CustomCloudProvider>
 
     @Query("SELECT * FROM cloud_providers WHERE isActive = 1 LIMIT 1")
     fun getActiveProvider(): Flow<CustomCloudProvider?>
@@ -96,6 +111,9 @@ interface ProviderDao {
 
     @Query("DELETE FROM cloud_providers WHERE id LIKE 'prov-%'")
     suspend fun deletePresetProviders()
+
+    @Query("DELETE FROM cloud_providers")
+    suspend fun deleteAll()
 
     @Query("UPDATE cloud_providers SET isActive = 0")
     suspend fun clearActiveProviders()

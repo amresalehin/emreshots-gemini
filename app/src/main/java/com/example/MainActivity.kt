@@ -41,6 +41,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.ui.navigation.Screen
+import com.example.ui.screens.CloudProvidersScreen
 import com.example.ui.screens.CollectionDetailScreen
 import com.example.ui.screens.CollectionsScreen
 import com.example.ui.screens.ScreenshotDetailScreen
@@ -130,7 +131,12 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable(Screen.Settings.route) {
-                            SettingsScreen(viewModel = viewModel)
+                            SettingsScreen(
+                                viewModel = viewModel,
+                                onNavigateToCloudProviders = {
+                                    navController.navigate(Screen.CloudProviders.route)
+                                }
+                            )
                         }
 
                         // Backwards compatibility mappings for deep links
@@ -139,7 +145,10 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable(Screen.CloudProviders.route) {
-                            SettingsScreen(viewModel = viewModel)
+                            CloudProvidersScreen(
+                                viewModel = viewModel,
+                                onNavigateBack = { navController.popBackStack() }
+                            )
                         }
 
                         composable(
@@ -194,7 +203,7 @@ fun BottomNavigationBar(navController: NavHostController, currentRoute: String?)
     NavigationBar(
         modifier = Modifier.testTag("bottom_nav_bar"),
         containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 4.dp
+        tonalElevation = 6.dp
     ) {
         items.forEach { item ->
             val selected = currentRoute == item.route
@@ -220,9 +229,17 @@ fun BottomNavigationBar(navController: NavHostController, currentRoute: String?)
                 label = {
                     Text(
                         text = item.title,
-                        fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
+                        fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium,
+                        style = MaterialTheme.typography.labelSmall
                     )
                 },
+                colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
                 modifier = Modifier.testTag(item.testTag)
             )
         }

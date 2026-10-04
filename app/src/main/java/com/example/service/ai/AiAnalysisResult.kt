@@ -21,3 +21,11 @@ data class ConnectionTestResult(
     val message: String,
     val availableModels: List<String> = emptyList()
 )
+
+data class FetchModelsResult(
+    val isSuccess: Boolean,
+    val models: List<String> = emptyList(),
+    val message: String = "",
+    val suggestedModels: List<String> = emptyList(),
+    val latencyMs: Long = 0L
+)

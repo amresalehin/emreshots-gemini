@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +32,11 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -47,6 +54,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -62,18 +70,27 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.CustomCloudProvider
+import com.example.service.ai.ConnectionTestResult
+import com.example.service.ai.FetchModelsResult
 import com.example.viewmodel.ScreenshotsViewModel
 import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CloudProvidersScreen(
-    viewModel: ScreenshotsViewModel
+    viewModel: ScreenshotsViewModel,
+    onNavigateBack: (() -> Unit)? = null
 ) {
+    if (onNavigateBack != null) {
+        BackHandler(onBack = onNavigateBack)
+    }
+
     val providers by viewModel.providers.collectAsStateWithLifecycle()
     val activeProvider by viewModel.activeProvider.collectAsStateWithLifecycle()
 
@@ -92,6 +109,13 @@ fun CloudProvidersScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 },
+                navigationIcon = {
+                    if (onNavigateBack != null) {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
@@ -103,6 +127,48 @@ fun CloudProvidersScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.CloudQueue,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "Custom Cloud & Local AI",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                                Text(
+                                    text = "Connect OpenAI, Groq, Ollama, DeepSeek, or Gemini endpoints to analyze photos and extract OCR text.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                )
+                            }
+                        }
+                    }
+                }
+
                 items(providers, key = { it.id }) { provider ->
                     val isActive = provider.id == activeProvider?.id
                     val isTesting = testingProviderId == provider.id
@@ -187,6 +253,11 @@ fun ProviderCard(
         colors = CardDefaults.cardColors(
             containerColor = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
             else MaterialTheme.colorScheme.surfaceVariant
+        ),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            if (isActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
         ),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = if (isActive) 3.dp else 1.dp)
@@ -312,20 +383,26 @@ fun ProviderEditDialog(
     initial: CustomCloudProvider?,
     onDismiss: () -> Unit,
     onSave: (CustomCloudProvider) -> Unit,
-    onFetchModels: (CustomCloudProvider, (List<String>) -> Unit) -> Unit,
+    onFetchModels: (CustomCloudProvider, (com.example.service.ai.FetchModelsResult) -> Unit) -> Unit,
     onTest: (CustomCloudProvider, (com.example.service.ai.ConnectionTestResult) -> Unit) -> Unit
 ) {
-    var name by remember { mutableStateOf(initial?.name ?: "Custom Cloud API") }
-    var baseUrl by remember { mutableStateOf(initial?.baseUrl ?: "https://api.openai.com/v1") }
-    var apiKey by remember { mutableStateOf(initial?.apiKey ?: "") }
-    var selectedModel by remember { mutableStateOf(initial?.selectedModel ?: "gpt-4o-mini") }
-    var headersJson by remember { mutableStateOf(initial?.customHeadersJson ?: "{}") }
-    var timeoutSeconds by remember { mutableStateOf((initial?.timeoutSeconds ?: 60).toString()) }
+    var name by remember(initial) { mutableStateOf(initial?.name ?: "Google Gemini") }
+    var baseUrl by remember(initial) { mutableStateOf(initial?.baseUrl ?: "https://generativelanguage.googleapis.com") }
+    var apiKey by remember(initial) { mutableStateOf(initial?.apiKey ?: "") }
+    var selectedModel by remember(initial) { mutableStateOf(initial?.selectedModel ?: "gemini-2.5-flash") }
+    var headersJson by remember(initial) { mutableStateOf(initial?.customHeadersJson ?: "{}") }
+    var timeoutSeconds by remember(initial) { mutableStateOf((initial?.timeoutSeconds ?: 60).toString()) }
 
     var testStatusText by remember { mutableStateOf<String?>(null) }
+    var testStatusSuccess by remember { mutableStateOf(true) }
     var isTesting by remember { mutableStateOf(false) }
+
     var isFetchingModels by remember { mutableStateOf(false) }
+    var fetchStatusText by remember { mutableStateOf<String?>(null) }
+    var fetchStatusSuccess by remember { mutableStateOf(true) }
     var discoveredModels by remember { mutableStateOf<List<String>>(emptyList()) }
+    var suggestedModels by remember { mutableStateOf<List<String>>(emptyList()) }
+    var modelSearchQuery by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -333,7 +410,7 @@ fun ProviderEditDialog(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.CloudQueue, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(if (initial == null) "Add Cloud API Provider" else "Edit Cloud Provider")
+                Text(if (initial == null) "Add AI Provider" else "Edit AI Provider")
             }
         },
         text = {
@@ -344,22 +421,31 @@ fun ProviderEditDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 // Preset Quick Fill Chips
-                Text("Quick Presets:", style = MaterialTheme.typography.labelSmall)
+                Text("Quick Presets (Tap to Configure):", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     InputChip(
-                        selected = false,
+                        selected = name.contains("Gemini", ignoreCase = true) || baseUrl.contains("generativelanguage"),
                         onClick = {
-                            name = "Ollama Local (vLLM)"
-                            baseUrl = "http://10.0.2.2:11434/v1"
-                            selectedModel = "llama3.2-vision"
+                            name = "Google Gemini"
+                            baseUrl = "https://generativelanguage.googleapis.com"
+                            selectedModel = "gemini-2.5-flash"
                         },
-                        label = { Text("Ollama Local") }
+                        label = { Text("Google Gemini") }
                     )
                     InputChip(
-                        selected = false,
+                        selected = name.contains("OpenAI", ignoreCase = true) || baseUrl.contains("openai.com"),
+                        onClick = {
+                            name = "OpenAI"
+                            baseUrl = "https://api.openai.com/v1"
+                            selectedModel = "gpt-4o-mini"
+                        },
+                        label = { Text("OpenAI") }
+                    )
+                    InputChip(
+                        selected = name.contains("Groq", ignoreCase = true),
                         onClick = {
                             name = "Groq Cloud"
                             baseUrl = "https://api.groq.com/openai/v1"
@@ -368,7 +454,7 @@ fun ProviderEditDialog(
                         label = { Text("Groq Cloud") }
                     )
                     InputChip(
-                        selected = false,
+                        selected = name.contains("OpenRouter", ignoreCase = true),
                         onClick = {
                             name = "OpenRouter"
                             baseUrl = "https://openrouter.ai/api/v1"
@@ -377,13 +463,22 @@ fun ProviderEditDialog(
                         label = { Text("OpenRouter") }
                     )
                     InputChip(
-                        selected = false,
+                        selected = name.contains("Ollama", ignoreCase = true) || baseUrl.contains("11434"),
                         onClick = {
-                            name = "Custom Gateway"
-                            baseUrl = "https://your-custom-endpoint.com/v1"
-                            selectedModel = "custom-vision-model"
+                            name = "Ollama Local"
+                            baseUrl = "http://10.0.2.2:11434"
+                            selectedModel = "llama3.2-vision"
                         },
-                        label = { Text("Custom Gateway") }
+                        label = { Text("Ollama Local") }
+                    )
+                    InputChip(
+                        selected = name.contains("Anthropic", ignoreCase = true),
+                        onClick = {
+                            name = "Anthropic Claude"
+                            baseUrl = "https://api.anthropic.com"
+                            selectedModel = "claude-3-5-sonnet-20241022"
+                        },
+                        label = { Text("Anthropic") }
                     )
                 }
 
@@ -400,7 +495,7 @@ fun ProviderEditDialog(
                 OutlinedTextField(
                     value = baseUrl,
                     onValueChange = { baseUrl = it },
-                    label = { Text("Base URL (e.g. https://api.openai.com/v1)") },
+                    label = { Text("Base URL (e.g. https://generativelanguage.googleapis.com)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().testTag("input_provider_url")
                 )
@@ -416,12 +511,12 @@ fun ProviderEditDialog(
                 OutlinedTextField(
                     value = selectedModel,
                     onValueChange = { selectedModel = it },
-                    label = { Text("Model Identifier") },
+                    label = { Text("Selected Model Identifier") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().testTag("input_provider_model")
                 )
 
-                // Fetch Available Models from Server
+                // Fetch Available Models & Test Connection
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -429,16 +524,26 @@ fun ProviderEditDialog(
                     OutlinedButton(
                         onClick = {
                             isFetchingModels = true
+                            fetchStatusText = null
                             val temp = CustomCloudProvider(
-                                name = name,
-                                baseUrl = baseUrl,
-                                apiKey = apiKey,
-                                selectedModel = selectedModel,
-                                customHeadersJson = headersJson
+                                id = initial?.id ?: UUID.randomUUID().toString(),
+                                name = name.trim(),
+                                baseUrl = baseUrl.trim(),
+                                apiKey = apiKey.trim(),
+                                selectedModel = selectedModel.trim(),
+                                customHeadersJson = headersJson.trim()
                             )
-                            onFetchModels(temp) { models ->
+                            onFetchModels(temp) { result ->
                                 isFetchingModels = false
-                                discoveredModels = models
+                                fetchStatusText = result.message
+                                fetchStatusSuccess = result.isSuccess
+                                if (result.isSuccess && result.models.isNotEmpty()) {
+                                    discoveredModels = result.models
+                                    suggestedModels = emptyList()
+                                } else {
+                                    discoveredModels = emptyList()
+                                    suggestedModels = result.suggestedModels
+                                }
                             }
                         },
                         enabled = !isFetchingModels && baseUrl.isNotBlank(),
@@ -450,22 +555,25 @@ fun ProviderEditDialog(
                             Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                         }
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Discover Models")
+                        Text("Fetch Models")
                     }
 
                     OutlinedButton(
                         onClick = {
                             isTesting = true
+                            testStatusText = null
                             val temp = CustomCloudProvider(
-                                name = name,
-                                baseUrl = baseUrl,
-                                apiKey = apiKey,
-                                selectedModel = selectedModel,
-                                customHeadersJson = headersJson
+                                id = initial?.id ?: UUID.randomUUID().toString(),
+                                name = name.trim(),
+                                baseUrl = baseUrl.trim(),
+                                apiKey = apiKey.trim(),
+                                selectedModel = selectedModel.trim(),
+                                customHeadersJson = headersJson.trim()
                             )
                             onTest(temp) { result ->
                                 isTesting = false
                                 testStatusText = result.message
+                                testStatusSuccess = result.isSuccess
                             }
                         },
                         enabled = !isTesting && baseUrl.isNotBlank(),
@@ -477,21 +585,31 @@ fun ProviderEditDialog(
                             Icon(Icons.Default.NetworkCheck, contentDescription = null, modifier = Modifier.size(16.dp))
                         }
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Test Connection")
+                        Text("Test Ping")
                     }
                 }
 
-                if (discoveredModels.isNotEmpty()) {
-                    Text("Select Discovered Model:", style = MaterialTheme.typography.labelSmall)
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                if (fetchStatusText != null) {
+                    Surface(
+                        color = if (fetchStatusSuccess) Color(0xFF10B981).copy(alpha = 0.12f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        discoveredModels.take(8).forEach { m ->
-                            InputChip(
-                                selected = selectedModel == m,
-                                onClick = { selectedModel = m },
-                                label = { Text(m) }
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = if (fetchStatusSuccess) Icons.Default.CheckCircle else Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = if (fetchStatusSuccess) Color(0xFF10B981) else MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = fetchStatusText ?: "",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (fetchStatusSuccess) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onErrorContainer
                             )
                         }
                     }
@@ -499,15 +617,84 @@ fun ProviderEditDialog(
 
                 if (testStatusText != null) {
                     Surface(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        color = if (testStatusSuccess) Color(0xFF10B981).copy(alpha = 0.12f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = if (testStatusSuccess) Icons.Default.CheckCircle else Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = if (testStatusSuccess) Color(0xFF10B981) else MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = testStatusText ?: "",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (testStatusSuccess) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+                    }
+                }
+
+                if (discoveredModels.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = testStatusText ?: "",
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(8.dp)
+                            text = "Discovered ${discoveredModels.size} Models (tap to select):",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold
                         )
+
+                        if (discoveredModels.size > 8) {
+                            OutlinedTextField(
+                                value = modelSearchQuery,
+                                onValueChange = { modelSearchQuery = it },
+                                placeholder = { Text("Search models...", fontSize = 12.sp) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth().height(48.dp)
+                            )
+                        }
+
+                        val filteredModels = if (modelSearchQuery.isBlank()) discoveredModels else {
+                            discoveredModels.filter { it.contains(modelSearchQuery.trim(), ignoreCase = true) }
+                        }
+
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            filteredModels.take(12).forEach { m ->
+                                InputChip(
+                                    selected = selectedModel == m,
+                                    onClick = { selectedModel = m },
+                                    label = { Text(m, fontSize = 11.sp) }
+                                )
+                            }
+                        }
+                    }
+                } else if (suggestedModels.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = "Recommended Models (tap to select):",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            suggestedModels.forEach { m ->
+                                InputChip(
+                                    selected = selectedModel == m,
+                                    onClick = { selectedModel = m },
+                                    label = { Text(m, fontSize = 11.sp) }
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -523,17 +710,23 @@ fun ProviderEditDialog(
         confirmButton = {
             Button(
                 onClick = {
+                    val finalName = name.trim().ifBlank { "Custom AI Engine" }
+                    val finalUrl = baseUrl.trim().ifBlank { "https://api.openai.com/v1" }
+                    val isGemini = finalUrl.contains("generativelanguage.googleapis.com") ||
+                            finalName.contains("Gemini", ignoreCase = true)
+
                     val saved = (initial ?: CustomCloudProvider(
                         id = UUID.randomUUID().toString(),
-                        name = name,
-                        baseUrl = baseUrl
+                        name = finalName,
+                        baseUrl = finalUrl
                     )).copy(
-                        name = name.trim(),
-                        baseUrl = baseUrl.trim(),
+                        name = finalName,
+                        baseUrl = finalUrl,
                         apiKey = apiKey.trim(),
-                        selectedModel = selectedModel.trim(),
-                        customHeadersJson = headersJson.trim(),
-                        timeoutSeconds = timeoutSeconds.toIntOrNull() ?: 60
+                        selectedModel = selectedModel.trim().ifBlank { if (isGemini) "gemini-2.5-flash" else "gpt-4o-mini" },
+                        customHeadersJson = headersJson.trim().ifBlank { "{}" },
+                        timeoutSeconds = timeoutSeconds.toIntOrNull() ?: 60,
+                        isDefaultGemini = isGemini
                     )
                     onSave(saved)
                 },

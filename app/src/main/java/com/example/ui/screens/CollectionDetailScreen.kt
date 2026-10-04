@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -105,16 +106,18 @@ fun CollectionDetailScreen(
                 .padding(padding)
         ) {
             Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, accentColor.copy(alpha = 0.25f)),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(20.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(52.dp)
+                            .size(56.dp)
                             .background(accentColor.copy(alpha = 0.2f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
@@ -122,16 +125,16 @@ fun CollectionDetailScreen(
                             imageVector = iconVector,
                             contentDescription = null,
                             tint = accentColor,
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(30.dp)
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(14.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
 
                     Column {
                         Text(
                             text = collection.name,
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
                         if (collection.description.isNotBlank()) {
@@ -141,11 +144,12 @@ fun CollectionDetailScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "${screenshotsInCollection.size} screenshots in collection",
+                            text = if (screenshotsInCollection.size == 1) "1 item in collection" else "${screenshotsInCollection.size} items in collection",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold
+                            color = accentColor,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
@@ -153,15 +157,48 @@ fun CollectionDetailScreen(
 
             if (screenshotsInCollection.isEmpty()) {
                 Box(
-                    modifier = Modifier.fillMaxSize().padding(32.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "No screenshots in this collection yet.\nOpen any screenshot detail view to add it here!",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = accentColor.copy(alpha = 0.15f),
+                            modifier = Modifier.size(72.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = iconVector,
+                                    contentDescription = null,
+                                    tint = accentColor,
+                                    modifier = Modifier.size(36.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(18.dp))
+
+                        Text(
+                            text = "Collection is Empty",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Text(
+                            text = "Open any photo, video, or screenshot from the Gallery and tap the folder icon to add it to '${collection.name}'.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 24.dp)
+                        )
+                    }
                 }
             } else {
                 LazyVerticalGrid(

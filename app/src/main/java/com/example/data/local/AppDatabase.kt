@@ -100,9 +100,6 @@ suspend fun seedInitialData(database: AppDatabase, context: Context) {
     database.collectionDao().insertAll(collections)
 
     // Clean initial state: No preset AI providers. Users set up their own providers.
-    try {
-        database.providerDao().deletePresetProviders()
-    } catch (_: Exception) {}
 
     // Remove any preset images and videos so the app starts completely clean
     try {

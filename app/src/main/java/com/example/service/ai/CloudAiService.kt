@@ -37,9 +37,90 @@ class CloudAiService(
             return url
         }
 
+        fun isGeminiProvider(provider: CustomCloudProvider): Boolean {
+            return provider.isDefaultGemini ||
+                    provider.baseUrl.contains("generativelanguage.googleapis.com") ||
+                    provider.name.contains("Gemini", ignoreCase = true)
+        }
+
+        fun isOllamaProvider(provider: CustomCloudProvider): Boolean {
+            return provider.baseUrl.contains(":11434") ||
+                    provider.name.contains("Ollama", ignoreCase = true)
+        }
+
+        fun isAnthropicProvider(provider: CustomCloudProvider): Boolean {
+            return provider.baseUrl.contains("anthropic.com") ||
+                    provider.name.contains("Anthropic", ignoreCase = true) ||
+                    provider.name.contains("Claude", ignoreCase = true)
+        }
+
+        fun getCuratedModels(provider: CustomCloudProvider): List<String> {
+            val name = provider.name.lowercase()
+            val url = provider.baseUrl.lowercase()
+            return when {
+                isGeminiProvider(provider) -> listOf(
+                    "gemini-2.5-flash",
+                    "gemini-2.5-pro",
+                    "gemini-1.5-flash",
+                    "gemini-1.5-pro",
+                    "gemini-2.0-flash"
+                )
+                isOllamaProvider(provider) -> listOf(
+                    "llama3.2-vision",
+                    "llava",
+                    "bakllava",
+                    "minicpm-v",
+                    "qwen2-vl",
+                    "llama3.2",
+                    "mistral"
+                )
+                url.contains("groq.com") || name.contains("groq") -> listOf(
+                    "llama-3.2-11b-vision-preview",
+                    "llama-3.2-90b-vision-preview",
+                    "llama-3.3-70b-versatile",
+                    "mixtral-8x7b-32768"
+                )
+                url.contains("openrouter.ai") || name.contains("openrouter") -> listOf(
+                    "google/gemini-2.5-flash",
+                    "openai/gpt-4o-mini",
+                    "anthropic/claude-3.5-sonnet",
+                    "meta-llama/llama-3.2-11b-vision-instruct",
+                    "deepseek/deepseek-chat"
+                )
+                url.contains("deepseek.com") || name.contains("deepseek") -> listOf(
+                    "deepseek-chat",
+                    "deepseek-reasoner"
+                )
+                isAnthropicProvider(provider) -> listOf(
+                    "claude-3-5-sonnet-20241022",
+                    "claude-3-5-haiku-20241022",
+                    "claude-3-opus-20240229"
+                )
+                url.contains("openai.com") || name.contains("openai") || name.contains("gpt") -> listOf(
+                    "gpt-4o-mini",
+                    "gpt-4o",
+                    "gpt-4-turbo",
+                    "gpt-3.5-turbo"
+                )
+                else -> listOf(
+                    "gpt-4o-mini",
+                    "gpt-4o",
+                    "gemini-2.5-flash",
+                    "llama3.2-vision"
+                )
+            }
+        }
+
         fun buildModelsUrl(baseUrl: String): String {
             val normalized = normalizeBaseUrl(baseUrl)
-            return if (normalized.endsWith("/v1")) {
+            if (normalized.contains("generativelanguage.googleapis.com")) {
+                return "$normalized/v1beta/models"
+            }
+            return if (normalized.endsWith("/v1") || normalized.endsWith("/v1beta")) {
+                "$normalized/models"
+            } else if (normalized.endsWith("/models")) {
+                normalized
+            } else if (normalized.contains("/v1/")) {
                 "$normalized/models"
             } else {
                 "$normalized/v1/models"
@@ -48,86 +129,276 @@ class CloudAiService(
 
         fun buildChatCompletionsUrl(baseUrl: String): String {
             val normalized = normalizeBaseUrl(baseUrl)
-            return if (normalized.endsWith("/v1")) {
+            return if (normalized.endsWith("/v1") || normalized.endsWith("/v1beta")) {
+                "$normalized/chat/completions"
+            } else if (normalized.contains("/v1/")) {
                 "$normalized/chat/completions"
             } else {
                 "$normalized/v1/chat/completions"
             }
         }
+
+        fun parseErrorMessage(body: String): String {
+            try {
+                if (body.startsWith("{")) {
+                    val json = JSONObject(body)
+                    val errObj = json.optJSONObject("error")
+                    if (errObj != null) {
+                        val msg = errObj.optString("message", "")
+                        if (msg.isNotBlank()) return msg
+                    }
+                    val directMsg = json.optString("message", "")
+                    if (directMsg.isNotBlank()) return directMsg
+                    val errStr = json.optString("error", "")
+                    if (errStr.isNotBlank()) return errStr
+                }
+            } catch (_: Exception) {}
+            return body.take(150).replace("\n", " ").trim()
+        }
     }
 
-    suspend fun testConnection(provider: CustomCloudProvider): ConnectionTestResult = withContext(Dispatchers.IO) {
-        val startTime = System.currentTimeMillis()
-        try {
-            val modelsUrl = buildModelsUrl(provider.baseUrl)
-            val requestBuilder = Request.Builder()
-                .url(modelsUrl)
-                .get()
-
-            if (provider.apiKey.isNotBlank()) {
-                requestBuilder.addHeader("Authorization", "Bearer ${provider.apiKey.trim()}")
-            }
-
-            parseCustomHeaders(provider.customHeadersJson).forEach { (k, v) ->
-                requestBuilder.addHeader(k, v)
-            }
-
-            val request = requestBuilder.build()
-            client.newCall(request).execute().use { response ->
-                val latency = System.currentTimeMillis() - startTime
-                val body = response.body?.string() ?: ""
-
-                if (response.isSuccessful) {
-                    val models = parseModelsList(body)
-                    ConnectionTestResult(
-                        isSuccess = true,
-                        latencyMs = latency,
-                        statusCode = response.code,
-                        message = "Connected successfully (${latency}ms). Found ${models.size} models.",
-                        availableModels = models
-                    )
-                } else {
-                    ConnectionTestResult(
-                        isSuccess = false,
-                        latencyMs = latency,
-                        statusCode = response.code,
-                        message = "Server error ${response.code}: ${response.message}"
-                    )
-                }
-            }
-        } catch (e: Exception) {
-            val latency = System.currentTimeMillis() - startTime
+    suspend fun testConnection(
+        provider: CustomCloudProvider,
+        fallbackGeminiKey: String = ""
+    ): ConnectionTestResult = withContext(Dispatchers.IO) {
+        val result = fetchModels(provider, fallbackGeminiKey)
+        if (result.isSuccess) {
+            ConnectionTestResult(
+                isSuccess = true,
+                latencyMs = result.latencyMs,
+                statusCode = 200,
+                message = result.message,
+                availableModels = result.models
+            )
+        } else {
             ConnectionTestResult(
                 isSuccess = false,
-                latencyMs = latency,
-                statusCode = -1,
-                message = "Connection failed: ${e.localizedMessage ?: e.javaClass.simpleName}"
+                latencyMs = result.latencyMs,
+                statusCode = 400,
+                message = result.message,
+                availableModels = result.suggestedModels
             )
         }
     }
 
-    suspend fun fetchModels(provider: CustomCloudProvider): List<String> = withContext(Dispatchers.IO) {
+    suspend fun fetchModels(
+        provider: CustomCloudProvider,
+        fallbackGeminiKey: String = ""
+    ): FetchModelsResult = withContext(Dispatchers.IO) {
+        val startTime = System.currentTimeMillis()
+        val curated = getCuratedModels(provider)
+
         try {
+            if (isGeminiProvider(provider)) {
+                val effectiveKey = provider.apiKey.ifBlank { fallbackGeminiKey }.trim()
+                if (effectiveKey.isBlank()) {
+                    return@withContext FetchModelsResult(
+                        isSuccess = false,
+                        models = emptyList(),
+                        message = "Google Gemini requires an API key. Please enter your API key in the provider settings.",
+                        suggestedModels = curated,
+                        latencyMs = 0L
+                    )
+                }
+                val url = "https://generativelanguage.googleapis.com/v1beta/models?key=$effectiveKey"
+                val requestBuilder = Request.Builder().url(url).get()
+                requestBuilder.addHeader("x-goog-api-key", effectiveKey)
+                parseCustomHeaders(provider.customHeadersJson).forEach { (k, v) ->
+                    requestBuilder.addHeader(k, v)
+                }
+
+                client.newCall(requestBuilder.build()).execute().use { response ->
+                    val latency = System.currentTimeMillis() - startTime
+                    val body = response.body?.string() ?: ""
+
+                    if (response.isSuccessful) {
+                        val parsed = parseModelsList(body).filter { modelId ->
+                            !modelId.contains("embedding", ignoreCase = true) &&
+                            !modelId.contains("aqa", ignoreCase = true) &&
+                            !modelId.contains("imagen", ignoreCase = true) &&
+                            !modelId.contains("bison", ignoreCase = true)
+                        }
+                        val sorted = parsed.sortedWith(compareByDescending<String> {
+                            when {
+                                it.contains("2.5") -> 5
+                                it.contains("2.0") -> 4
+                                it.contains("1.5") && it.contains("flash") -> 3
+                                it.contains("1.5") -> 2
+                                it.contains("flash") -> 1
+                                else -> 0
+                            }
+                        }.thenBy { it })
+                        val finalModels = if (sorted.isNotEmpty()) sorted else curated
+                        return@withContext FetchModelsResult(
+                            isSuccess = true,
+                            models = finalModels,
+                            message = "Discovered ${finalModels.size} models from Google Gemini (${latency}ms)",
+                            suggestedModels = curated,
+                            latencyMs = latency
+                        )
+                    } else {
+                        val errorMsg = parseErrorMessage(body)
+                        return@withContext FetchModelsResult(
+                            isSuccess = false,
+                            models = emptyList(),
+                            message = "Gemini API error (${response.code}): $errorMsg",
+                            suggestedModels = curated,
+                            latencyMs = latency
+                        )
+                    }
+                }
+            }
+
+            // Ollama native check (supports /api/tags, /v1/models, /models)
+            if (isOllamaProvider(provider)) {
+                val normalized = normalizeBaseUrl(provider.baseUrl)
+                val cleanBase = if (normalized.endsWith("/v1")) normalized.removeSuffix("/v1") else normalized
+                val urlsToTry = listOf("$cleanBase/api/tags", "$cleanBase/v1/models", "$cleanBase/models")
+                var lastError = ""
+                for (targetUrl in urlsToTry) {
+                    try {
+                        val req = Request.Builder().url(targetUrl).get().build()
+                        client.newCall(req).execute().use { response ->
+                            val latency = System.currentTimeMillis() - startTime
+                            if (response.isSuccessful) {
+                                val body = response.body?.string() ?: ""
+                                val parsed = parseModelsList(body).map { it.removeSuffix(":latest") }
+                                if (parsed.isNotEmpty()) {
+                                    return@withContext FetchModelsResult(
+                                        isSuccess = true,
+                                        models = parsed,
+                                        message = "Discovered ${parsed.size} local models from Ollama (${latency}ms)",
+                                        suggestedModels = curated,
+                                        latencyMs = latency
+                                    )
+                                }
+                            } else {
+                                lastError = "HTTP ${response.code}"
+                            }
+                        }
+                    } catch (e: Exception) {
+                        lastError = e.localizedMessage ?: "Connection refused"
+                    }
+                }
+                val latency = System.currentTimeMillis() - startTime
+                return@withContext FetchModelsResult(
+                    isSuccess = false,
+                    models = emptyList(),
+                    message = "Could not fetch Ollama models: $lastError. Make sure Ollama server is running.",
+                    suggestedModels = curated,
+                    latencyMs = latency
+                )
+            }
+
+            // Anthropic Claude native check
+            if (isAnthropicProvider(provider)) {
+                val effectiveKey = provider.apiKey.trim()
+                if (effectiveKey.isBlank()) {
+                    return@withContext FetchModelsResult(
+                        isSuccess = false,
+                        models = emptyList(),
+                        message = "Anthropic requires an API key to discover models.",
+                        suggestedModels = curated,
+                        latencyMs = 0L
+                    )
+                }
+                val url = "https://api.anthropic.com/v1/models"
+                val request = Request.Builder()
+                    .url(url)
+                    .get()
+                    .addHeader("x-api-key", effectiveKey)
+                    .addHeader("anthropic-version", "2023-06-01")
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    val latency = System.currentTimeMillis() - startTime
+                    val body = response.body?.string() ?: ""
+                    if (response.isSuccessful) {
+                        val parsed = parseModelsList(body)
+                        val finalModels = if (parsed.isNotEmpty()) parsed else curated
+                        return@withContext FetchModelsResult(
+                            isSuccess = true,
+                            models = finalModels,
+                            message = "Discovered ${finalModels.size} models from Anthropic (${latency}ms)",
+                            suggestedModels = curated,
+                            latencyMs = latency
+                        )
+                    } else {
+                        val errorMsg = parseErrorMessage(body)
+                        return@withContext FetchModelsResult(
+                            isSuccess = false,
+                            models = emptyList(),
+                            message = "Anthropic API error (${response.code}): $errorMsg",
+                            suggestedModels = curated,
+                            latencyMs = latency
+                        )
+                    }
+                }
+            }
+
+            // Standard OpenAI-compatible endpoints (OpenAI, Groq, OpenRouter, DeepSeek, Together, LM Studio, etc.)
             val modelsUrl = buildModelsUrl(provider.baseUrl)
             val requestBuilder = Request.Builder().url(modelsUrl).get()
             if (provider.apiKey.isNotBlank()) {
                 requestBuilder.addHeader("Authorization", "Bearer ${provider.apiKey.trim()}")
+            }
+            if (provider.baseUrl.contains("openrouter.ai")) {
+                requestBuilder.addHeader("HTTP-Referer", "https://emreshots.app")
+                requestBuilder.addHeader("X-Title", "EmreShots")
             }
             parseCustomHeaders(provider.customHeadersJson).forEach { (k, v) ->
                 requestBuilder.addHeader(k, v)
             }
 
             client.newCall(requestBuilder.build()).execute().use { response ->
+                val latency = System.currentTimeMillis() - startTime
+                val body = response.body?.string() ?: ""
+
                 if (response.isSuccessful) {
-                    val body = response.body?.string() ?: ""
-                    parseModelsList(body)
+                    val parsed = parseModelsList(body)
+                    val sorted = parsed.sortedWith(compareByDescending<String> {
+                        it.contains("vision", ignoreCase = true) ||
+                        it.contains("flash", ignoreCase = true) ||
+                        it.contains("4o", ignoreCase = true) ||
+                        it.contains("vl", ignoreCase = true) ||
+                        it.contains("claude", ignoreCase = true)
+                    }.thenBy { it })
+
+                    val finalModels = if (sorted.isNotEmpty()) sorted else curated
+                    return@withContext FetchModelsResult(
+                        isSuccess = true,
+                        models = finalModels,
+                        message = "Discovered ${finalModels.size} models from ${provider.name} (${latency}ms)",
+                        suggestedModels = curated,
+                        latencyMs = latency
+                    )
                 } else {
-                    emptyList()
+                    val errorMsg = parseErrorMessage(body)
+                    return@withContext FetchModelsResult(
+                        isSuccess = false,
+                        models = emptyList(),
+                        message = "Server error (${response.code}): $errorMsg",
+                        suggestedModels = curated,
+                        latencyMs = latency
+                    )
                 }
             }
         } catch (e: Exception) {
-            emptyList()
+            val latency = System.currentTimeMillis() - startTime
+            val msg = e.localizedMessage ?: e.javaClass.simpleName
+            return@withContext FetchModelsResult(
+                isSuccess = false,
+                models = emptyList(),
+                message = "Failed to connect: $msg",
+                suggestedModels = curated,
+                latencyMs = latency
+            )
         }
+    }
+
+    suspend fun fetchModelsList(provider: CustomCloudProvider, fallbackGeminiKey: String = ""): List<String> {
+        val result = fetchModels(provider, fallbackGeminiKey)
+        return if (result.isSuccess && result.models.isNotEmpty()) result.models else result.suggestedModels
     }
 
     suspend fun analyzeScreenshot(
@@ -139,8 +410,22 @@ class CloudAiService(
         try {
             val imageBase64 = imageFile?.let { fileToBase64(it) }
 
-            if (provider.isDefaultGemini) {
-                analyzeWithGemini(imageBase64, provider.selectedModel, geminiApiKey, startTime)
+            if (isGeminiProvider(provider)) {
+                val effectiveKey = provider.apiKey.ifBlank { geminiApiKey }.trim()
+                if (effectiveKey.isBlank()) {
+                    return@withContext AiAnalysisResult(
+                        title = "API Key Missing",
+                        description = "Google Gemini API key is missing. Please enter your API key in Settings.",
+                        tags = listOf("Error"),
+                        modelUsed = provider.selectedModel,
+                        processingTimeMs = System.currentTimeMillis() - startTime,
+                        isSuccess = false,
+                        errorMessage = "Gemini API key is required"
+                    )
+                }
+                analyzeWithGemini(imageBase64, provider.selectedModel, effectiveKey, startTime)
+            } else if (isAnthropicProvider(provider)) {
+                analyzeWithAnthropic(imageBase64, provider, startTime)
             } else {
                 analyzeWithCustomCloudProvider(imageBase64, provider, startTime)
             }
@@ -228,6 +513,83 @@ class CloudAiService(
 
             val content = extractChatCompletionContent(body)
             return parseAiJsonOutput(content, provider.selectedModel, elapsed)
+        }
+    }
+
+    private fun analyzeWithAnthropic(
+        imageBase64: String?,
+        provider: CustomCloudProvider,
+        startTime: Long
+    ): AiAnalysisResult {
+        val effectiveModel = provider.selectedModel.ifBlank { "claude-3-5-sonnet-20241022" }
+        val prompt = buildAnalysisPrompt()
+        val url = if (provider.baseUrl.endsWith("/v1/messages")) provider.baseUrl
+        else if (provider.baseUrl.endsWith("/v1")) "${provider.baseUrl}/messages"
+        else "${normalizeBaseUrl(provider.baseUrl)}/v1/messages"
+
+        val root = JSONObject().apply {
+            put("model", effectiveModel)
+            put("max_tokens", 1024)
+            val messages = JSONArray()
+            val userMsg = JSONObject().apply {
+                put("role", "user")
+                val contentArray = JSONArray()
+
+                val textContent = JSONObject().apply {
+                    put("type", "text")
+                    put("text", prompt)
+                }
+                contentArray.put(textContent)
+
+                if (!imageBase64.isNullOrBlank()) {
+                    val imageContent = JSONObject().apply {
+                        put("type", "image")
+                        val sourceObj = JSONObject().apply {
+                            put("type", "base64")
+                            put("media_type", "image/jpeg")
+                            put("data", imageBase64)
+                        }
+                        put("source", sourceObj)
+                    }
+                    contentArray.put(imageContent)
+                }
+
+                put("content", contentArray)
+            }
+            messages.put(userMsg)
+            put("messages", messages)
+        }
+
+        val requestBody = root.toString().toRequestBody("application/json".toMediaType())
+        val requestBuilder = Request.Builder()
+            .url(url)
+            .post(requestBody)
+            .addHeader("x-api-key", provider.apiKey.trim())
+            .addHeader("anthropic-version", "2023-06-01")
+
+        parseCustomHeaders(provider.customHeadersJson).forEach { (k, v) ->
+            requestBuilder.addHeader(k, v)
+        }
+
+        client.newCall(requestBuilder.build()).execute().use { response ->
+            val elapsed = System.currentTimeMillis() - startTime
+            val body = response.body?.string() ?: ""
+
+            if (!response.isSuccessful) {
+                val errorMsg = parseErrorMessage(body)
+                return AiAnalysisResult(
+                    title = "Anthropic Error",
+                    description = "Error ${response.code}: $errorMsg",
+                    tags = listOf("Error"),
+                    modelUsed = effectiveModel,
+                    processingTimeMs = elapsed,
+                    isSuccess = false,
+                    errorMessage = "Anthropic API error (${response.code}): $errorMsg"
+                )
+            }
+
+            val text = extractClaudeContent(body)
+            return parseAiJsonOutput(text, effectiveModel, elapsed)
         }
     }
 
@@ -396,28 +758,83 @@ class CloudAiService(
         return ""
     }
 
-    private fun parseModelsList(jsonString: String): List<String> {
-        val models = mutableListOf<String>()
+    private fun extractClaudeContent(responseBody: String): String {
         try {
-            val json = JSONObject(jsonString)
+            val json = JSONObject(responseBody)
+            val contentArr = json.optJSONArray("content")
+            if (contentArr != null && contentArr.length() > 0) {
+                val sb = StringBuilder()
+                for (i in 0 until contentArr.length()) {
+                    val block = contentArr.optJSONObject(i)
+                    if (block != null && block.optString("type") == "text") {
+                        sb.append(block.optString("text"))
+                    }
+                }
+                if (sb.isNotEmpty()) return sb.toString()
+            }
+        } catch (_: Exception) {}
+        return ""
+    }
+
+    fun parseModelsList(jsonString: String): List<String> {
+        val models = mutableListOf<String>()
+        val trimmed = jsonString.trim()
+        try {
+            if (trimmed.startsWith("[")) {
+                val array = JSONArray(trimmed)
+                for (i in 0 until array.length()) {
+                    val item = array.optJSONObject(i)
+                    if (item != null) {
+                        val id = item.optString("id").ifBlank { item.optString("name").ifBlank { item.optString("model") } }
+                        val cleanId = id.removePrefix("models/")
+                        if (cleanId.isNotBlank() && !models.contains(cleanId)) {
+                            models.add(cleanId)
+                        }
+                    } else {
+                        val str = array.optString(i).removePrefix("models/")
+                        if (str.isNotBlank() && !models.contains(str)) {
+                            models.add(str)
+                        }
+                    }
+                }
+                return models
+            }
+
+            val json = JSONObject(trimmed)
             val data = json.optJSONArray("data")
             if (data != null) {
                 for (i in 0 until data.length()) {
                     val item = data.optJSONObject(i)
-                    val id = item?.optString("id")
-                    if (!id.isNullOrBlank()) {
-                        models.add(id)
+                    if (item != null) {
+                        val id = item.optString("id").ifBlank { item.optString("name").ifBlank { item.optString("model") } }
+                        val cleanId = id.removePrefix("models/")
+                        if (cleanId.isNotBlank() && !models.contains(cleanId)) {
+                            models.add(cleanId)
+                        }
+                    } else {
+                        val str = data.optString(i).removePrefix("models/")
+                        if (str.isNotBlank() && !models.contains(str)) {
+                            models.add(str)
+                        }
                     }
                 }
-            } else {
-                // Ollama format: "models": [{"name": "..."}]
-                val ollamaModels = json.optJSONArray("models")
-                if (ollamaModels != null) {
-                    for (i in 0 until ollamaModels.length()) {
-                        val item = ollamaModels.optJSONObject(i)
-                        val name = item?.optString("name")
-                        if (!name.isNullOrBlank()) {
-                            models.add(name)
+            }
+
+            // Ollama or Gemini format: "models": [...]
+            val modelsArray = json.optJSONArray("models")
+            if (modelsArray != null) {
+                for (i in 0 until modelsArray.length()) {
+                    val item = modelsArray.optJSONObject(i)
+                    if (item != null) {
+                        val rawName = item.optString("name").ifBlank { item.optString("id").ifBlank { item.optString("model") } }
+                        val cleanName = rawName.removePrefix("models/")
+                        if (cleanName.isNotBlank() && !models.contains(cleanName)) {
+                            models.add(cleanName)
+                        }
+                    } else {
+                        val str = modelsArray.optString(i).removePrefix("models/")
+                        if (str.isNotBlank() && !models.contains(str)) {
+                            models.add(str)
                         }
                     }
                 }
@@ -449,33 +866,37 @@ class CloudAiService(
             preferRgb565 = true
         ) ?: return ""
 
-        val ratio = Math.min(
-            targetDim.toFloat() / bitmap.width,
-            targetDim.toFloat() / bitmap.height
-        )
-        val scaled = if (ratio < 1.0f) {
-            val res = Bitmap.createScaledBitmap(
-                bitmap,
-                Math.max(1, (bitmap.width * ratio).toInt()),
-                Math.max(1, (bitmap.height * ratio).toInt()),
-                true
+        try {
+            val ratio = Math.min(
+                targetDim.toFloat() / bitmap.width,
+                targetDim.toFloat() / bitmap.height
             )
-            if (res != bitmap) {
+            val scaled = if (ratio < 1.0f) {
+                Bitmap.createScaledBitmap(
+                    bitmap,
+                    Math.max(1, (bitmap.width * ratio).toInt()),
+                    Math.max(1, (bitmap.height * ratio).toInt()),
+                    true
+                )
+            } else {
+                bitmap
+            }
+
+            try {
+                val outputStream = ByteArrayOutputStream()
+                scaled.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
+                val bytes = outputStream.toByteArray()
+                return Base64.encodeToString(bytes, Base64.NO_WRAP)
+            } finally {
+                if (scaled !== bitmap && !scaled.isRecycled) {
+                    scaled.recycle()
+                }
+            }
+        } finally {
+            if (!bitmap.isRecycled) {
                 bitmap.recycle()
             }
-            res
-        } else {
-            bitmap
         }
-
-        val outputStream = ByteArrayOutputStream()
-        scaled.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
-        val bytes = outputStream.toByteArray()
-        if (scaled != bitmap) {
-            scaled.recycle()
-        }
-        bitmap.recycle()
-        return Base64.encodeToString(bytes, Base64.NO_WRAP)
     }
 
     suspend fun extractOcrText(
@@ -491,9 +912,15 @@ class CloudAiService(
             val imageBase64 = fileToBase64(imageFile)
             val ocrPrompt = "Perform high-accuracy optical character recognition (OCR) on this image. Extract and transcribe ALL text, numbers, codes, labels, dates, and links verbatim in order of appearance. Do not add markdown fences, intros, or summaries. Output purely the transcribed text."
 
-            if (provider.isDefaultGemini) {
+            val isGemini = isGeminiProvider(provider)
+            val effectiveGeminiKey = provider.apiKey.ifBlank { geminiApiKey }.trim()
+
+            if (isGemini) {
+                if (effectiveGeminiKey.isBlank()) {
+                    return@withContext Result.failure(IllegalStateException("Google Gemini API key is required. Please set up your key in Settings."))
+                }
                 val effectiveModel = provider.selectedModel.ifBlank { "gemini-2.5-flash" }
-                val url = "https://generativelanguage.googleapis.com/v1beta/models/$effectiveModel:generateContent?key=$geminiApiKey"
+                val url = "https://generativelanguage.googleapis.com/v1beta/models/$effectiveModel:generateContent?key=$effectiveGeminiKey"
 
                 val root = JSONObject().apply {
                     val contents = JSONArray()
@@ -598,9 +1025,23 @@ Do not include any prose outside the JSON.
 """.trimIndent()
 
         try {
-            if (provider.isDefaultGemini) {
+            val isGemini = isGeminiProvider(provider)
+            val effectiveGeminiKey = provider.apiKey.ifBlank { geminiApiKey }.trim()
+
+            if (isGemini) {
+                if (effectiveGeminiKey.isBlank()) {
+                    return@withContext AiAnalysisResult(
+                        title = "API Key Missing",
+                        description = "Google Gemini API key is missing. Please set up your key in Settings.",
+                        tags = listOf("Error"),
+                        modelUsed = provider.selectedModel,
+                        processingTimeMs = System.currentTimeMillis() - startTime,
+                        isSuccess = false,
+                        errorMessage = "Gemini API key is required"
+                    )
+                }
                 val effectiveModel = provider.selectedModel.ifBlank { "gemini-2.5-flash" }
-                val url = "https://generativelanguage.googleapis.com/v1beta/models/$effectiveModel:generateContent?key=$geminiApiKey"
+                val url = "https://generativelanguage.googleapis.com/v1beta/models/$effectiveModel:generateContent?key=$effectiveGeminiKey"
 
                 val root = JSONObject().apply {
                     val contents = JSONArray()

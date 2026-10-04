@@ -1,6 +1,8 @@
 package com.example.viewmodel
 
 import android.app.Application
+import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -22,8 +24,13 @@ import com.example.data.repository.ScreenshotRepository
 import com.example.service.ai.AiAnalysisResult
 import com.example.service.ai.CloudAiService
 import com.example.service.ai.ConnectionTestResult
+import com.example.service.backup.BackupData
+import com.example.service.backup.BackupRestoreManager
+import com.example.service.backup.RestoreMode
+import com.example.service.backup.RestoreResult
 import com.example.service.exif.ExifMetadataManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -31,6 +38,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -38,6 +47,18 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+
+data class IndexingState(
+    val isIndexing: Boolean = false,
+    val current: Int = 0,
+    val total: Int = 0,
+    val progress: Float = 0f,
+    val currentItemTitle: String = "",
+    val currentModel: String = "",
+    val successCount: Int = 0,
+    val failureCount: Int = 0,
+    val isCancelled: Boolean = false
+)
 
 enum class ScreenshotFilter(val displayName: String) {
     ALL("All"),
@@ -100,35 +121,69 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     private val _analysisStatusText = MutableStateFlow<String?>(null)
     val analysisStatusText: StateFlow<String?> = _analysisStatusText.asStateFlow()
 
+    private val _indexingState = MutableStateFlow(IndexingState())
+    val indexingState: StateFlow<IndexingState> = _indexingState.asStateFlow()
+
+    private var indexingJob: kotlinx.coroutines.Job? = null
+
     private val _snackbarMessage = MutableStateFlow<String?>(null)
     val snackbarMessage: StateFlow<String?> = _snackbarMessage.asStateFlow()
 
     private val _exifDataState = MutableStateFlow<Map<String, ExifData>>(emptyMap())
     val exifDataState: StateFlow<Map<String, ExifData>> = _exifDataState.asStateFlow()
 
-    // Enhanced Settings Controls
-    val ocrEnabled = MutableStateFlow(true)
-    val linksDetectionEnabled = MutableStateFlow(true)
-    val smartTagsEnabled = MutableStateFlow(true)
-    val remindersDetectionEnabled = MutableStateFlow(true)
-    val autoSyncDeviceMedia = MutableStateFlow(true)
-    val aiQualityPreset = MutableStateFlow("Balanced") // "Fast", "Balanced", "Deep"
-    val autoWriteExifSetting = MutableStateFlow(false) // Default to NOT writing directly to metadata
+    private val prefs = application.getSharedPreferences("emreshots_settings", Context.MODE_PRIVATE)
+
+    // Enhanced Settings Controls (persisted via SharedPreferences)
+    val ocrEnabled = MutableStateFlow(prefs.getBoolean("ocr_enabled", true))
+    val linksDetectionEnabled = MutableStateFlow(prefs.getBoolean("links_detection_enabled", true))
+    val smartTagsEnabled = MutableStateFlow(prefs.getBoolean("smart_tags_enabled", true))
+    val remindersDetectionEnabled = MutableStateFlow(prefs.getBoolean("reminders_detection_enabled", true))
+    val autoSyncDeviceMedia = MutableStateFlow(prefs.getBoolean("auto_sync_device_media", true))
+    val aiQualityPreset = MutableStateFlow(prefs.getString("ai_quality_preset", "Balanced") ?: "Balanced")
+    val autoWriteExifSetting = MutableStateFlow(prefs.getBoolean("auto_write_exif", false))
     val isLowEndDevice = com.example.service.perf.PerformanceManager.isLowEndDevice(application)
     val isLowRamDevice = com.example.service.perf.PerformanceManager.isLowRamDevice(application)
-    val gridColumns = MutableStateFlow(if (isLowEndDevice) 2 else 2)
+    val gridColumns = MutableStateFlow(prefs.getInt("grid_columns", if (isLowEndDevice) 2 else 2))
+
+    private val _lastBackupInfo = MutableStateFlow(prefs.getString("last_backup_info", null))
+    val lastBackupInfo: StateFlow<String?> = _lastBackupInfo.asStateFlow()
 
     val isExtractingOcr = MutableStateFlow(false)
     val ocrStatusText = MutableStateFlow<String?>(null)
 
-    fun setOcrEnabled(enabled: Boolean) { ocrEnabled.value = enabled }
-    fun setLinksDetectionEnabled(enabled: Boolean) { linksDetectionEnabled.value = enabled }
-    fun setSmartTagsEnabled(enabled: Boolean) { smartTagsEnabled.value = enabled }
-    fun setRemindersDetectionEnabled(enabled: Boolean) { remindersDetectionEnabled.value = enabled }
-    fun setAutoSyncDeviceMedia(enabled: Boolean) { autoSyncDeviceMedia.value = enabled }
-    fun setAiQualityPreset(preset: String) { aiQualityPreset.value = preset }
-    fun setAutoWriteExifSetting(enabled: Boolean) { autoWriteExifSetting.value = enabled }
-    fun setGridColumns(cols: Int) { gridColumns.value = cols }
+    fun setOcrEnabled(enabled: Boolean) {
+        ocrEnabled.value = enabled
+        prefs.edit().putBoolean("ocr_enabled", enabled).apply()
+    }
+    fun setLinksDetectionEnabled(enabled: Boolean) {
+        linksDetectionEnabled.value = enabled
+        prefs.edit().putBoolean("links_detection_enabled", enabled).apply()
+    }
+    fun setSmartTagsEnabled(enabled: Boolean) {
+        smartTagsEnabled.value = enabled
+        prefs.edit().putBoolean("smart_tags_enabled", enabled).apply()
+    }
+    fun setRemindersDetectionEnabled(enabled: Boolean) {
+        remindersDetectionEnabled.value = enabled
+        prefs.edit().putBoolean("reminders_detection_enabled", enabled).apply()
+    }
+    fun setAutoSyncDeviceMedia(enabled: Boolean) {
+        autoSyncDeviceMedia.value = enabled
+        prefs.edit().putBoolean("auto_sync_device_media", enabled).apply()
+    }
+    fun setAiQualityPreset(preset: String) {
+        aiQualityPreset.value = preset
+        prefs.edit().putString("ai_quality_preset", preset).apply()
+    }
+    fun setAutoWriteExifSetting(enabled: Boolean) {
+        autoWriteExifSetting.value = enabled
+        prefs.edit().putBoolean("auto_write_exif", enabled).apply()
+    }
+    fun setGridColumns(cols: Int) {
+        gridColumns.value = cols
+        prefs.edit().putInt("grid_columns", cols).apply()
+    }
 
     @OptIn(coil.annotation.ExperimentalCoilApi::class)
     fun clearThumbnailCache() {
@@ -243,14 +298,38 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     init {
-        // Ensure initial seed data is loaded if first run, and purge legacy preset providers
         viewModelScope.launch(Dispatchers.IO) {
             seedInitialData(database, getApplication())
-            try {
-                database.providerDao().deletePresetProviders()
-            } catch (_: Exception) {}
+            ensureDefaultProviderIfNeeded()
+            // Ensure that if providers exist but none is currently marked active, activate the first one
+            val active = providerRepository.getActiveProviderSync()
+            if (active == null) {
+                val all = providerRepository.getAllProvidersSync()
+                if (all.isNotEmpty()) {
+                    providerRepository.setActiveProvider(all.first().id)
+                }
+            }
         }
         checkPermissions()
+    }
+
+    private suspend fun ensureDefaultProviderIfNeeded() {
+        val existing = providerRepository.getAllProvidersSync()
+        if (existing.isEmpty()) {
+            val geminiKey = try {
+                BuildConfig::class.java.getField("GEMINI_API_KEY").get(null) as? String ?: ""
+            } catch (_: Exception) { "" }
+            val defaultProvider = CustomCloudProvider(
+                id = "default-gemini",
+                name = "Google Gemini",
+                baseUrl = "https://generativelanguage.googleapis.com",
+                apiKey = geminiKey,
+                selectedModel = "gemini-2.5-flash",
+                isActive = true,
+                isDefaultGemini = true
+            )
+            providerRepository.saveProvider(defaultProvider, makeActive = true)
+        }
     }
 
     fun checkPermissions() {
@@ -475,6 +554,98 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    private fun resolveImageFile(screenshot: ScreenshotItem): File? {
+        val direct = File(screenshot.filePath)
+        if (direct.exists() && direct.canRead() && direct.length() > 0) {
+            return direct
+        }
+        if (!screenshot.uriString.isNullOrBlank()) {
+            try {
+                val uri = Uri.parse(screenshot.uriString)
+                val context = getApplication<Application>()
+                val cacheDir = File(context.cacheDir, "ai_media_cache").apply { mkdirs() }
+                val safeId = screenshot.id.replace(Regex("[^a-zA-Z0-9_-]"), "_")
+                val cacheFile = File(cacheDir, "cached_${safeId}.jpg")
+                if (cacheFile.exists() && cacheFile.length() > 0 && cacheFile.lastModified() >= screenshot.addedOn) {
+                    return cacheFile
+                }
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    FileOutputStream(cacheFile).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                if (cacheFile.exists() && cacheFile.length() > 0) {
+                    return cacheFile
+                }
+            } catch (_: Exception) {}
+        }
+        return null
+    }
+
+    private suspend fun analyzeScreenshotInternal(
+        screenshot: ScreenshotItem,
+        autoWriteExif: Boolean
+    ): AiAnalysisResult {
+        val provider = activeProvider.value ?: return AiAnalysisResult(
+            isSuccess = false,
+            errorMessage = "No AI provider configured. Please set up your endpoint in Settings."
+        )
+
+        val file = resolveImageFile(screenshot)
+        val geminiKey = try {
+            BuildConfig::class.java.getField("GEMINI_API_KEY").get(null) as? String ?: ""
+        } catch (_: Exception) { "" }
+
+        val result = aiService.analyzeScreenshot(
+            imageFile = file,
+            provider = provider,
+            geminiApiKey = provider.apiKey.ifBlank { geminiKey }
+        )
+
+        if (result.isSuccess) {
+            val matchedCol = collections.value.find {
+                it.name.equals(result.suggestedCollection, ignoreCase = true)
+            }
+            val newColIds = if (matchedCol != null && !screenshot.collectionIds.contains(matchedCol.id)) {
+                screenshot.collectionIds + matchedCol.id
+            } else {
+                screenshot.collectionIds
+            }
+
+            var updatedScreenshot = screenshot.copy(
+                title = if (result.title.isNotBlank()) result.title else screenshot.title,
+                description = if (result.description.isNotBlank()) result.description else screenshot.description,
+                ocrText = result.ocrText ?: screenshot.ocrText,
+                tags = (screenshot.tags + result.tags).distinct(),
+                links = (screenshot.links + result.detectedLinks).distinct(),
+                collectionIds = newColIds,
+                aiProcessed = true,
+                aiModelUsed = result.modelUsed
+            )
+
+            if (autoWriteExif) {
+                val aiExifResult = exifManager.applyAiMetadataToExifSafe(
+                    context = getApplication(),
+                    screenshot = updatedScreenshot,
+                    title = updatedScreenshot.title,
+                    description = updatedScreenshot.description,
+                    tags = updatedScreenshot.tags,
+                    modelName = result.modelUsed
+                )
+                if (aiExifResult.isSuccess) {
+                    val (savedFile, exif) = aiExifResult.getOrThrow()
+                    updatedScreenshot = updatedScreenshot.copy(filePath = savedFile.absolutePath)
+                    val current = _exifDataState.value.toMutableMap()
+                    current[screenshot.id] = exif
+                    _exifDataState.value = current
+                }
+            }
+
+            screenshotRepository.update(updatedScreenshot)
+        }
+        return result
+    }
+
     fun analyzeScreenshot(
         screenshot: ScreenshotItem,
         autoWriteExif: Boolean = autoWriteExifSetting.value,
@@ -484,66 +655,19 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             val provider = activeProvider.value
             if (provider == null) {
                 _snackbarMessage.value = "No AI provider configured. Please set up your endpoint in Settings."
-                onComplete?.invoke(AiAnalysisResult(isSuccess = false, errorMessage = "No AI provider configured. Please set up your endpoint in Settings."))
+                val errorResult = AiAnalysisResult(isSuccess = false, errorMessage = "No AI provider configured. Please set up your endpoint in Settings.")
+                withContext(Dispatchers.Main) {
+                    onComplete?.invoke(errorResult)
+                }
                 return@launch
             }
 
             _isAnalyzing.value = true
             _analysisStatusText.value = "Analyzing with ${provider.name}..."
 
-            val file = File(screenshot.filePath).takeIf { it.exists() }
-            val geminiKey = try {
-                BuildConfig::class.java.getField("GEMINI_API_KEY").get(null) as? String ?: ""
-            } catch (_: Exception) { "" }
-
-            val result = aiService.analyzeScreenshot(
-                imageFile = file,
-                provider = provider,
-                geminiApiKey = provider.apiKey.ifBlank { geminiKey }
-            )
+            val result = analyzeScreenshotInternal(screenshot, autoWriteExif)
 
             if (result.isSuccess) {
-                // Match suggested collection if available
-                val matchedCol = collections.value.find {
-                    it.name.equals(result.suggestedCollection, ignoreCase = true)
-                }
-                val newColIds = if (matchedCol != null && !screenshot.collectionIds.contains(matchedCol.id)) {
-                    screenshot.collectionIds + matchedCol.id
-                } else {
-                    screenshot.collectionIds
-                }
-
-                var updatedScreenshot = screenshot.copy(
-                    title = if (result.title.isNotBlank()) result.title else screenshot.title,
-                    description = if (result.description.isNotBlank()) result.description else screenshot.description,
-                    ocrText = result.ocrText ?: screenshot.ocrText,
-                    tags = (screenshot.tags + result.tags).distinct(),
-                    links = (screenshot.links + result.detectedLinks).distinct(),
-                    collectionIds = newColIds,
-                    aiProcessed = true,
-                    aiModelUsed = result.modelUsed
-                )
-
-                if (autoWriteExif) {
-                    val aiExifResult = exifManager.applyAiMetadataToExifSafe(
-                        context = getApplication(),
-                        screenshot = updatedScreenshot,
-                        title = updatedScreenshot.title,
-                        description = updatedScreenshot.description,
-                        tags = updatedScreenshot.tags,
-                        modelName = result.modelUsed
-                    )
-                    if (aiExifResult.isSuccess) {
-                        val (savedFile, exif) = aiExifResult.getOrThrow()
-                        updatedScreenshot = updatedScreenshot.copy(filePath = savedFile.absolutePath)
-                        val current = _exifDataState.value.toMutableMap()
-                        current[screenshot.id] = exif
-                        _exifDataState.value = current
-                    }
-                }
-
-                screenshotRepository.update(updatedScreenshot)
-
                 _snackbarMessage.value = "AI Analysis complete via ${result.modelUsed} (${result.processingTimeMs}ms)!"
             } else {
                 _snackbarMessage.value = "AI Analysis failed: ${result.errorMessage ?: "Unknown error"}"
@@ -551,7 +675,9 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
             _isAnalyzing.value = false
             _analysisStatusText.value = null
-            onComplete?.invoke(result)
+            withContext(Dispatchers.Main) {
+                onComplete?.invoke(result)
+            }
         }
     }
 
@@ -560,14 +686,16 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             val provider = activeProvider.value
             if (provider == null) {
                 _snackbarMessage.value = "No AI provider configured. Please set up your endpoint in Settings."
-                onComplete?.invoke(null)
+                withContext(Dispatchers.Main) {
+                    onComplete?.invoke(null)
+                }
                 return@launch
             }
 
             isExtractingOcr.value = true
             ocrStatusText.value = "Extracting text from image..."
 
-            val file = File(screenshot.filePath).takeIf { it.exists() }
+            val file = resolveImageFile(screenshot)
             val geminiKey = try {
                 BuildConfig::class.java.getField("GEMINI_API_KEY").get(null) as? String ?: ""
             } catch (_: Exception) { "" }
@@ -586,10 +714,14 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                 val updated = screenshot.copy(ocrText = ocr)
                 screenshotRepository.update(updated)
                 _snackbarMessage.value = "Text extracted successfully (${ocr.length} chars)!"
-                onComplete?.invoke(ocr)
+                withContext(Dispatchers.Main) {
+                    onComplete?.invoke(ocr)
+                }
             } else {
                 _snackbarMessage.value = "OCR failed: ${result.exceptionOrNull()?.message}"
-                onComplete?.invoke(null)
+                withContext(Dispatchers.Main) {
+                    onComplete?.invoke(null)
+                }
             }
         }
     }
@@ -713,18 +845,109 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun batchAnalyzeScreenshots(screenshots: List<ScreenshotItem>, autoWriteExif: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) {
+    fun startIndexing(
+        targetScreenshots: List<ScreenshotItem>? = null,
+        onlyUnindexed: Boolean = true,
+        autoWriteExif: Boolean = autoWriteExifSetting.value
+    ) {
+        if (_indexingState.value.isIndexing) {
+            _snackbarMessage.value = "AI indexing is already in progress."
+            return
+        }
+
+        val allItems = targetScreenshots ?: allScreenshots.value
+        val items = if (onlyUnindexed) allItems.filter { !it.aiProcessed } else allItems
+
+        if (items.isEmpty()) {
+            _snackbarMessage.value = if (onlyUnindexed && allItems.isNotEmpty())
+                "All ${allItems.size} media items are already indexed with AI!"
+            else
+                "No media items available to index."
+            return
+        }
+
+        val provider = activeProvider.value
+        if (provider == null) {
+            _snackbarMessage.value = "No AI provider configured. Please set up your endpoint in Settings."
+            return
+        }
+
+        indexingJob?.cancel()
+        indexingJob = viewModelScope.launch(Dispatchers.IO) {
+            val total = items.size
+            val modelName = provider.selectedModel.ifBlank { provider.name }
+            _indexingState.value = IndexingState(
+                isIndexing = true,
+                current = 0,
+                total = total,
+                progress = 0f,
+                currentItemTitle = items.first().title.ifBlank { "Starting indexer..." },
+                currentModel = modelName,
+                successCount = 0,
+                failureCount = 0,
+                isCancelled = false
+            )
             _isAnalyzing.value = true
-            val total = screenshots.size
-            screenshots.forEachIndexed { index, item ->
-                _analysisStatusText.value = "Analyzing (${index + 1}/$total): ${item.title.ifBlank { "Screenshot" }}"
-                analyzeScreenshot(item, autoWriteExif)
+
+            var successes = 0
+            var failures = 0
+
+            for ((index, item) in items.withIndex()) {
+                if (!isActive) {
+                    break
+                }
+
+                val itemTitle = item.title.ifBlank { "Media #${index + 1}" }
+                _indexingState.value = _indexingState.value.copy(
+                    current = index + 1,
+                    progress = index.toFloat() / total,
+                    currentItemTitle = itemTitle
+                )
+                _analysisStatusText.value = "Indexing (${index + 1}/$total): $itemTitle"
+
+                val res = analyzeScreenshotInternal(item, autoWriteExif)
+                if (res.isSuccess) {
+                    successes++
+                } else {
+                    failures++
+                }
+
+                _indexingState.value = _indexingState.value.copy(
+                    progress = (index + 1).toFloat() / total,
+                    successCount = successes,
+                    failureCount = failures
+                )
             }
+
+            val wasCancelled = !isActive
+            _indexingState.value = _indexingState.value.copy(
+                isIndexing = false,
+                isCancelled = wasCancelled,
+                progress = if (wasCancelled) _indexingState.value.progress else 1f
+            )
             _isAnalyzing.value = false
             _analysisStatusText.value = null
-            _snackbarMessage.value = "Batch analysis finished for $total screenshots!"
+
+            if (wasCancelled) {
+                _snackbarMessage.value = "AI indexing cancelled ($successes of $total processed)."
+            } else {
+                _snackbarMessage.value = "AI Indexing complete: $successes indexed successfully" +
+                        if (failures > 0) " ($failures failed)" else "!"
+            }
         }
+    }
+
+    fun cancelIndexing() {
+        indexingJob?.cancel()
+        indexingJob = null
+        _indexingState.value = _indexingState.value.copy(isIndexing = false, isCancelled = true)
+        _isAnalyzing.value = false
+        _analysisStatusText.value = null
+        _snackbarMessage.value = "AI indexing cancelled"
+    }
+
+    fun batchAnalyzeScreenshots(screenshots: List<ScreenshotItem>, autoWriteExif: Boolean = autoWriteExifSetting.value) {
+        startIndexing(targetScreenshots = screenshots, onlyUnindexed = false, autoWriteExif = autoWriteExif)
     }
 
     fun toggleFavorite(screenshot: ScreenshotItem) {
@@ -838,8 +1061,10 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                 val prefix = if (isVideo) "vid" else "img"
                 val targetFile = File(dir, "${prefix}_${System.currentTimeMillis()}.$extension")
 
-                FileOutputStream(targetFile).use { out ->
-                    inputStream.copyTo(out)
+                inputStream.use { input ->
+                    FileOutputStream(targetFile).use { out ->
+                        input.copyTo(out)
+                    }
                 }
 
                 var width = 0
@@ -847,14 +1072,18 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                 var duration = 0L
 
                 if (isVideo) {
+                    val retriever = android.media.MediaMetadataRetriever()
                     try {
-                        val retriever = android.media.MediaMetadataRetriever()
                         retriever.setDataSource(targetFile.absolutePath)
                         width = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0
                         height = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 0
                         duration = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
-                        retriever.release()
-                    } catch (_: Exception) {}
+                    } catch (_: Exception) {
+                    } finally {
+                        try {
+                            retriever.release()
+                        } catch (_: Exception) {}
+                    }
                 } else {
                     val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                     BitmapFactory.decodeFile(targetFile.absolutePath, options)
@@ -889,17 +1118,23 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     // Provider Management
-    fun saveProvider(provider: CustomCloudProvider) {
+    fun saveProvider(provider: CustomCloudProvider, makeActive: Boolean = true) {
         viewModelScope.launch(Dispatchers.IO) {
-            providerRepository.insert(provider)
-            _snackbarMessage.value = "Provider '${provider.name}' saved!"
+            val isGemini = provider.baseUrl.contains("generativelanguage.googleapis.com") ||
+                    provider.name.contains("Gemini", ignoreCase = true)
+            val updated = provider.copy(
+                isDefaultGemini = isGemini || provider.isDefaultGemini
+            )
+            providerRepository.saveProvider(updated, makeActive)
+            val action = if (makeActive) "saved & activated" else "saved"
+            _snackbarMessage.value = "AI Provider '${updated.name}' $action!"
         }
     }
 
     fun deleteProvider(provider: CustomCloudProvider) {
         viewModelScope.launch(Dispatchers.IO) {
-            providerRepository.delete(provider)
-            _snackbarMessage.value = "Provider removed"
+            providerRepository.deleteProviderWithFallback(provider)
+            _snackbarMessage.value = "Provider '${provider.name}' removed"
         }
     }
 
@@ -913,7 +1148,10 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     fun testProviderConnection(provider: CustomCloudProvider, onResult: (ConnectionTestResult) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
-            val result = aiService.testConnection(provider)
+            val geminiKey = try {
+                BuildConfig::class.java.getField("GEMINI_API_KEY").get(null) as? String ?: ""
+            } catch (_: Exception) { "" }
+            val result = aiService.testConnection(provider, geminiKey)
             val updated = provider.copy(
                 lastTestedTime = System.currentTimeMillis(),
                 lastTestStatus = if (result.isSuccess) "Connected (${result.latencyMs}ms)" else result.message
@@ -923,10 +1161,224 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun fetchProviderModels(provider: CustomCloudProvider, onResult: (List<String>) -> Unit) {
+    fun fetchProviderModels(provider: CustomCloudProvider, onResult: (com.example.service.ai.FetchModelsResult) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
-            val models = aiService.fetchModels(provider)
-            onResult(models)
+            val geminiKey = try {
+                BuildConfig::class.java.getField("GEMINI_API_KEY").get(null) as? String ?: ""
+            } catch (_: Exception) { "" }
+            val result = aiService.fetchModels(provider, geminiKey)
+            onResult(result)
+        }
+    }
+
+    // Backup & Restore
+    private fun getSettingsMap(): Map<String, String> {
+        return mapOf(
+            "ocr_enabled" to ocrEnabled.value.toString(),
+            "links_detection_enabled" to linksDetectionEnabled.value.toString(),
+            "smart_tags_enabled" to smartTagsEnabled.value.toString(),
+            "reminders_detection_enabled" to remindersDetectionEnabled.value.toString(),
+            "auto_sync_device_media" to autoSyncDeviceMedia.value.toString(),
+            "ai_quality_preset" to aiQualityPreset.value,
+            "auto_write_exif" to autoWriteExifSetting.value.toString(),
+            "grid_columns" to gridColumns.value.toString()
+        )
+    }
+
+    fun exportBackupJson(): String {
+        // Safe synchronous fallback using current state (never blocks main thread or Room)
+        val shots = allScreenshots.value
+        val cols = collections.value
+        val provs = providers.value
+        return BackupRestoreManager.createBackupJson(shots, cols, provs, getSettingsMap())
+    }
+
+    suspend fun generateBackupJson(): String = withContext(Dispatchers.IO) {
+        val shots = screenshotRepository.getAllScreenshotsSync()
+        val cols = collectionRepository.getAllCollectionsSync()
+        val provs = providerRepository.getAllProvidersSync()
+        BackupRestoreManager.createBackupJson(shots, cols, provs, getSettingsMap())
+    }
+
+    fun exportBackupToUri(context: Context, uri: Uri, onComplete: ((Result<Unit>) -> Unit)? = null) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val json = generateBackupJson()
+                val writeResult = BackupRestoreManager.writeBackupToUri(context, uri, json)
+                withContext(Dispatchers.Main) {
+                    if (writeResult.isSuccess) {
+                        val count = allScreenshots.value.size
+                        val timeStr = SimpleDateFormat("MMM d, yyyy HH:mm", Locale.getDefault()).format(Date())
+                        val info = "Last export: $timeStr ($count items)"
+                        _lastBackupInfo.value = info
+                        prefs.edit().putString("last_backup_info", info).apply()
+                        _snackbarMessage.value = "Backup successfully exported!"
+                    } else {
+                        _snackbarMessage.value = "Failed to export backup: ${writeResult.exceptionOrNull()?.message}"
+                    }
+                    onComplete?.invoke(writeResult)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    _snackbarMessage.value = "Export error: ${e.message}"
+                    onComplete?.invoke(Result.failure(e))
+                }
+            }
+        }
+    }
+
+    fun shareBackup(context: Context) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val json = generateBackupJson()
+                withContext(Dispatchers.Main) {
+                    val sendIntent = Intent().apply {
+                        action = Intent.ACTION_SEND
+                        putExtra(Intent.EXTRA_TEXT, json)
+                        type = "text/plain"
+                    }
+                    val shareIntent = Intent.createChooser(sendIntent, "Share EmreShots Backup JSON")
+                    shareIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    context.startActivity(shareIntent)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    _snackbarMessage.value = "Failed to share backup: ${e.message}"
+                }
+            }
+        }
+    }
+
+    fun createBackupFile(onComplete: ((Result<File>) -> Unit)? = null) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val json = generateBackupJson()
+                val result = BackupRestoreManager.createLocalBackupFile(getApplication(), json)
+                if (result.isSuccess) {
+                    val file = result.getOrThrow()
+                    val count = allScreenshots.value.size
+                    val timeStr = SimpleDateFormat("MMM d, yyyy HH:mm", Locale.getDefault()).format(Date())
+                    val info = "Last backup: $timeStr ($count items)"
+                    _lastBackupInfo.value = info
+                    prefs.edit().putString("last_backup_info", info).apply()
+                    _snackbarMessage.value = "Backup created: ${file.name} ($count items)"
+                } else {
+                    _snackbarMessage.value = "Failed to create backup: ${result.exceptionOrNull()?.message}"
+                }
+                withContext(Dispatchers.Main) {
+                    onComplete?.invoke(result)
+                }
+            } catch (e: Exception) {
+                _snackbarMessage.value = "Backup error: ${e.message}"
+                withContext(Dispatchers.Main) {
+                    onComplete?.invoke(Result.failure(e))
+                }
+            }
+        }
+    }
+
+    fun restoreFromUri(uri: Uri, mode: RestoreMode, onComplete: ((RestoreResult) -> Unit)? = null) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val readResult = BackupRestoreManager.readBackupFromUri(getApplication(), uri)
+            if (readResult.isFailure) {
+                val errorMsg = readResult.exceptionOrNull()?.message ?: "Invalid backup file"
+                _snackbarMessage.value = "Failed to read backup: $errorMsg"
+                withContext(Dispatchers.Main) {
+                    onComplete?.invoke(RestoreResult(isSuccess = false, message = errorMsg))
+                }
+                return@launch
+            }
+
+            val data = readResult.getOrThrow()
+            restoreBackupData(data, mode, onComplete)
+        }
+    }
+
+    fun restoreFromJson(jsonString: String, mode: RestoreMode, onComplete: ((RestoreResult) -> Unit)? = null) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val data = BackupRestoreManager.parseBackupJson(jsonString)
+                restoreBackupData(data, mode, onComplete)
+            } catch (e: Exception) {
+                val msg = "Failed to parse backup JSON: ${e.message}"
+                _snackbarMessage.value = msg
+                withContext(Dispatchers.Main) {
+                    onComplete?.invoke(RestoreResult(isSuccess = false, message = msg))
+                }
+            }
+        }
+    }
+
+    private suspend fun restoreBackupData(
+        data: BackupData,
+        mode: RestoreMode,
+        onComplete: ((RestoreResult) -> Unit)? = null
+    ) {
+        try {
+            if (mode == RestoreMode.REPLACE) {
+                screenshotRepository.deleteAll()
+                collectionRepository.deleteAll()
+                providerRepository.deleteAll()
+            }
+
+            // Restore collections
+            if (data.collections.isNotEmpty()) {
+                collectionRepository.insertAll(data.collections)
+            }
+
+            // Restore screenshots
+            if (data.screenshots.isNotEmpty()) {
+                screenshotRepository.insertAll(data.screenshots)
+            }
+
+            // Restore providers
+            if (data.providers.isNotEmpty()) {
+                providerRepository.insertAll(data.providers)
+                val active = providerRepository.getActiveProviderSync()
+                if (active == null) {
+                    providerRepository.setActiveProvider(data.providers.first().id)
+                }
+            } else {
+                ensureDefaultProviderIfNeeded()
+            }
+
+            // Restore settings
+            var settingsRestored = 0
+            data.settings["ocr_enabled"]?.toBooleanStrictOrNull()?.let { setOcrEnabled(it); settingsRestored++ }
+            data.settings["links_detection_enabled"]?.toBooleanStrictOrNull()?.let { setLinksDetectionEnabled(it); settingsRestored++ }
+            data.settings["smart_tags_enabled"]?.toBooleanStrictOrNull()?.let { setSmartTagsEnabled(it); settingsRestored++ }
+            data.settings["reminders_detection_enabled"]?.toBooleanStrictOrNull()?.let { setRemindersDetectionEnabled(it); settingsRestored++ }
+            data.settings["auto_sync_device_media"]?.toBooleanStrictOrNull()?.let { setAutoSyncDeviceMedia(it); settingsRestored++ }
+            data.settings["ai_quality_preset"]?.let { setAiQualityPreset(it); settingsRestored++ }
+            data.settings["auto_write_exif"]?.toBooleanStrictOrNull()?.let { setAutoWriteExifSetting(it); settingsRestored++ }
+            data.settings["grid_columns"]?.toIntOrNull()?.let { setGridColumns(it); settingsRestored++ }
+
+            val totalRestored = data.screenshots.size
+            val timeStr = SimpleDateFormat("MMM d, yyyy HH:mm", Locale.getDefault()).format(Date())
+            val info = "Restored: $timeStr ($totalRestored items)"
+            _lastBackupInfo.value = info
+            prefs.edit().putString("last_backup_info", info).apply()
+
+            val successMsg = "Successfully restored $totalRestored items, ${data.collections.size} collections, ${data.providers.size} AI providers!"
+            _snackbarMessage.value = successMsg
+
+            val result = RestoreResult(
+                isSuccess = true,
+                screenshotsRestored = data.screenshots.size,
+                collectionsRestored = data.collections.size,
+                providersRestored = data.providers.size,
+                settingsRestored = settingsRestored,
+                message = successMsg
+            )
+            withContext(Dispatchers.Main) {
+                onComplete?.invoke(result)
+            }
+        } catch (e: Exception) {
+            val errMsg = "Failed to restore: ${e.message}"
+            _snackbarMessage.value = errMsg
+            withContext(Dispatchers.Main) {
+                onComplete?.invoke(RestoreResult(isSuccess = false, message = errMsg))
+            }
         }
     }
 }

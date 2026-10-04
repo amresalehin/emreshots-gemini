@@ -84,22 +84,23 @@ class DeviceMediaScanner(private val context: Context) {
                 null,
                 sortOrder
             )?.use { cursor ->
-                val idCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-                val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME)
-                val dateCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED)
-                val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.SIZE)
-                val widthCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.WIDTH)
-                val heightCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.HEIGHT)
+                val idCol = cursor.getColumnIndex(MediaStore.Images.Media._ID)
+                if (idCol == -1) return@use
+                val nameCol = cursor.getColumnIndex(MediaStore.Images.Media.DISPLAY_NAME)
+                val dateCol = cursor.getColumnIndex(MediaStore.Images.Media.DATE_ADDED)
+                val sizeCol = cursor.getColumnIndex(MediaStore.Images.Media.SIZE)
+                val widthCol = cursor.getColumnIndex(MediaStore.Images.Media.WIDTH)
+                val heightCol = cursor.getColumnIndex(MediaStore.Images.Media.HEIGHT)
                 val dataCol = cursor.getColumnIndex(MediaStore.Images.Media.DATA)
 
                 var count = 0
                 while (cursor.moveToNext() && count < limit) {
                     val id = cursor.getLong(idCol)
-                    val name = cursor.getString(nameCol) ?: "Photo"
-                    val dateAdded = cursor.getLong(dateCol) * 1000L
-                    val size = cursor.getLong(sizeCol)
-                    val width = cursor.getInt(widthCol)
-                    val height = cursor.getInt(heightCol)
+                    val name = if (nameCol != -1) cursor.getString(nameCol) ?: "Photo" else "Photo"
+                    val dateAdded = if (dateCol != -1) cursor.getLong(dateCol) * 1000L else System.currentTimeMillis()
+                    val size = if (sizeCol != -1) cursor.getLong(sizeCol) else 0L
+                    val width = if (widthCol != -1) cursor.getInt(widthCol) else 0
+                    val height = if (heightCol != -1) cursor.getInt(heightCol) else 0
                     val filePath = if (dataCol != -1) cursor.getString(dataCol) ?: "" else ""
                     val contentUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
 
@@ -150,24 +151,25 @@ class DeviceMediaScanner(private val context: Context) {
                 null,
                 videoSortOrder
             )?.use { cursor ->
-                val idCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID)
-                val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DISPLAY_NAME)
-                val dateCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DATE_ADDED)
-                val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.SIZE)
-                val widthCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.WIDTH)
-                val heightCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.HEIGHT)
-                val durationCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DURATION)
+                val idCol = cursor.getColumnIndex(MediaStore.Video.Media._ID)
+                if (idCol == -1) return@use
+                val nameCol = cursor.getColumnIndex(MediaStore.Video.Media.DISPLAY_NAME)
+                val dateCol = cursor.getColumnIndex(MediaStore.Video.Media.DATE_ADDED)
+                val sizeCol = cursor.getColumnIndex(MediaStore.Video.Media.SIZE)
+                val widthCol = cursor.getColumnIndex(MediaStore.Video.Media.WIDTH)
+                val heightCol = cursor.getColumnIndex(MediaStore.Video.Media.HEIGHT)
+                val durationCol = cursor.getColumnIndex(MediaStore.Video.Media.DURATION)
                 val dataCol = cursor.getColumnIndex(MediaStore.Video.Media.DATA)
 
                 var count = 0
                 while (cursor.moveToNext() && count < limit) {
                     val id = cursor.getLong(idCol)
-                    val name = cursor.getString(nameCol) ?: "Video"
-                    val dateAdded = cursor.getLong(dateCol) * 1000L
-                    val size = cursor.getLong(sizeCol)
-                    val width = cursor.getInt(widthCol)
-                    val height = cursor.getInt(heightCol)
-                    val duration = cursor.getLong(durationCol)
+                    val name = if (nameCol != -1) cursor.getString(nameCol) ?: "Video" else "Video"
+                    val dateAdded = if (dateCol != -1) cursor.getLong(dateCol) * 1000L else System.currentTimeMillis()
+                    val size = if (sizeCol != -1) cursor.getLong(sizeCol) else 0L
+                    val width = if (widthCol != -1) cursor.getInt(widthCol) else 0
+                    val height = if (heightCol != -1) cursor.getInt(heightCol) else 0
+                    val duration = if (durationCol != -1) cursor.getLong(durationCol) else 0L
                     val filePath = if (dataCol != -1) cursor.getString(dataCol) ?: "" else ""
                     val contentUri = ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id)
 

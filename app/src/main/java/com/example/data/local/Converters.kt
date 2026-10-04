@@ -19,7 +19,12 @@ class Converters {
         try {
             val array = JSONArray(json)
             for (i in 0 until array.length()) {
-                list.add(array.getString(i))
+                if (!array.isNull(i)) {
+                    val str = array.optString(i, "").trim()
+                    if (str.isNotBlank() && !str.equals("null", ignoreCase = true)) {
+                        list.add(str)
+                    }
+                }
             }
         } catch (_: Exception) {}
         return list

@@ -1,4 +1,4 @@
-package com.example.ui.components
+package com.amresalehin.emreshots.ui.components
 
 import android.content.Context
 import android.content.Intent
@@ -67,7 +67,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.example.data.model.ScreenshotItem
+import com.amresalehin.emreshots.data.model.ScreenshotItem
 import kotlinx.coroutines.delay
 import java.io.File
 import java.util.Locale

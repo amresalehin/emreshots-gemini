@@ -1,4 +1,4 @@
-package com.example.ui.components
+package com.amresalehin.emreshots.ui.components
 
 import android.graphics.Bitmap
 import android.net.Uri
@@ -56,8 +56,8 @@ import coil.compose.AsyncImage
 import coil.decode.VideoFrameDecoder
 import coil.request.ImageRequest
 import coil.request.videoFrameMillis
-import com.example.data.model.ScreenshotItem
-import com.example.service.media.VideoThumbnailHelper
+import com.amresalehin.emreshots.data.model.ScreenshotItem
+import com.amresalehin.emreshots.service.media.VideoThumbnailHelper
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -109,7 +109,7 @@ fun ScreenshotFeedCard(
         }
         builder.build()
     }
-    val dateStr = com.example.ui.util.DateUtils.formatFullDate(screenshot.addedOn)
+    val dateStr = com.amresalehin.emreshots.ui.util.DateUtils.formatFullDate(screenshot.addedOn)
 
     Card(
         modifier = modifier
@@ -271,5 +271,5 @@ fun ScreenshotFeedCard(
 }
 
 private fun formatFeedDuration(ms: Long): String {
-    return com.example.ui.util.DateUtils.formatDuration(ms)
+    return com.amresalehin.emreshots.ui.util.DateUtils.formatDuration(ms)
 }

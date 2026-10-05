@@ -1,4 +1,4 @@
-package com.example.ui.components
+package com.amresalehin.emreshots.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -43,8 +43,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.data.model.ExifData
-import com.example.data.model.ScreenshotItem
+import com.amresalehin.emreshots.data.model.ExifData
+import com.amresalehin.emreshots.data.model.ScreenshotItem
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

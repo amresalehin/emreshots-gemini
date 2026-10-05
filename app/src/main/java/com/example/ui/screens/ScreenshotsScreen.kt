@@ -142,6 +142,7 @@ fun ScreenshotsScreen(
     val groupByOption by viewModel.groupByOption.collectAsStateWithLifecycle()
     val viewMode by viewModel.viewMode.collectAsStateWithLifecycle()
     val groupedScreenshots by viewModel.groupedScreenshots.collectAsStateWithLifecycle()
+    val autoSyncDeviceMedia by viewModel.autoSyncDeviceMedia.collectAsStateWithLifecycle()
 
     var isSearchExpanded by remember { mutableStateOf(false) }
     var hidePermissionBanner by remember { mutableStateOf(false) }
@@ -149,6 +150,12 @@ fun ScreenshotsScreen(
     var showMoreMenu by remember { mutableStateOf(false) }
     var pinchNotification by remember { mutableStateOf<String?>(null) }
     val organizeSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    LaunchedEffect(autoSyncDeviceMedia, hasMediaPermissions) {
+        if (autoSyncDeviceMedia && hasMediaPermissions) {
+            viewModel.syncDeviceMedia()
+        }
+    }
 
     LaunchedEffect(pinchNotification) {
         if (pinchNotification != null) {

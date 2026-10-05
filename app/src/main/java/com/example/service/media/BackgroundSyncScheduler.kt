@@ -1,4 +1,4 @@
-package com.example.service.media
+package com.amresalehin.emreshots.service.media
 
 import android.content.Context
 import androidx.work.ExistingPeriodicWorkPolicy

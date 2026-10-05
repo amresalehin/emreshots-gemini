@@ -19,7 +19,7 @@ class MediaSyncManager(private val context: Context) {
     private val dao = database.screenshotDao()
 
     suspend fun synchronize(): MediaSyncResult = withContext(Dispatchers.IO) {
-        if (!scanner.hasAnyMediaPermission()) {
+        if (!DeviceMediaScanner.hasAnyMediaPermission(context)) {
             return@withContext MediaSyncResult(0, 0, 0, dao.getAllScreenshotsSync().size)
         }
 

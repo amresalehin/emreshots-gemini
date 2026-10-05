@@ -1,12 +1,12 @@
-package com.example
+package com.amresalehin.emreshots
 
 import android.Manifest
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import com.example.data.model.ExifData
-import com.example.data.model.ScreenshotItem
-import com.example.service.exif.ExifMetadataManager
-import com.example.service.media.DeviceMediaScanner
+import com.amresalehin.emreshots.data.model.ExifData
+import com.amresalehin.emreshots.data.model.ScreenshotItem
+import com.amresalehin.emreshots.service.exif.ExifMetadataManager
+import com.amresalehin.emreshots.service.media.DeviceMediaScanner
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue

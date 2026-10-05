@@ -647,6 +647,34 @@ fun SettingsScreen(
         }
     }
 
+
+    if (showRestoreModeDialog && pendingRestoreUri != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showRestoreModeDialog = false
+                pendingRestoreUri = null
+            },
+            title = { Text("Restore backup") },
+            text = { Text("Choose how this backup should affect the current library. Merge keeps existing records; Replace clears current library records first.") },
+            confirmButton = {
+                Button(onClick = {
+                    val uri = pendingRestoreUri
+                    showRestoreModeDialog = false
+                    pendingRestoreUri = null
+                    if (uri != null) viewModel.restoreFromUri(uri, RestoreMode.MERGE)
+                }) { Text("Merge") }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = {
+                    val uri = pendingRestoreUri
+                    showRestoreModeDialog = false
+                    pendingRestoreUri = null
+                    if (uri != null) viewModel.restoreFromUri(uri, RestoreMode.REPLACE)
+                }) { Text("Replace") }
+            }
+        )
+    }
+
     if (showEditDialog) {
         ProviderEditDialog(
             initial = editingProvider,

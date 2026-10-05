@@ -1,8 +1,8 @@
-package com.example
+package com.amresalehin.emreshots
 
-import com.example.service.ai.DeviceCapabilities
-import com.example.service.ai.DevicePerformanceTier
-import com.example.service.ai.OnDeviceVisionCatalog
+import com.amresalehin.emreshots.service.ai.DeviceCapabilities
+import com.amresalehin.emreshots.service.ai.DevicePerformanceTier
+import com.amresalehin.emreshots.service.ai.OnDeviceVisionCatalog
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

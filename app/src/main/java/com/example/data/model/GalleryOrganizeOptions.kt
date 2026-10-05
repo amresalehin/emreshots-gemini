@@ -1,4 +1,4 @@
-package com.example.data.model
+package com.amresalehin.emreshots.data.model
 
 enum class MediaSortOption(val displayName: String) {
     NEWEST("Newest"),

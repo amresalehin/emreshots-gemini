@@ -1,9 +1,9 @@
-package com.example
+package com.amresalehin.emreshots
 
 import androidx.test.core.app.ApplicationProvider
-import com.example.service.perf.PerformanceManager
-import com.example.ui.util.DateUtils
-import com.example.viewmodel.ScreenshotsViewModel
+import com.amresalehin.emreshots.service.perf.PerformanceManager
+import com.amresalehin.emreshots.ui.util.DateUtils
+import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue

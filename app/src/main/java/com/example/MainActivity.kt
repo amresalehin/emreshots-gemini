@@ -31,15 +31,11 @@ import com.example.service.media.BackgroundSyncScheduler
 
 class MainActivity : ComponentActivity() {
 
-    override fun onCreate(savedInstanceState: android.os.Bundle?) {
-        super.onCreate(savedInstanceState)
-        BackgroundSyncScheduler.schedule(this)
-    }
-
     private val viewModel: ScreenshotsViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        BackgroundSyncScheduler.schedule(this)
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {

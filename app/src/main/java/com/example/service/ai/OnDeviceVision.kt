@@ -114,21 +114,24 @@ class OnDeviceVisionService(
 ) {
     suspend fun installedModels(): List<OnDeviceVisionModel> = withContext(Dispatchers.Default) {
         OnDeviceVisionCatalog.all().filter { model ->
-            engineFactory(model)?.let { engine ->
-                try {
-                    engine.isAvailable()
-                } finally {
-                    engine.close()
-                }
-            } ?: false
+            val engine = engineFactory(model) ?: return@filter false
+            try {
+                engine.isAvailable()
+            } finally {
+                engine.close()
+            }
         }
+    }
+
+    suspend fun recommend(): OnDeviceModelRecommendation = withContext(Dispatchers.Default) {
+        OnDeviceVisionCatalog.recommend(OnDeviceVisionCapabilityDetector.detect(context))
     }
 
     suspend fun recommendationForInstalledModels(): OnDeviceModelRecommendation {
         val deviceRecommendation = recommend()
-        val installed = installedModels().associateBy { it.id }
-        val available = listOfNotNull(deviceRecommendation.recommended?.takeIf { installed.containsKey(it.id) }) +
-            deviceRecommendation.alternatives.filter { installed.containsKey(it.id) }
+        val installedIds = installedModels().map { it.id }.toSet()
+        val candidates = listOfNotNull(deviceRecommendation.recommended) + deviceRecommendation.alternatives
+        val available = candidates.filter { installedIds.contains(it.id) }
         return OnDeviceModelRecommendation(
             tier = deviceRecommendation.tier,
             recommended = available.firstOrNull(),
@@ -136,46 +139,59 @@ class OnDeviceVisionService(
         )
     }
 
-    suspend fun recommend(): OnDeviceModelRecommendation = withContext(Dispatchers.Default) {
-        OnDeviceVisionCatalog.recommend(OnDeviceVisionCapabilityDetector.detect(context))
-    }
-
     suspend fun resolveModel(preference: String): OnDeviceVisionModel? {
         val capabilities = OnDeviceVisionCapabilityDetector.detect(context)
         return if (preference.isBlank() || preference == "auto") {
             OnDeviceVisionCatalog.recommend(capabilities).recommended
         } else {
-            OnDeviceVisionCatalog.all().firstOrNull { it.id == preference && it.minRamMb <= capabilities.totalRamMb }
+            OnDeviceVisionCatalog.all().firstOrNull {
+                it.id == preference && it.minRamMb <= capabilities.totalRamMb
+            }
         }
     }
 
     suspend fun analyze(
-    private val context: Context,
-    private val engineFactory: (OnDeviceVisionModel) -> OnDeviceVisionEngine? = { null }
-) {
-    suspend fun recommend(): OnDeviceModelRecommendation = withContext(Dispatchers.Default) {
-        OnDeviceVisionCatalog.recommend(OnDeviceVisionCapabilityDetector.detect(context))
-    }
-
-    suspend fun resolveModel(preference: String): OnDeviceVisionModel? {
-        val capabilities = OnDeviceVisionCapabilityDetector.detect(context)
-        return if (preference.isBlank() || preference == "auto") {
-            OnDeviceVisionCatalog.recommend(capabilities).recommended
-        } else {
-            OnDeviceVisionCatalog.all().firstOrNull { it.id == preference && it.minRamMb <= capabilities.totalRamMb }
+        imagePath: String,
+        mode: OnDeviceVisionMode,
+        modelPreference: String,
+        qualityPreset: String
+    ): OnDeviceVisionResult {
+        if (mode == OnDeviceVisionMode.DISABLED) {
+            return OnDeviceVisionResult(
+                isSuccess = false,
+                modelId = modelPreference,
+                errorMessage = "On-device vision is disabled."
+            )
         }
-    }
 
-    suspend fun analyze(imagePath: String, mode: OnDeviceVisionMode, modelPreference: String, qualityPreset: String): OnDeviceVisionResult {
-        if (mode == OnDeviceVisionMode.DISABLED) return OnDeviceVisionResult(false, modelPreference, errorMessage = "On-device vision is disabled.")
-        val model = resolveModel(modelPreference) ?: return OnDeviceVisionResult(false, modelPreference, errorMessage = "No compatible on-device vision model is available for this device.")
-        val engine = engineFactory(model) ?: return OnDeviceVisionResult(false, model.id, errorMessage = "Model runtime for ${model.displayName} is not installed yet.")
+        val model = resolveModel(modelPreference)
+            ?: return OnDeviceVisionResult(
+                isSuccess = false,
+                modelId = modelPreference,
+                errorMessage = "No compatible on-device vision model is available for this device."
+            )
+
+        val engine = engineFactory(model)
+            ?: return OnDeviceVisionResult(
+                isSuccess = false,
+                modelId = model.id,
+                errorMessage = "Model runtime is not installed for the selected local model."
+            )
+
         return try {
             if (!engine.isAvailable()) {
-                OnDeviceVisionResult(false, model.id, errorMessage = "Model ${model.displayName} is unavailable.")
+                OnDeviceVisionResult(
+                    isSuccess = false,
+                    modelId = model.id,
+                    errorMessage = "Model runtime is unavailable."
+                )
             } else {
                 val started = SystemClock.elapsedRealtime()
-                engine.analyze(imagePath, qualityPreset).copy(modelId = model.id, modelUsed = model.displayName, processingTimeMs = SystemClock.elapsedRealtime() - started)
+                engine.analyze(imagePath, qualityPreset).copy(
+                    modelId = model.id,
+                    modelUsed = model.displayName,
+                    processingTimeMs = SystemClock.elapsedRealtime() - started
+                )
             }
         } finally {
             engine.close()

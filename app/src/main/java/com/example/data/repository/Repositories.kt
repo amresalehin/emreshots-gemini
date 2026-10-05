@@ -1,11 +1,11 @@
-package com.example.data.repository
+package com.amresalehin.emreshots.data.repository
 
-import com.example.data.local.CollectionDao
-import com.example.data.local.ProviderDao
-import com.example.data.local.ScreenshotDao
-import com.example.data.model.CollectionItem
-import com.example.data.model.CustomCloudProvider
-import com.example.data.model.ScreenshotItem
+import com.amresalehin.emreshots.data.local.CollectionDao
+import com.amresalehin.emreshots.data.local.ProviderDao
+import com.amresalehin.emreshots.data.local.ScreenshotDao
+import com.amresalehin.emreshots.data.model.CollectionItem
+import com.amresalehin.emreshots.data.model.CustomCloudProvider
+import com.amresalehin.emreshots.data.model.ScreenshotItem
 import kotlinx.coroutines.flow.Flow
 
 class ScreenshotRepository(private val dao: ScreenshotDao) {

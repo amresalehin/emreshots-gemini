@@ -50,7 +50,7 @@ interface VisionRuntimeFactory{fun supports(model:OnDeviceVisionModel,capabiliti
 object OnDeviceVisionCatalog {
     private const val HF="https://huggingface.co"
     private val models=listOf(
-        OnDeviceVisionModel("smolvlm-256m-q4","SmolVLM","SmolVLM 256M Instruct Q4_K_M","0.26B","Q4_K_M",185,1800,2400,
+        OnDeviceVisionModel("smolvlm-256m-q4","SmolVLM","SmolVLM 256M Instruct Q4_K_M","0.26B","Q4_K_M",718,1800,2400,
             capabilities=setOf(OnDeviceVisionCapability.TITLE_GENERATION,OnDeviceVisionCapability.DESCRIPTION_SUMMARY,OnDeviceVisionCapability.TAG_SUGGESTIONS,OnDeviceVisionCapability.CATEGORY_TOPIC,OnDeviceVisionCapability.LINK_DETECTION,OnDeviceVisionCapability.VISUAL_QA,OnDeviceVisionCapability.OCR_CONTEXT),
             expectedSpeed="Fastest local VLM profile",license="Apache-2.0",sourceUrl="$HF/ggml-org/SmolVLM-256M-Instruct-GGUF",artifacts=listOf(
                 ModelArtifact("base","SmolVLM-256M-Instruct-Q4_K_M.gguf","$HF/ggml-org/SmolVLM-256M-Instruct-GGUF/resolve/main/SmolVLM-256M-Instruct-Q4_K_M.gguf",125_000_000,"8f19fa336b353f60389efcdcfe75ab52e584193266646fe397e0de7903319e57"),
@@ -60,11 +60,11 @@ object OnDeviceVisionCatalog {
             expectedSpeed="Fast",license="Apache-2.0",sourceUrl="$HF/ggml-org/SmolVLM2-256M-Video-Instruct-GGUF",artifacts=listOf(
                 ModelArtifact("base","SmolVLM2-256M-Video-Instruct-Q4_K_M.gguf","$HF/ggml-org/SmolVLM2-256M-Video-Instruct-GGUF/resolve/main/SmolVLM2-256M-Video-Instruct-Q4_K_M.gguf",131_000_000,"UNVERIFIED"),
                 ModelArtifact("mmproj","mmproj-SmolVLM2-256M-Video-Instruct-Q8_0.gguf","$HF/ggml-org/SmolVLM2-256M-Video-Instruct-GGUF/resolve/main/mmproj-SmolVLM2-256M-Video-Instruct-Q8_0.gguf",104_000_000,"05d5751132244a6ebd64cba9b34898c0d874b2cb78159d758e1d4da3aad91581"))),
-        OnDeviceVisionModel("gemma-3-4b-q4","Gemma","Gemma 3 4B Instruct Q4_K_M","4B","Q4_K_M",3340,5200,7200,capabilities=OnDeviceVisionCapability.entries.toSet(),
+        OnDeviceVisionModel("gemma-3-4b-q4","Gemma","Gemma 3 4B Instruct Q4_K_M","4B","Q4_K_M",3341,5200,7200,capabilities=OnDeviceVisionCapability.entries.toSet(),
             acceleratorSupport="CPU/NEON; vendor/GPU adapters can share this provider",expectedSpeed="Balanced on 8 GB+ devices",license="Gemma",sourceUrl="$HF/ggml-org/gemma-3-4b-it-GGUF",artifacts=listOf(
                 ModelArtifact("base","gemma-3-4b-it-Q4_K_M.gguf","$HF/ggml-org/gemma-3-4b-it-GGUF/resolve/main/gemma-3-4b-it-Q4_K_M.gguf",2_490_000_000,"882e8d2db44dc554fb0ea5077cb7e4bc49e7342a1f0da57901c0802ea21a0863"),
                 ModelArtifact("mmproj","mmproj-model-f16.gguf","$HF/ggml-org/gemma-3-4b-it-GGUF/resolve/main/mmproj-model-f16.gguf",851_000_000,"8c0fb064b019a6972856aaae2c7e4792858af3ca4561be2dbf649123ba6c40cb"))),
-        OnDeviceVisionModel("qwen2.5-vl-3b-q4","Qwen2.5-VL","Qwen2.5-VL 3B Instruct Q4_K_M","3B","Q4_K_M + Q8 projector",2800,5000,7000,capabilities=OnDeviceVisionCapability.entries.toSet(),
+        OnDeviceVisionModel("qwen2.5-vl-3b-q4","Qwen2.5-VL","Qwen2.5-VL 3B Instruct Q4_K_M","3B","Q4_K_M + Q8 projector",2775,5000,7000,capabilities=OnDeviceVisionCapability.entries.toSet(),
             expectedSpeed="Balanced / high quality",license="Apache-2.0",sourceUrl="$HF/ggml-org/Qwen2.5-VL-3B-Instruct-GGUF",artifacts=listOf(
                 ModelArtifact("base","Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf","$HF/ggml-org/Qwen2.5-VL-3B-Instruct-GGUF/resolve/main/Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf",1_930_000_000,"d02fe9b69ad8cadbbd228e387667af66612c44bed29ffc8eb1e7caf9ac486c12"),
                 ModelArtifact("mmproj","mmproj-Qwen2.5-VL-3B-Instruct-Q8_0.gguf","$HF/ggml-org/Qwen2.5-VL-3B-Instruct-GGUF/resolve/main/mmproj-Qwen2.5-VL-3B-Instruct-Q8_0.gguf",845_000_000,"980c9b2f78c04e6cff93d277ada09e768394f112d75db3b4e9dea8a69f9fb904"))),

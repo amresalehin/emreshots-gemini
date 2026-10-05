@@ -1,4 +1,4 @@
-package com.example.service.ai
+package com.amresalehin.emreshots.service.ai
 
 data class AiAnalysisResult(
     val title: String = "",

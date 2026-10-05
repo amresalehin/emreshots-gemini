@@ -1,4 +1,4 @@
-package com.example.ui.components
+package com.amresalehin.emreshots.ui.components
 
 import android.graphics.Bitmap
 import android.net.Uri
@@ -56,8 +56,8 @@ import coil.compose.AsyncImage
 import coil.decode.VideoFrameDecoder
 import coil.request.ImageRequest
 import coil.request.videoFrameMillis
-import com.example.data.model.ScreenshotItem
-import com.example.service.media.VideoThumbnailHelper
+import com.amresalehin.emreshots.data.model.ScreenshotItem
+import com.amresalehin.emreshots.service.media.VideoThumbnailHelper
 import java.io.File
 import kotlin.math.abs
 

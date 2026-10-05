@@ -1,4 +1,4 @@
-package com.example.ui.screens
+package com.amresalehin.emreshots.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -46,7 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.viewmodel.ScreenshotsViewModel
+import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

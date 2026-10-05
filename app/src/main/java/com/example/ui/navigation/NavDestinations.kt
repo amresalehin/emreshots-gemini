@@ -1,4 +1,4 @@
-package com.example.ui.navigation
+package com.amresalehin.emreshots.ui.navigation
 
 sealed class Screen(val route: String) {
     data object Gallery : Screen("gallery")

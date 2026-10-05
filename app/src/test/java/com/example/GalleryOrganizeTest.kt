@@ -1,10 +1,10 @@
-package com.example
+package com.amresalehin.emreshots
 
 import androidx.test.core.app.ApplicationProvider
-import com.example.data.model.GalleryViewMode
-import com.example.data.model.MediaGroupBy
-import com.example.data.model.MediaSortOption
-import com.example.viewmodel.ScreenshotsViewModel
+import com.amresalehin.emreshots.data.model.GalleryViewMode
+import com.amresalehin.emreshots.data.model.MediaGroupBy
+import com.amresalehin.emreshots.data.model.MediaSortOption
+import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Before

@@ -1,4 +1,4 @@
-package com.example.data.model
+package com.amresalehin.emreshots.data.model
 
 data class ExifData(
     val dateTaken: String? = null,

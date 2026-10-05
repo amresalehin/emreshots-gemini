@@ -1,5 +1,6 @@
 package com.amresalehin.emreshots.ui.screens
 
+import com.amresalehin.emreshots.ui.components.OnDeviceVisionModelSettings
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -392,29 +393,16 @@ fun SettingsScreen(
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         listOf("Automatic", "Force local", "Disabled").forEach { mode ->
                             val selected = onDeviceVisionMode.equals(mode, ignoreCase = true)
-                            Surface(
-                                modifier = Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).clickable { viewModel.setOnDeviceVisionMode(mode) },
-                                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Text(text = mode, fontSize = 11.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center, modifier = Modifier.padding(vertical = 7.dp))
+                            Surface(modifier = Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).clickable { viewModel.setOnDeviceVisionMode(mode) },
+                                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(10.dp)) {
+                                Text(text = mode, fontSize = 11.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                    textAlign = TextAlign.Center, modifier = Modifier.padding(vertical = 7.dp))
                             }
                         }
                     }
-                    Text(text = "Selected local model: " + onDeviceVisionModel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    OutlinedButton(
-                        onClick = {
-                            viewModel.getOnDeviceVisionRecommendation { recommendation ->
-                                val name = recommendation.recommended?.displayName ?: "none"
-                                viewModel.showMessage("Recommended local vision model: " + name)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(15.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Check local vision recommendation", fontSize = 11.sp)
-                    }
+                    Text("Automatic may use cloud fallback; Force local never uploads the screenshot image.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    OnDeviceVisionModelSettings(selectedModelId = onDeviceVisionModel, onSelect = { viewModel.setOnDeviceVisionModel(it) }, showMessage = { viewModel.showMessage(it) })
 
                     // Minimal Toggle Items
                     MinimalToggleRow(

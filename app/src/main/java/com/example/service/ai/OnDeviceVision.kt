@@ -1,4 +1,4 @@
-package com.example.service.ai
+package com.amresalehin.emreshots.service.ai
 
 import android.app.ActivityManager
 import android.content.Context

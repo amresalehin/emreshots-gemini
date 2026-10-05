@@ -964,5 +964,4 @@ fun ScreenshotsScreen(
             }
         )
     }
-
-
+}

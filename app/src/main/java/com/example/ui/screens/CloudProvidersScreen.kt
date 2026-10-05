@@ -1,4 +1,4 @@
-package com.example.ui.screens
+package com.amresalehin.emreshots.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -75,10 +75,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.data.model.CustomCloudProvider
-import com.example.service.ai.ConnectionTestResult
-import com.example.service.ai.FetchModelsResult
-import com.example.viewmodel.ScreenshotsViewModel
+import com.amresalehin.emreshots.data.model.CustomCloudProvider
+import com.amresalehin.emreshots.service.ai.ConnectionTestResult
+import com.amresalehin.emreshots.service.ai.FetchModelsResult
+import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -383,8 +383,8 @@ fun ProviderEditDialog(
     initial: CustomCloudProvider?,
     onDismiss: () -> Unit,
     onSave: (CustomCloudProvider) -> Unit,
-    onFetchModels: (CustomCloudProvider, (com.example.service.ai.FetchModelsResult) -> Unit) -> Unit,
-    onTest: (CustomCloudProvider, (com.example.service.ai.ConnectionTestResult) -> Unit) -> Unit
+    onFetchModels: (CustomCloudProvider, (com.amresalehin.emreshots.service.ai.FetchModelsResult) -> Unit) -> Unit,
+    onTest: (CustomCloudProvider, (com.amresalehin.emreshots.service.ai.ConnectionTestResult) -> Unit) -> Unit
 ) {
     var name by remember(initial) { mutableStateOf(initial?.name ?: "Google Gemini") }
     var baseUrl by remember(initial) { mutableStateOf(initial?.baseUrl ?: "https://generativelanguage.googleapis.com") }

@@ -1,6 +1,6 @@
-package com.example
+package com.amresalehin.emreshots
 
-import com.example.service.ai.CloudAiService
+import com.amresalehin.emreshots.service.ai.CloudAiService
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

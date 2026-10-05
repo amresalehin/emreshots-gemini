@@ -1,7 +1,7 @@
-package com.example
+package com.amresalehin.emreshots
 
-import com.example.data.model.ScreenshotItem
-import com.example.service.media.DeviceMediaScanner
+import com.amresalehin.emreshots.data.model.ScreenshotItem
+import com.amresalehin.emreshots.service.media.DeviceMediaScanner
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

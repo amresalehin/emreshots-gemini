@@ -1,4 +1,4 @@
-package com.example.viewmodel
+package com.amresalehin.emreshots.viewmodel
 
 import android.app.Application
 import android.content.Intent
@@ -10,31 +10,31 @@ import android.content.ContentValues
 import android.provider.MediaStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.data.local.AppDatabase
-import com.example.data.local.SecureApiKeyStore
-import com.example.data.local.seedInitialData
-import com.example.data.model.CollectionItem
-import com.example.data.model.CustomCloudProvider
-import com.example.data.model.ExifData
-import com.example.data.model.GalleryViewMode
-import com.example.data.model.MediaGroupBy
-import com.example.data.model.MediaSortOption
-import com.example.data.model.ScreenshotItem
-import com.example.data.repository.CollectionRepository
-import com.example.data.repository.ProviderRepository
-import com.example.data.repository.ScreenshotRepository
-import com.example.service.ai.AiAnalysisResult
-import com.example.service.ai.CloudAiService
-import com.example.service.ai.ConnectionTestResult
-import com.example.service.backup.BackupData
-import com.example.service.backup.BackupRestoreManager
-import com.example.service.backup.RestoreMode
-import com.example.service.backup.RestoreResult
-import com.example.service.exif.ExifMetadataManager
-import com.example.service.media.MediaSyncManager
-import com.example.service.media.DuplicateDetectionService
-import com.example.service.media.DuplicateGroup
-import com.example.service.media.BackgroundSyncScheduler
+import com.amresalehin.emreshots.data.local.AppDatabase
+import com.amresalehin.emreshots.data.local.SecureApiKeyStore
+import com.amresalehin.emreshots.data.local.seedInitialData
+import com.amresalehin.emreshots.data.model.CollectionItem
+import com.amresalehin.emreshots.data.model.CustomCloudProvider
+import com.amresalehin.emreshots.data.model.ExifData
+import com.amresalehin.emreshots.data.model.GalleryViewMode
+import com.amresalehin.emreshots.data.model.MediaGroupBy
+import com.amresalehin.emreshots.data.model.MediaSortOption
+import com.amresalehin.emreshots.data.model.ScreenshotItem
+import com.amresalehin.emreshots.data.repository.CollectionRepository
+import com.amresalehin.emreshots.data.repository.ProviderRepository
+import com.amresalehin.emreshots.data.repository.ScreenshotRepository
+import com.amresalehin.emreshots.service.ai.AiAnalysisResult
+import com.amresalehin.emreshots.service.ai.CloudAiService
+import com.amresalehin.emreshots.service.ai.ConnectionTestResult
+import com.amresalehin.emreshots.service.backup.BackupData
+import com.amresalehin.emreshots.service.backup.BackupRestoreManager
+import com.amresalehin.emreshots.service.backup.RestoreMode
+import com.amresalehin.emreshots.service.backup.RestoreResult
+import com.amresalehin.emreshots.service.exif.ExifMetadataManager
+import com.amresalehin.emreshots.service.media.MediaSyncManager
+import com.amresalehin.emreshots.service.media.DuplicateDetectionService
+import com.amresalehin.emreshots.service.media.DuplicateGroup
+import com.amresalehin.emreshots.service.media.BackgroundSyncScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -88,15 +88,15 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     val exifManager = ExifMetadataManager()
     val aiService = CloudAiService()
-    val mediaScanner = com.example.service.media.DeviceMediaScanner(application)
+    val mediaScanner = com.amresalehin.emreshots.service.media.DeviceMediaScanner(application)
 
-    private val _hasMediaPermissions = MutableStateFlow(com.example.service.media.DeviceMediaScanner.hasPermissions(application))
+    private val _hasMediaPermissions = MutableStateFlow(com.amresalehin.emreshots.service.media.DeviceMediaScanner.hasPermissions(application))
     val hasMediaPermissions: StateFlow<Boolean> = _hasMediaPermissions.asStateFlow()
 
-    private val _hasMediaLocationPermission = MutableStateFlow(com.example.service.media.DeviceMediaScanner.hasMediaLocationPermission(application))
+    private val _hasMediaLocationPermission = MutableStateFlow(com.amresalehin.emreshots.service.media.DeviceMediaScanner.hasMediaLocationPermission(application))
     val hasMediaLocationPermission: StateFlow<Boolean> = _hasMediaLocationPermission.asStateFlow()
 
-    private val _hasAllMetadataPermissions = MutableStateFlow(com.example.service.media.DeviceMediaScanner.hasAllMetadataPermissions(application))
+    private val _hasAllMetadataPermissions = MutableStateFlow(com.amresalehin.emreshots.service.media.DeviceMediaScanner.hasAllMetadataPermissions(application))
     val hasAllMetadataPermissions: StateFlow<Boolean> = _hasAllMetadataPermissions.asStateFlow()
 
     private val _pendingWriteIntentSender = MutableStateFlow<android.content.IntentSender?>(null)
@@ -144,7 +144,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     private val _exifDataState = MutableStateFlow<Map<String, ExifData>>(emptyMap())
     val exifDataState: StateFlow<Map<String, ExifData>> = _exifDataState.asStateFlow()
 
-    private val appPreferences = com.example.data.local.AppPreferences(application)
+    private val appPreferences = com.amresalehin.emreshots.data.local.AppPreferences(application)
     private val mediaSyncManager = MediaSyncManager(application)
     private val duplicateDetectionService = DuplicateDetectionService(application)
 
@@ -166,7 +166,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     val aiQualityPreset: StateFlow<String> = _aiQualityPreset.asStateFlow()
     private val _autoWriteExifSetting = MutableStateFlow(false)
     val autoWriteExifSetting: StateFlow<Boolean> = _autoWriteExifSetting.asStateFlow()
-    private val onDeviceVisionService = com.example.service.ai.OnDeviceVisionService(application)
+    private val onDeviceVisionService = com.amresalehin.emreshots.service.ai.OnDeviceVisionService(application)
     private val _onDeviceVisionMode = MutableStateFlow("Automatic")
     val onDeviceVisionMode: StateFlow<String> = _onDeviceVisionMode.asStateFlow()
     private val _onDeviceVisionModel = MutableStateFlow("auto")
@@ -174,8 +174,8 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     private val _gridColumns = MutableStateFlow(2)
     val gridColumns: StateFlow<Int> = _gridColumns.asStateFlow()
-    val isLowEndDevice = com.example.service.perf.PerformanceManager.isLowEndDevice(application)
-    val isLowRamDevice = com.example.service.perf.PerformanceManager.isLowRamDevice(application)
+    val isLowEndDevice = com.amresalehin.emreshots.service.perf.PerformanceManager.isLowEndDevice(application)
+    val isLowRamDevice = com.amresalehin.emreshots.service.perf.PerformanceManager.isLowRamDevice(application)
 
     val lastBackupInfo: StateFlow<String?> = appPreferences.lastBackupInfo.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
@@ -215,7 +215,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch { appPreferences.setOnDeviceVisionModel(value) }
     }
 
-    fun getOnDeviceVisionRecommendation(callback: (com.example.service.ai.OnDeviceModelRecommendation) -> Unit) {
+    fun getOnDeviceVisionRecommendation(callback: (com.amresalehin.emreshots.service.ai.OnDeviceModelRecommendation) -> Unit) {
         viewModelScope.launch {
             callback(onDeviceVisionService.recommend())
         }
@@ -437,9 +437,9 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     fun checkPermissions() {
         val app = getApplication<Application>()
-        _hasMediaPermissions.value = com.example.service.media.DeviceMediaScanner.hasPermissions(app)
-        _hasMediaLocationPermission.value = com.example.service.media.DeviceMediaScanner.hasMediaLocationPermission(app)
-        _hasAllMetadataPermissions.value = com.example.service.media.DeviceMediaScanner.hasAllMetadataPermissions(app)
+        _hasMediaPermissions.value = com.amresalehin.emreshots.service.media.DeviceMediaScanner.hasPermissions(app)
+        _hasMediaLocationPermission.value = com.amresalehin.emreshots.service.media.DeviceMediaScanner.hasMediaLocationPermission(app)
+        _hasAllMetadataPermissions.value = com.amresalehin.emreshots.service.media.DeviceMediaScanner.hasAllMetadataPermissions(app)
     }
 
     fun onPermissionsResult(granted: Boolean) {
@@ -1297,7 +1297,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun fetchProviderModels(provider: CustomCloudProvider, onResult: (com.example.service.ai.FetchModelsResult) -> Unit) {
+    fun fetchProviderModels(provider: CustomCloudProvider, onResult: (com.amresalehin.emreshots.service.ai.FetchModelsResult) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             val result = aiService.fetchModels(provider, provider.apiKey)
             onResult(result)

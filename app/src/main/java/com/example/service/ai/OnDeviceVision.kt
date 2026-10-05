@@ -112,6 +112,47 @@ class OnDeviceVisionService(
     private val context: Context,
     private val engineFactory: (OnDeviceVisionModel) -> OnDeviceVisionEngine? = { null }
 ) {
+    suspend fun installedModels(): List<OnDeviceVisionModel> = withContext(Dispatchers.Default) {
+        OnDeviceVisionCatalog.all().filter { model ->
+            engineFactory(model)?.let { engine ->
+                try {
+                    engine.isAvailable()
+                } finally {
+                    engine.close()
+                }
+            } ?: false
+        }
+    }
+
+    suspend fun recommendationForInstalledModels(): OnDeviceModelRecommendation {
+        val deviceRecommendation = recommend()
+        val installed = installedModels().associateBy { it.id }
+        val available = listOfNotNull(deviceRecommendation.recommended?.takeIf { installed.containsKey(it.id) }) +
+            deviceRecommendation.alternatives.filter { installed.containsKey(it.id) }
+        return OnDeviceModelRecommendation(
+            tier = deviceRecommendation.tier,
+            recommended = available.firstOrNull(),
+            alternatives = available.drop(1)
+        )
+    }
+
+    suspend fun recommend(): OnDeviceModelRecommendation = withContext(Dispatchers.Default) {
+        OnDeviceVisionCatalog.recommend(OnDeviceVisionCapabilityDetector.detect(context))
+    }
+
+    suspend fun resolveModel(preference: String): OnDeviceVisionModel? {
+        val capabilities = OnDeviceVisionCapabilityDetector.detect(context)
+        return if (preference.isBlank() || preference == "auto") {
+            OnDeviceVisionCatalog.recommend(capabilities).recommended
+        } else {
+            OnDeviceVisionCatalog.all().firstOrNull { it.id == preference && it.minRamMb <= capabilities.totalRamMb }
+        }
+    }
+
+    suspend fun analyze(
+    private val context: Context,
+    private val engineFactory: (OnDeviceVisionModel) -> OnDeviceVisionEngine? = { null }
+) {
     suspend fun recommend(): OnDeviceModelRecommendation = withContext(Dispatchers.Default) {
         OnDeviceVisionCatalog.recommend(OnDeviceVisionCapabilityDetector.detect(context))
     }

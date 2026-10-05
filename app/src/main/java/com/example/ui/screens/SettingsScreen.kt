@@ -34,7 +34,6 @@ import androidx.compose.material.icons.filled.CloudQueue
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Sync
@@ -91,7 +90,6 @@ fun SettingsScreen(
     val ocrEnabled by viewModel.ocrEnabled.collectAsStateWithLifecycle()
     val linksDetectionEnabled by viewModel.linksDetectionEnabled.collectAsStateWithLifecycle()
     val smartTagsEnabled by viewModel.smartTagsEnabled.collectAsStateWithLifecycle()
-    val remindersDetectionEnabled by viewModel.remindersDetectionEnabled.collectAsStateWithLifecycle()
     val autoSyncDeviceMedia by viewModel.autoSyncDeviceMedia.collectAsStateWithLifecycle()
     val aiQualityPreset by viewModel.aiQualityPreset.collectAsStateWithLifecycle()
     val autoWriteExifSetting by viewModel.autoWriteExifSetting.collectAsStateWithLifecycle()
@@ -402,13 +400,6 @@ fun SettingsScreen(
                         title = "Smart Keyword Tagging",
                         checked = smartTagsEnabled,
                         onCheckedChange = { viewModel.setSmartTagsEnabled(it) }
-                    )
-
-                    MinimalToggleRow(
-                        icon = Icons.Default.NotificationsActive,
-                        title = "Actionable Reminders",
-                        checked = remindersDetectionEnabled,
-                        onCheckedChange = { viewModel.setRemindersDetectionEnabled(it) }
                     )
 
                     MinimalToggleRow(

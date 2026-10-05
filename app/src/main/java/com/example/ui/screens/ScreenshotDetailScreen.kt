@@ -1,4 +1,4 @@
-package com.example.ui.screens
+package com.amresalehin.emreshots.ui.screens
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -93,11 +93,11 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.data.model.ExifData
-import com.example.ui.components.ExifEditorDialog
-import com.example.ui.components.InAppVideoPlayer
-import com.example.ui.components.OcrAiSheet
-import com.example.viewmodel.ScreenshotsViewModel
+import com.amresalehin.emreshots.data.model.ExifData
+import com.amresalehin.emreshots.ui.components.ExifEditorDialog
+import com.amresalehin.emreshots.ui.components.InAppVideoPlayer
+import com.amresalehin.emreshots.ui.components.OcrAiSheet
+import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
@@ -354,7 +354,7 @@ fun ScreenshotDetailScreen(
                         OutlinedButton(
                             onClick = {
                                 if (!hasMediaLocationPermission) {
-                                    permissionLauncher.launch(com.example.service.media.DeviceMediaScanner.getRequiredPermissions())
+                                    permissionLauncher.launch(com.amresalehin.emreshots.service.media.DeviceMediaScanner.getRequiredPermissions())
                                 }
                                 showExifEditor = true
                             },
@@ -423,7 +423,7 @@ fun ScreenshotDetailScreen(
                         }
                         Button(
                             onClick = {
-                                permissionLauncher.launch(com.example.service.media.DeviceMediaScanner.getRequiredPermissions())
+                                permissionLauncher.launch(com.amresalehin.emreshots.service.media.DeviceMediaScanner.getRequiredPermissions())
                             },
                             shape = RoundedCornerShape(12.dp),
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),

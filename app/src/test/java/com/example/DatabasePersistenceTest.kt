@@ -1,9 +1,9 @@
-package com.example
+package com.amresalehin.emreshots
 
-import com.example.data.local.Converters
-import com.example.data.model.CollectionItem
-import com.example.data.model.CustomCloudProvider
-import com.example.data.model.ScreenshotItem
+import com.amresalehin.emreshots.data.local.Converters
+import com.amresalehin.emreshots.data.model.CollectionItem
+import com.amresalehin.emreshots.data.model.CustomCloudProvider
+import com.amresalehin.emreshots.data.model.ScreenshotItem
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

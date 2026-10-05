@@ -35,7 +35,6 @@ class AppPreferences(private val context: Context) {
     suspend fun setOcrEnabled(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.ocrEnabled] = value }
     suspend fun setLinksDetectionEnabled(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.linksDetectionEnabled] = value }
     suspend fun setSmartTagsEnabled(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.smartTagsEnabled] = value }
-    suspend fun setRemindersDetectionEnabled(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.remindersDetectionEnabled] = value }
     suspend fun setAutoSyncDeviceMedia(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.autoSyncDeviceMedia] = value }
     suspend fun setAiQualityPreset(value: String) = context.appPreferencesDataStore.edit { it[Keys.aiQualityPreset] = value }
     suspend fun setAutoWriteExif(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.autoWriteExif] = value }

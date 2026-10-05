@@ -154,15 +154,22 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     val isScanningDuplicates: StateFlow<Boolean> = _isScanningDuplicates.asStateFlow()
 
     // Settings are persisted in DataStore so they survive process death and are not tied to SharedPreferences.
-    val ocrEnabled = appPreferences.ocrEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, true)
-    val linksDetectionEnabled = appPreferences.linksDetectionEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, true)
-    val smartTagsEnabled = appPreferences.smartTagsEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, true)
-    val autoSyncDeviceMedia = appPreferences.autoSyncDeviceMedia.stateIn(viewModelScope, SharingStarted.Eagerly, true)
-    val aiQualityPreset = appPreferences.aiQualityPreset.stateIn(viewModelScope, SharingStarted.Eagerly, "Balanced")
-    val autoWriteExifSetting = appPreferences.autoWriteExif.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    private val _ocrEnabled = MutableStateFlow(true)
+    val ocrEnabled: StateFlow<Boolean> = _ocrEnabled.asStateFlow()
+    private val _linksDetectionEnabled = MutableStateFlow(true)
+    val linksDetectionEnabled: StateFlow<Boolean> = _linksDetectionEnabled.asStateFlow()
+    private val _smartTagsEnabled = MutableStateFlow(true)
+    val smartTagsEnabled: StateFlow<Boolean> = _smartTagsEnabled.asStateFlow()
+    private val _autoSyncDeviceMedia = MutableStateFlow(true)
+    val autoSyncDeviceMedia: StateFlow<Boolean> = _autoSyncDeviceMedia.asStateFlow()
+    private val _aiQualityPreset = MutableStateFlow("Balanced")
+    val aiQualityPreset: StateFlow<String> = _aiQualityPreset.asStateFlow()
+    private val _autoWriteExifSetting = MutableStateFlow(false)
+    val autoWriteExifSetting: StateFlow<Boolean> = _autoWriteExifSetting.asStateFlow()
+    private val _gridColumns = MutableStateFlow(2)
+    val gridColumns: StateFlow<Int> = _gridColumns.asStateFlow()
     val isLowEndDevice = com.example.service.perf.PerformanceManager.isLowEndDevice(application)
     val isLowRamDevice = com.example.service.perf.PerformanceManager.isLowRamDevice(application)
-    val gridColumns = appPreferences.gridColumns.stateIn(viewModelScope, SharingStarted.Eagerly, if (isLowEndDevice) 2 else 2)
 
     val lastBackupInfo: StateFlow<String?> = appPreferences.lastBackupInfo.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
@@ -170,28 +177,36 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     val ocrStatusText = MutableStateFlow<String?>(null)
 
     fun setOcrEnabled(enabled: Boolean) {
+        _ocrEnabled.value = enabled
         viewModelScope.launch { appPreferences.setOcrEnabled(enabled) }
     }
     fun setLinksDetectionEnabled(enabled: Boolean) {
+        _linksDetectionEnabled.value = enabled
         viewModelScope.launch { appPreferences.setLinksDetectionEnabled(enabled) }
     }
     fun setSmartTagsEnabled(enabled: Boolean) {
+        _smartTagsEnabled.value = enabled
         viewModelScope.launch { appPreferences.setSmartTagsEnabled(enabled) }
     }
     fun setAutoSyncDeviceMedia(enabled: Boolean) {
+        _autoSyncDeviceMedia.value = enabled
         viewModelScope.launch {
             appPreferences.setAutoSyncDeviceMedia(enabled)
             if (enabled) BackgroundSyncScheduler.schedule(getApplication()) else BackgroundSyncScheduler.cancel(getApplication())
         }
     }
     fun setAiQualityPreset(preset: String) {
+        _aiQualityPreset.value = preset
         viewModelScope.launch { appPreferences.setAiQualityPreset(preset) }
     }
     fun setAutoWriteExifSetting(enabled: Boolean) {
+        _autoWriteExifSetting.value = enabled
         viewModelScope.launch { appPreferences.setAutoWriteExif(enabled) }
     }
     fun setGridColumns(cols: Int) {
-        viewModelScope.launch { appPreferences.setGridColumns(cols) }
+        val normalized = cols.coerceIn(2, 4)
+        _gridColumns.value = normalized
+        viewModelScope.launch { appPreferences.setGridColumns(normalized) }
     }
 
     @OptIn(coil.annotation.ExperimentalCoilApi::class)
@@ -344,6 +359,13 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     init {
+        viewModelScope.launch { appPreferences.ocrEnabled.collect { _ocrEnabled.value = it } }
+        viewModelScope.launch { appPreferences.linksDetectionEnabled.collect { _linksDetectionEnabled.value = it } }
+        viewModelScope.launch { appPreferences.smartTagsEnabled.collect { _smartTagsEnabled.value = it } }
+        viewModelScope.launch { appPreferences.autoSyncDeviceMedia.collect { _autoSyncDeviceMedia.value = it } }
+        viewModelScope.launch { appPreferences.aiQualityPreset.collect { _aiQualityPreset.value = it } }
+        viewModelScope.launch { appPreferences.autoWriteExif.collect { _autoWriteExifSetting.value = it } }
+        viewModelScope.launch { appPreferences.gridColumns.collect { _gridColumns.value = it.coerceIn(2, 4) } }
         viewModelScope.launch(Dispatchers.IO) {
             seedInitialData(database, getApplication())
             migrateProviderApiKeysToKeystore()

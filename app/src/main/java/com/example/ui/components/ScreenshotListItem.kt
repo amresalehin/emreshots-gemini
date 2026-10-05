@@ -1,4 +1,4 @@
-package com.example.ui.components
+package com.amresalehin.emreshots.ui.components
 
 import android.graphics.Bitmap
 import android.net.Uri
@@ -52,8 +52,8 @@ import coil.compose.AsyncImage
 import coil.decode.VideoFrameDecoder
 import coil.request.ImageRequest
 import coil.request.videoFrameMillis
-import com.example.data.model.ScreenshotItem
-import com.example.service.media.VideoThumbnailHelper
+import com.amresalehin.emreshots.data.model.ScreenshotItem
+import com.amresalehin.emreshots.service.media.VideoThumbnailHelper
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -105,7 +105,7 @@ fun ScreenshotListItem(
         }
         builder.build()
     }
-    val dateStr = com.example.ui.util.DateUtils.formatShortDate(screenshot.addedOn)
+    val dateStr = com.amresalehin.emreshots.ui.util.DateUtils.formatShortDate(screenshot.addedOn)
     val sizeStr = if (screenshot.fileSize > 0) "${screenshot.fileSize / 1024} KB" else ""
 
     Card(

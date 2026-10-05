@@ -393,7 +393,7 @@ fun ScreenshotsScreen(
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { viewModel.setSearchQuery(it) },
-                        placeholder = { Text("Search title, tags, or links...", fontSize = 14.sp) },
+                        placeholder = { Text("Search text, or use tag:, ocr:, type:, before:, after:…", fontSize = 13.sp) },
                         leadingIcon = {
                             Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                         },

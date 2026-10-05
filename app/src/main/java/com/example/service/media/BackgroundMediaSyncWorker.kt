@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.data.local.AppPreferences
+import kotlinx.coroutines.flow.first
 
 class BackgroundMediaSyncWorker(
     appContext: Context,
@@ -11,7 +12,7 @@ class BackgroundMediaSyncWorker(
 ) : CoroutineWorker(appContext, workerParams) {
     override suspend fun doWork(): Result {
         return try {
-            val enabled = AppPreferences(applicationContext).autoSyncDeviceMedia.firstValue()
+            val enabled = AppPreferences(applicationContext).autoSyncDeviceMedia.first()
             if (!enabled || !DeviceMediaScanner.hasPermissions(applicationContext)) {
                 Result.success()
             } else {
@@ -25,6 +26,4 @@ class BackgroundMediaSyncWorker(
         }
     }
 
-    private suspend fun kotlinx.coroutines.flow.Flow<Boolean>.firstValue(): Boolean =
-        kotlinx.coroutines.flow.first(this)
 }

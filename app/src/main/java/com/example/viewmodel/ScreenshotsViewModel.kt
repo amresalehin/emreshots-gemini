@@ -166,6 +166,12 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     val aiQualityPreset: StateFlow<String> = _aiQualityPreset.asStateFlow()
     private val _autoWriteExifSetting = MutableStateFlow(false)
     val autoWriteExifSetting: StateFlow<Boolean> = _autoWriteExifSetting.asStateFlow()
+    private val onDeviceVisionService = com.example.service.ai.OnDeviceVisionService(application)
+    private val _onDeviceVisionMode = MutableStateFlow("Automatic")
+    val onDeviceVisionMode: StateFlow<String> = _onDeviceVisionMode.asStateFlow()
+    private val _onDeviceVisionModel = MutableStateFlow("auto")
+    val onDeviceVisionModel: StateFlow<String> = _onDeviceVisionModel.asStateFlow()
+
     private val _gridColumns = MutableStateFlow(2)
     val gridColumns: StateFlow<Int> = _gridColumns.asStateFlow()
     val isLowEndDevice = com.example.service.perf.PerformanceManager.isLowEndDevice(application)
@@ -199,6 +205,22 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         _aiQualityPreset.value = preset
         viewModelScope.launch { appPreferences.setAiQualityPreset(preset) }
     }
+    fun setOnDeviceVisionMode(value: String) {
+        _onDeviceVisionMode.value = value
+        viewModelScope.launch { appPreferences.setOnDeviceVisionMode(value) }
+    }
+
+    fun setOnDeviceVisionModel(value: String) {
+        _onDeviceVisionModel.value = value
+        viewModelScope.launch { appPreferences.setOnDeviceVisionModel(value) }
+    }
+
+    fun getOnDeviceVisionRecommendation(callback: (com.example.service.ai.OnDeviceModelRecommendation) -> Unit) {
+        viewModelScope.launch {
+            callback(onDeviceVisionService.recommend())
+        }
+    }
+
     fun setAutoWriteExifSetting(enabled: Boolean) {
         _autoWriteExifSetting.value = enabled
         viewModelScope.launch { appPreferences.setAutoWriteExif(enabled) }
@@ -359,6 +381,13 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     init {
+        viewModelScope.launch {
+            appPreferences.onDeviceVisionMode.collect { _onDeviceVisionMode.value = it }
+        }
+        viewModelScope.launch {
+            appPreferences.onDeviceVisionModel.collect { _onDeviceVisionModel.value = it }
+        }
+
         viewModelScope.launch { appPreferences.ocrEnabled.collect { _ocrEnabled.value = it } }
         viewModelScope.launch { appPreferences.linksDetectionEnabled.collect { _linksDetectionEnabled.value = it } }
         viewModelScope.launch { appPreferences.smartTagsEnabled.collect { _smartTagsEnabled.value = it } }

@@ -32,6 +32,22 @@ class DeviceMediaScanner(private val context: Context) {
             return list.toTypedArray()
         }
 
+        fun hasImagePermission(context: Context): Boolean {
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED
+            } else {
+                ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+            }
+        }
+
+        fun hasVideoPermission(context: Context): Boolean {
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_VIDEO) == PackageManager.PERMISSION_GRANTED
+            } else {
+                ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+            }
+        }
+
         fun hasPermissions(context: Context): Boolean {
             return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 val hasImages = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED
@@ -44,6 +60,8 @@ class DeviceMediaScanner(private val context: Context) {
                 ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
             }
         }
+
+        fun hasAnyMediaPermission(context: Context): Boolean = hasImagePermission(context) || hasVideoPermission(context)
 
         fun hasMediaLocationPermission(context: Context): Boolean {
             return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -60,7 +78,7 @@ class DeviceMediaScanner(private val context: Context) {
 
     suspend fun scanDeviceMedia(limit: Int = 50): List<ScreenshotItem> = withContext(Dispatchers.IO) {
         val mediaList = mutableListOf<ScreenshotItem>()
-        if (!hasPermissions(context)) {
+        if (!hasAnyMediaPermission(context)) {
             return@withContext mediaList
         }
 

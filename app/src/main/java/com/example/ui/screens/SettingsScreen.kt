@@ -87,6 +87,7 @@ fun SettingsScreen(
     val activeProvider by viewModel.activeProvider.collectAsStateWithLifecycle()
     val isAnalyzing by viewModel.isAnalyzing.collectAsStateWithLifecycle()
     val statusText by viewModel.analysisStatusText.collectAsStateWithLifecycle()
+    val indexingState by viewModel.indexingState.collectAsStateWithLifecycle()
 
     val ocrEnabled by viewModel.ocrEnabled.collectAsStateWithLifecycle()
     val linksDetectionEnabled by viewModel.linksDetectionEnabled.collectAsStateWithLifecycle()
@@ -422,10 +423,21 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            text = statusText ?: "Analyzing library...",
+                            text = if (indexingState.total > 0) {
+                                "${indexingState.current}/${indexingState.total} • ${indexingState.currentModel.ifBlank { "AI" }} • ${indexingState.successCount} passed, ${indexingState.failureCount} failed"
+                            } else {
+                                statusText ?: "Analyzing library..."
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
                         )
+                        OutlinedButton(
+                            onClick = { viewModel.cancelIndexing() },
+                            enabled = indexingState.isIndexing,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Cancel indexing")
+                        }
                     }
 
                     Row(

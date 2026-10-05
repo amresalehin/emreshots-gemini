@@ -500,7 +500,7 @@ fun SettingsScreen(
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     MinimalToggleRow(
                         icon = Icons.Default.Sync,
-                        title = "Auto-sync on Gallery Open",
+                        title = "Background media sync (every 15 min)",
                         checked = autoSyncDeviceMedia,
                         onCheckedChange = { viewModel.setAutoSyncDeviceMedia(it) }
                     )

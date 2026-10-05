@@ -493,7 +493,7 @@ fun SettingsScreen(
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     MinimalToggleRow(
                         icon = Icons.Default.Sync,
-                        title = "Auto-sync Device Media",
+                        title = "Auto-sync on Gallery Open",
                         checked = autoSyncDeviceMedia,
                         onCheckedChange = { viewModel.setAutoSyncDeviceMedia(it) }
                     )
@@ -538,6 +538,97 @@ fun SettingsScreen(
                             Text("Clear Cache", fontSize = 11.sp)
                         }
                     }
+                }
+            }
+
+
+            // SECTION 3: GALLERY DISPLAY
+            MinimalSectionTitle("GALLERY DISPLAY")
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Grid columns", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(2, 3, 4).forEach { columns ->
+                            val selected = gridColumns == columns
+                            Surface(
+                                modifier = Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).clickable { viewModel.setGridColumns(columns) },
+                                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text(
+                                    text = "${columns}×",
+                                    textAlign = TextAlign.Center,
+                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(vertical = 8.dp)
+                                )
+                            }
+                        }
+                    }
+                    Text("Applies to the gallery grid view.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+
+            // SECTION 4: ACCESS & BACKUP
+            MinimalSectionTitle("ACCESS & BACKUP")
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Media access", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PermissionStatusChip("Photos & videos", hasMediaPermissions)
+                        PermissionStatusChip("Metadata", hasAllMetadataPermissions)
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            val permissions = when {
+                                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> arrayOf(
+                                    Manifest.permission.READ_MEDIA_IMAGES,
+                                    Manifest.permission.READ_MEDIA_VIDEO,
+                                    Manifest.permission.ACCESS_MEDIA_LOCATION
+                                )
+                                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> arrayOf(
+                                    Manifest.permission.READ_EXTERNAL_STORAGE,
+                                    Manifest.permission.ACCESS_MEDIA_LOCATION
+                                )
+                                else -> arrayOf(
+                                    Manifest.permission.READ_EXTERNAL_STORAGE,
+                                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+                                )
+                            }
+                            mediaPermissionLauncher.launch(permissions)
+                        },
+                        enabled = !hasAllMetadataPermissions,
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text(if (hasMediaPermissions) "Grant Metadata Access" else "Grant Media Access") }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+
+                    Text(
+                        "Backups include library metadata, collections, providers without plaintext API keys, and app settings. Media files themselves are not copied.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (lastBackupInfo != null) {
+                        Text(lastBackupInfo!!, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { backupExportLauncher.launch("emreshots-backup.json") }, modifier = Modifier.weight(1f)) { Text("Export") }
+                        OutlinedButton(onClick = { viewModel.shareBackup(context) }, modifier = Modifier.weight(1f)) { Text("Share") }
+                    }
+                    Button(
+                        onClick = { backupRestoreLauncher.launch(arrayOf("application/json", "text/plain")) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Restore Backup") }
                 }
             }
 

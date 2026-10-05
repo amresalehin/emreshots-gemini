@@ -732,12 +732,44 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         screenshot: ScreenshotItem,
         autoWriteExif: Boolean
     ): AiAnalysisResult {
+        val mode = com.amresalehin.emreshots.service.ai.OnDeviceVisionMode.fromPreference(onDeviceVisionMode.value)
+        val file = resolveImageFile(screenshot)
+
+        if (mode != com.amresalehin.emreshots.service.ai.OnDeviceVisionMode.DISABLED && file != null) {
+            val quality = when (aiQualityPreset.value.lowercase()) {
+                "fast" -> com.amresalehin.emreshots.service.ai.VisionQualityPreset.FAST
+                "deep" -> com.amresalehin.emreshots.service.ai.VisionQualityPreset.DEEP
+                else -> com.amresalehin.emreshots.service.ai.VisionQualityPreset.BALANCED
+            }
+            val local = onDeviceVisionService.analyze(
+                request = com.amresalehin.emreshots.service.ai.VisionAnalysisRequest(
+                    imagePath = file.absolutePath,
+                    quality = quality,
+                    ocrText = if (ocrEnabled.value) screenshot.ocrText else null
+                ),
+                mode = mode,
+                modelPreference = onDeviceVisionModel.value
+            )
+            if (local.isSuccess || mode == com.amresalehin.emreshots.service.ai.OnDeviceVisionMode.FORCE_LOCAL) {
+                return AiAnalysisResult(
+                    title = local.title,
+                    description = local.description,
+                    tags = local.tags,
+                    detectedLinks = local.detectedLinks,
+                    ocrText = local.ocrTextUsed,
+                    modelUsed = local.modelUsed,
+                    processingTimeMs = local.processingTimeMs,
+                    isSuccess = local.isSuccess,
+                    errorMessage = local.errorMessage
+                )
+            }
+        }
+
         val provider = activeProvider.value ?: return AiAnalysisResult(
             isSuccess = false,
             errorMessage = "No AI provider configured. Please set up your endpoint in Settings."
         )
 
-        val file = resolveImageFile(screenshot)
         val result = aiService.analyzeScreenshot(
             imageFile = file,
             provider = provider,

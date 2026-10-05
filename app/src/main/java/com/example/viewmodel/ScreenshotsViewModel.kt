@@ -5,6 +5,8 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.content.ContentValues
+import android.provider.MediaStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
@@ -28,6 +30,10 @@ import com.example.service.backup.BackupRestoreManager
 import com.example.service.backup.RestoreMode
 import com.example.service.backup.RestoreResult
 import com.example.service.exif.ExifMetadataManager
+import com.example.service.media.MediaSyncManager
+import com.example.service.media.DuplicateDetectionService
+import com.example.service.media.DuplicateGroup
+import com.example.service.media.BackgroundSyncScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,6 +53,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import java.util.regex.Pattern
 
 data class IndexingState(
     val isIndexing: Boolean = false,
@@ -137,6 +144,13 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     val exifDataState: StateFlow<Map<String, ExifData>> = _exifDataState.asStateFlow()
 
     private val appPreferences = com.example.data.local.AppPreferences(application)
+    private val mediaSyncManager = MediaSyncManager(application)
+    private val duplicateDetectionService = DuplicateDetectionService(application)
+
+    private val _duplicateGroups = MutableStateFlow<List<DuplicateGroup>>(emptyList())
+    val duplicateGroups: StateFlow<List<DuplicateGroup>> = _duplicateGroups.asStateFlow()
+    private val _isScanningDuplicates = MutableStateFlow(false)
+    val isScanningDuplicates: StateFlow<Boolean> = _isScanningDuplicates.asStateFlow()
 
     // Settings are persisted in DataStore so they survive process death and are not tied to SharedPreferences.
     val ocrEnabled = appPreferences.ocrEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, true)
@@ -164,7 +178,10 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch { appPreferences.setSmartTagsEnabled(enabled) }
     }
     fun setAutoSyncDeviceMedia(enabled: Boolean) {
-        viewModelScope.launch { appPreferences.setAutoSyncDeviceMedia(enabled) }
+        viewModelScope.launch {
+            appPreferences.setAutoSyncDeviceMedia(enabled)
+            if (enabled) BackgroundSyncScheduler.schedule(getApplication()) else BackgroundSyncScheduler.cancel(getApplication())
+        }
     }
     fun setAiQualityPreset(preset: String) {
         viewModelScope.launch { appPreferences.setAiQualityPreset(preset) }
@@ -208,21 +225,11 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     fun setGroupByOption(option: MediaGroupBy) { groupByOption.value = option }
     fun setViewMode(mode: GalleryViewMode) { viewMode.value = mode }
 
-    val filteredScreenshots: StateFlow<List<ScreenshotItem>> = combine(
-        allScreenshots,
-        _searchQuery,
-        _selectedFilter
-    ) { screenshots, query, filter ->
+    val filteredScreenshots: StateFlow<List<ScreenshotItem>> = combine(allScreenshots, _searchQuery, _selectedFilter, collections) { screenshots, query, filter, collectionList ->
         var result = screenshots
         if (query.isNotBlank()) {
-            val q = query.trim().lowercase()
-            result = result.filter { item ->
-                item.title.lowercase().contains(q) ||
-                        item.description.lowercase().contains(q) ||
-                        item.tags.any { it.lowercase().contains(q) } ||
-                        (item.notes?.lowercase()?.contains(q) == true) ||
-                        item.links.any { it.lowercase().contains(q) }
-            }
+            val clauses = parseAdvancedQuery(query)
+            result = result.filter { matchesAdvancedQuery(it, clauses, collectionList) }
         }
         when (filter) {
             ScreenshotFilter.ALL -> result
@@ -235,6 +242,53 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             ScreenshotFilter.REMINDERS -> result.filter { it.reminderTime != null }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private data class SearchClause(val field: String?, val value: String, val negated: Boolean)
+
+    private fun parseAdvancedQuery(query: String): List<SearchClause> {
+        val pattern = Pattern.compile("""(-)?([A-Za-z]+):(?:"([^"]+)"|(\S+))|(-)?(?:"([^"]+)"|(\S+))""")
+        val matcher = pattern.matcher(query)
+        val clauses = mutableListOf<SearchClause>()
+        while (matcher.find()) {
+            val negated = matcher.group(1) == "-" || matcher.group(5) == "-"
+            val field = matcher.group(2)?.lowercase()
+            val value = matcher.group(3) ?: matcher.group(4) ?: matcher.group(6) ?: matcher.group(7)
+            if (!value.isNullOrBlank()) clauses += SearchClause(field, value.trim(), negated)
+        }
+        return clauses
+    }
+
+    private fun matchesAdvancedQuery(item: ScreenshotItem, clauses: List<SearchClause>, collectionList: List<CollectionItem>): Boolean {
+        val haystack = listOf(item.title, item.description, item.tags.joinToString(" "), item.links.joinToString(" "), item.notes.orEmpty(), item.ocrText.orEmpty(), item.filePath).joinToString(" ").lowercase()
+        return clauses.all { clause ->
+            val value = clause.value.lowercase()
+            val matched = when (clause.field) {
+                null -> haystack.contains(value)
+                "title" -> item.title.lowercase().contains(value)
+                "description", "desc" -> item.description.lowercase().contains(value)
+                "tag", "tags" -> item.tags.any { it.lowercase().contains(value) }
+                "ocr", "text" -> item.ocrText?.lowercase()?.contains(value) == true
+                "link", "url", "domain" -> item.links.any { it.lowercase().contains(value) }
+                "note", "notes" -> item.notes?.lowercase()?.contains(value) == true
+                "type" -> when (value) {
+                    "video" -> item.isVideo
+                    "photo" -> !item.isVideo && !item.tags.any { it.equals("Screenshot", true) }
+                    "screenshot" -> !item.isVideo && (item.tags.any { it.equals("Screenshot", true) } || item.title.contains("screenshot", true))
+                    else -> haystack.contains(value)
+                }
+                "favorite", "fav" -> item.isFavorite == (value == "true" || value == "yes" || value == "1")
+                "ai" -> item.aiProcessed == (value == "true" || value == "yes" || value == "1" || value == "indexed")
+                "collection", "in" -> item.collectionIds.mapNotNull { id -> collectionList.find { it.id == id }?.name?.lowercase() }.any { it.contains(value) }
+                "before" -> parseDateStart(value)?.let { item.addedOn < it } ?: false
+                "after" -> parseDateEnd(value)?.let { item.addedOn > it } ?: false
+                else -> haystack.contains(value)
+            }
+            if (clause.negated) !matched else matched
+        }
+    }
+
+    private fun parseDateStart(value: String): Long? = runCatching { SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { isLenient = false }.parse(value)?.time }.getOrNull()
+    private fun parseDateEnd(value: String): Long? = parseDateStart(value)?.plus(24 * 60 * 60 * 1000L - 1)
 
     val sortedScreenshots: StateFlow<List<ScreenshotItem>> = combine(
         filteredScreenshots,
@@ -349,31 +403,74 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     fun syncDeviceMedia(onComplete: ((Int) -> Unit)? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             checkPermissions()
-            if (!_hasMediaPermissions.value) {
-                _snackbarMessage.value = "Please grant photos and videos permissions to auto-sync."
-                onComplete?.invoke(0)
-                return@launch
-            }
-            _analysisStatusText.value = "Scanning device photos and videos..."
-            val scanned = mediaScanner.scanDeviceMedia(100)
-            if (scanned.isNotEmpty()) {
-                val existingIds = allScreenshots.value.map { it.id }.toSet()
-                val newItems = scanned.filter { !existingIds.contains(it.id) }
-                if (newItems.isNotEmpty()) {
-                    screenshotRepository.insertAll(newItems)
-                }
-                _snackbarMessage.value = "Indexed ${newItems.size} new photos and videos!"
-                onComplete?.invoke(newItems.size)
-            } else {
-                _snackbarMessage.value = "Gallery is up to date."
-                onComplete?.invoke(0)
-            }
+            if (!_hasMediaPermissions.value) { _snackbarMessage.value = "Please grant photos and videos permissions to auto-sync."; onComplete?.invoke(0); return@launch }
+            _analysisStatusText.value = "Reconciling device media..."
+            val result = mediaSyncManager.synchronize()
+            _snackbarMessage.value = "Sync complete: ${result.added} added, ${result.updated} updated, ${result.removed} removed."
+            onComplete?.invoke(result.added)
             _analysisStatusText.value = null
         }
     }
 
-    fun setSearchQuery(query: String) {
-        _searchQuery.value = query
+    fun setSearchQuery(query: String) { _searchQuery.value = query }
+
+    fun scanDuplicates() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isScanningDuplicates.value = true
+            _duplicateGroups.value = duplicateDetectionService.findDuplicates(allScreenshots.value)
+            _isScanningDuplicates.value = false
+            val count = _duplicateGroups.value.sumOf { it.items.size - 1 }
+            _snackbarMessage.value = if (count == 0) "No duplicates found." else "Found $count duplicate items."
+        }
+    }
+
+    fun removeDuplicateFromLibrary(id: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            screenshotRepository.deleteById(id)
+            _duplicateGroups.value = _duplicateGroups.value.mapNotNull { group ->
+                val remaining = group.items.filterNot { it.id == id }
+                if (remaining.size > 1) group.copy(items = remaining) else null
+            }
+        }
+    }
+
+    fun clearDuplicateResults() { _duplicateGroups.value = emptyList() }
+
+    fun batchRename(items: List<ScreenshotItem>, template: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val cleanTemplate = template.trim()
+            if (cleanTemplate.isBlank()) { _snackbarMessage.value = "Enter a rename template."; return@launch }
+            var renamed = 0; var failed = 0
+            items.forEachIndexed { index, item ->
+                val extension = item.filePath.substringAfterLast(".", "").takeIf { it.isNotBlank() } ?: if (item.isVideo) "mp4" else "jpg"
+                val collectionName = item.collectionIds.firstNotNullOfOrNull { id -> collections.value.find { it.id == id }?.name }.orEmpty()
+                val baseName = cleanTemplate.replace("{index}", (index + 1).toString())
+                    .replace("{date}", SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(item.addedOn)))
+                    .replace("{time}", SimpleDateFormat("HH-mm-ss", Locale.US).format(Date(item.addedOn)))
+                    .replace("{title}", item.title.ifBlank { "Screenshot" }.sanitizeFileName())
+                    .replace("{collection}", collectionName.ifBlank { "Unsorted" }.sanitizeFileName())
+                    .replace("{type}", if (item.isVideo) "video" else "image").sanitizeFileName().take(180)
+                if (baseName.isBlank()) { failed++; return@forEachIndexed }
+                val newDisplayName = "$baseName.$extension"
+                if (renameMediaItem(item, newDisplayName)) {
+                    val newPath = if (item.filePath.isBlank()) item.filePath else File(item.filePath).let { File(it.parentFile, newDisplayName).absolutePath }
+                    screenshotRepository.update(item.copy(title = baseName, filePath = newPath)); renamed++
+                } else failed++
+            }
+            _snackbarMessage.value = "Batch rename complete: $renamed renamed${if (failed > 0) ", $failed failed" else ""}."
+        }
+    }
+
+    private fun String.sanitizeFileName(): String = replace(Regex("""[\\/:*?""<>|]"""), "_").replace(Regex("""\s+"""), " ").trim(' ', '.')
+
+    private fun renameMediaItem(item: ScreenshotItem, newDisplayName: String): Boolean {
+        val context = getApplication<Application>()
+        val uri = item.uriString?.let(Uri::parse)
+        if (uri != null && uri.toString().startsWith("content://media/")) return runCatching {
+            context.contentResolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.DISPLAY_NAME, newDisplayName) }, null, null) > 0
+        }.getOrDefault(false)
+        val file = File(item.filePath)
+        return file.exists() && runCatching { file.renameTo(File(file.parentFile, newDisplayName)) }.getOrDefault(false)
     }
 
     fun setFilter(filter: ScreenshotFilter) {
@@ -1333,7 +1430,6 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             data.settings["ocr_enabled"]?.toBooleanStrictOrNull()?.let { setOcrEnabled(it); settingsRestored++ }
             data.settings["links_detection_enabled"]?.toBooleanStrictOrNull()?.let { setLinksDetectionEnabled(it); settingsRestored++ }
             data.settings["smart_tags_enabled"]?.toBooleanStrictOrNull()?.let { setSmartTagsEnabled(it); settingsRestored++ }
-            data.settings["reminders_detection_enabled"]?.toBooleanStrictOrNull()?.let { setRemindersDetectionEnabled(it); settingsRestored++ }
             data.settings["auto_sync_device_media"]?.toBooleanStrictOrNull()?.let { setAutoSyncDeviceMedia(it); settingsRestored++ }
             data.settings["ai_quality_preset"]?.let { setAiQualityPreset(it); settingsRestored++ }
             data.settings["auto_write_exif"]?.toBooleanStrictOrNull()?.let { setAutoWriteExifSetting(it); settingsRestored++ }

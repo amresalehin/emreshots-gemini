@@ -1,8 +1,8 @@
-package com.example.service.media
+package com.amresalehin.emreshots.service.media
 
 import android.content.Context
-import com.example.data.local.AppDatabase
-import com.example.data.model.ScreenshotItem
+import com.amresalehin.emreshots.data.local.AppDatabase
+import com.amresalehin.emreshots.data.model.ScreenshotItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

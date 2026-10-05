@@ -59,8 +59,8 @@ class MediaSyncManager(private val context: Context) {
         existing.filter { it.id.startsWith("device-img-") || it.id.startsWith("device-vid-") }
             .filter { item ->
                 val typeReconciled = when {
-                    item.id.startsWith("device-img-") -> scanner.canReconcileImages()
-                    item.id.startsWith("device-vid-") -> scanner.canReconcileVideos()
+                    item.id.startsWith("device-img-") -> DeviceMediaScanner.hasImagePermission(context)
+                    item.id.startsWith("device-vid-") -> DeviceMediaScanner.hasVideoPermission(context)
                     else -> false
                 }
                 typeReconciled && !scannedById.containsKey(item.id)

@@ -1,4 +1,4 @@
-package com.example.service.media
+package com.amresalehin.emreshots.service.media
 
 import android.Manifest
 import android.content.ContentUris
@@ -8,7 +8,7 @@ import android.database.Cursor
 import android.os.Build
 import android.provider.MediaStore
 import androidx.core.content.ContextCompat
-import com.example.data.model.ScreenshotItem
+import com.amresalehin.emreshots.data.model.ScreenshotItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

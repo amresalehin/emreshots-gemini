@@ -593,14 +593,10 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         )
 
         val file = resolveImageFile(screenshot)
-        val geminiKey = try {
-            BuildConfig::class.java.getField("GEMINI_API_KEY").get(null) as? String ?: ""
-        } catch (_: Exception) { "" }
-
         val result = aiService.analyzeScreenshot(
             imageFile = file,
             provider = provider,
-            geminiApiKey = provider.apiKey.ifBlank { geminiKey }
+            geminiApiKey = provider.apiKey
         )
 
         if (result.isSuccess) {
@@ -697,10 +693,6 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             ocrStatusText.value = "Extracting text from image..."
 
             val file = resolveImageFile(screenshot)
-            val geminiKey = try {
-                BuildConfig::class.java.getField("GEMINI_API_KEY").get(null) as? String ?: ""
-            } catch (_: Exception) { "" }
-
             val result = aiService.extractOcrText(
                 imageFile = file,
                 provider = provider,
@@ -743,10 +735,6 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
             _isAnalyzing.value = true
             _analysisStatusText.value = "Processing OCR text with AI..."
-
-            val geminiKey = try {
-                BuildConfig::class.java.getField("GEMINI_API_KEY").get(null) as? String ?: ""
-            } catch (_: Exception) { "" }
 
             val result = aiService.sendOcrToAi(
                 ocrText = ocrText,

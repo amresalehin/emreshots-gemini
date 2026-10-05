@@ -1,10 +1,10 @@
-package com.example.service.media
+package com.amresalehin.emreshots.service.media
 
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import com.example.data.model.ScreenshotItem
+import com.amresalehin.emreshots.data.model.ScreenshotItem
 import java.io.File
 import java.io.InputStream
 import java.security.MessageDigest

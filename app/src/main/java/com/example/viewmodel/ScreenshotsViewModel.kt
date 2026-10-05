@@ -2,6 +2,7 @@ package com.example.viewmodel
 
 import android.app.Application
 import android.content.Intent
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -790,7 +791,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             val result = aiService.extractOcrText(
                 imageFile = file,
                 provider = provider,
-                geminiApiKey = provider.apiKey.ifBlank { geminiKey }
+                geminiApiKey = provider.apiKey
             )
 
             isExtractingOcr.value = false

@@ -745,7 +745,8 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                 request = com.amresalehin.emreshots.service.ai.VisionAnalysisRequest(
                     imagePath = file.absolutePath,
                     quality = quality,
-                    ocrText = if (ocrEnabled.value) screenshot.ocrText else null
+                    ocrText = if (ocrEnabled.value) screenshot.ocrText else null,
+                    requestedCapabilities = com.amresalehin.emreshots.service.ai.OnDeviceVisionCapability.entries.toSet()
                 ),
                 mode = mode,
                 modelPreference = onDeviceVisionModel.value

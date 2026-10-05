@@ -27,8 +27,14 @@ import com.example.ui.screens.ScreenshotsScreen
 import com.example.ui.screens.SettingsScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.viewmodel.ScreenshotsViewModel
+import com.example.service.media.BackgroundSyncScheduler
 
 class MainActivity : ComponentActivity() {
+
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        super.onCreate(savedInstanceState)
+        BackgroundSyncScheduler.schedule(this)
+    }
 
     private val viewModel: ScreenshotsViewModel by viewModels()
 

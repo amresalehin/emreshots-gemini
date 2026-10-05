@@ -133,18 +133,19 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     val exifDataState: StateFlow<Map<String, ExifData>> = _exifDataState.asStateFlow()
 
     private val prefs = application.getSharedPreferences("emreshots_settings", Context.MODE_PRIVATE)
+    private val appPreferences = com.example.data.local.AppPreferences(application)
 
-    // Enhanced Settings Controls (persisted via SharedPreferences)
-    val ocrEnabled = MutableStateFlow(prefs.getBoolean("ocr_enabled", true))
-    val linksDetectionEnabled = MutableStateFlow(prefs.getBoolean("links_detection_enabled", true))
-    val smartTagsEnabled = MutableStateFlow(prefs.getBoolean("smart_tags_enabled", true))
-    val remindersDetectionEnabled = MutableStateFlow(prefs.getBoolean("reminders_detection_enabled", true))
-    val autoSyncDeviceMedia = MutableStateFlow(prefs.getBoolean("auto_sync_device_media", true))
-    val aiQualityPreset = MutableStateFlow(prefs.getString("ai_quality_preset", "Balanced") ?: "Balanced")
-    val autoWriteExifSetting = MutableStateFlow(prefs.getBoolean("auto_write_exif", false))
+    // Settings are persisted in DataStore so they survive process death and are not tied to SharedPreferences.
+    val ocrEnabled = appPreferences.ocrEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+    val linksDetectionEnabled = appPreferences.linksDetectionEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+    val smartTagsEnabled = appPreferences.smartTagsEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+    val remindersDetectionEnabled = appPreferences.remindersDetectionEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+    val autoSyncDeviceMedia = appPreferences.autoSyncDeviceMedia.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+    val aiQualityPreset = appPreferences.aiQualityPreset.stateIn(viewModelScope, SharingStarted.Eagerly, "Balanced")
+    val autoWriteExifSetting = appPreferences.autoWriteExif.stateIn(viewModelScope, SharingStarted.Eagerly, false)
     val isLowEndDevice = com.example.service.perf.PerformanceManager.isLowEndDevice(application)
     val isLowRamDevice = com.example.service.perf.PerformanceManager.isLowRamDevice(application)
-    val gridColumns = MutableStateFlow(prefs.getInt("grid_columns", if (isLowEndDevice) 2 else 2))
+    val gridColumns = appPreferences.gridColumns.stateIn(viewModelScope, SharingStarted.Eagerly, if (isLowEndDevice) 2 else 2)
 
     private val _lastBackupInfo = MutableStateFlow(prefs.getString("last_backup_info", null))
     val lastBackupInfo: StateFlow<String?> = _lastBackupInfo.asStateFlow()
@@ -153,36 +154,28 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     val ocrStatusText = MutableStateFlow<String?>(null)
 
     fun setOcrEnabled(enabled: Boolean) {
-        ocrEnabled.value = enabled
-        prefs.edit().putBoolean("ocr_enabled", enabled).apply()
+        viewModelScope.launch { appPreferences.setOcrEnabled(enabled) }
     }
     fun setLinksDetectionEnabled(enabled: Boolean) {
-        linksDetectionEnabled.value = enabled
-        prefs.edit().putBoolean("links_detection_enabled", enabled).apply()
+        viewModelScope.launch { appPreferences.setLinksDetectionEnabled(enabled) }
     }
     fun setSmartTagsEnabled(enabled: Boolean) {
-        smartTagsEnabled.value = enabled
-        prefs.edit().putBoolean("smart_tags_enabled", enabled).apply()
+        viewModelScope.launch { appPreferences.setSmartTagsEnabled(enabled) }
     }
     fun setRemindersDetectionEnabled(enabled: Boolean) {
-        remindersDetectionEnabled.value = enabled
-        prefs.edit().putBoolean("reminders_detection_enabled", enabled).apply()
+        viewModelScope.launch { appPreferences.setRemindersDetectionEnabled(enabled) }
     }
     fun setAutoSyncDeviceMedia(enabled: Boolean) {
-        autoSyncDeviceMedia.value = enabled
-        prefs.edit().putBoolean("auto_sync_device_media", enabled).apply()
+        viewModelScope.launch { appPreferences.setAutoSyncDeviceMedia(enabled) }
     }
     fun setAiQualityPreset(preset: String) {
-        aiQualityPreset.value = preset
-        prefs.edit().putString("ai_quality_preset", preset).apply()
+        viewModelScope.launch { appPreferences.setAiQualityPreset(preset) }
     }
     fun setAutoWriteExifSetting(enabled: Boolean) {
-        autoWriteExifSetting.value = enabled
-        prefs.edit().putBoolean("auto_write_exif", enabled).apply()
+        viewModelScope.launch { appPreferences.setAutoWriteExif(enabled) }
     }
     fun setGridColumns(cols: Int) {
-        gridColumns.value = cols
-        prefs.edit().putInt("grid_columns", cols).apply()
+        viewModelScope.launch { appPreferences.setGridColumns(cols) }
     }
 
     @OptIn(coil.annotation.ExperimentalCoilApi::class)

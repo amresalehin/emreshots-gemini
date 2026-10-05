@@ -914,7 +914,7 @@ class CloudAiService(
         }
 
         try {
-            val imageBase64 = fileToBase64(imageFile)
+            val imageBase64 = fileToBase64(imageFile, 800)
             val ocrPrompt = "Perform high-accuracy optical character recognition (OCR) on this image. Extract and transcribe ALL text, numbers, codes, labels, dates, and links verbatim in order of appearance. Do not add markdown fences, intros, or summaries. Output purely the transcribed text."
 
             val isGemini = isGeminiProvider(provider)

@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-  namespace = "com.example"
+  namespace = "com.amresalehin.emreshots"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
-    applicationId = "com.aistudio.shotsstudio.kxmpzq"
+    applicationId = "com.amresalehin.emreshots"
     minSdk = 24
     targetSdk = 36
     versionCode = 1

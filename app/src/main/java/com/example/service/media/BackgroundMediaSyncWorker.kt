@@ -1,9 +1,9 @@
-package com.example.service.media
+package com.amresalehin.emreshots.service.media
 
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.example.data.local.AppPreferences
+import com.amresalehin.emreshots.data.local.AppPreferences
 import kotlinx.coroutines.flow.first
 
 class BackgroundMediaSyncWorker(

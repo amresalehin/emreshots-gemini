@@ -1,4 +1,4 @@
-package com.example.ui.screens
+package com.amresalehin.emreshots.ui.screens
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -107,18 +107,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.data.model.GalleryViewMode
-import com.example.data.model.MediaGroupBy
-import com.example.data.model.MediaSortOption
-import com.example.service.media.DeviceMediaScanner
-import com.example.ui.components.GalleryScrollBar
-import com.example.ui.components.ScreenshotCard
-import com.example.ui.components.ScreenshotFeedCard
-import com.example.ui.components.ScreenshotListItem
-import com.example.ui.components.ScreenshotMasonryCard
-import com.example.ui.components.ViewOrganizeBottomSheet
-import com.example.viewmodel.ScreenshotFilter
-import com.example.viewmodel.ScreenshotsViewModel
+import com.amresalehin.emreshots.data.model.GalleryViewMode
+import com.amresalehin.emreshots.data.model.MediaGroupBy
+import com.amresalehin.emreshots.data.model.MediaSortOption
+import com.amresalehin.emreshots.service.media.DeviceMediaScanner
+import com.amresalehin.emreshots.ui.components.GalleryScrollBar
+import com.amresalehin.emreshots.ui.components.ScreenshotCard
+import com.amresalehin.emreshots.ui.components.ScreenshotFeedCard
+import com.amresalehin.emreshots.ui.components.ScreenshotListItem
+import com.amresalehin.emreshots.ui.components.ScreenshotMasonryCard
+import com.amresalehin.emreshots.ui.components.ViewOrganizeBottomSheet
+import com.amresalehin.emreshots.viewmodel.ScreenshotFilter
+import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.hypot

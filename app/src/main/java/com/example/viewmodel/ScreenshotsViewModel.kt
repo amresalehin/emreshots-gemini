@@ -834,7 +834,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             val result = aiService.sendOcrToAi(
                 ocrText = ocrText,
                 provider = provider,
-                geminiApiKey = provider.apiKey.ifBlank { geminiKey }
+                geminiApiKey = provider.apiKey
             )
 
             if (result.isSuccess) {

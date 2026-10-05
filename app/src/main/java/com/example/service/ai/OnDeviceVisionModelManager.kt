@@ -22,8 +22,22 @@ class OnDeviceVisionModelManager(context:Context,private val client:OkHttpClient
  suspend fun delete(m:OnDeviceVisionModel)=withContext(Dispatchers.IO){File(root,m.id).deleteRecursively()}
  suspend fun storageUsageBytes()=withContext(Dispatchers.IO){root.walkTopDown().filter{it.isFile}.sumOf{it.length()}}
  private fun download(url:String,p:File,expected:Long,onProgress:(Long)->Unit){
-  var off=if(p.exists())p.length()else 0L;if(off>expected){p.delete();off=0L};val req=Request.Builder().url(url).apply{if(off>0)header("Range","bytes="+off+"-")}.build()
-  client.newCall(req).execute().use{r->check(r.isSuccessful){"Download failed: HTTP "+r.code};val append=off>0&&r.code==206;if(!append){off=0;RandomAccessFile(p,"rw").use{it.setLength(0)}};val body=r.body?:error("Empty model response");body.byteStream().use{input->RandomAccessFile(p,"rw").use{out->out.seek(off);val b=ByteArray(65536);var n=off;while(true){val x=input.read(b);if(x<0)break;out.write(b,0,x);n+=x;onProgress(n)}}}}};check(p.length()==expected){"Downloaded size mismatch: expected "+expected+", got "+p.length()}
+  var offset=if(p.exists())p.length()else 0L
+  if(offset>expected){p.delete();offset=0L}
+  val request=Request.Builder().url(url).apply{if(offset>0)header("Range","bytes="+offset+"-")}.build()
+  client.newCall(request).execute().use{response->
+   check(response.isSuccessful){"Download failed: HTTP "+response.code}
+   val append=offset>0&&response.code==206
+   if(!append){offset=0L;RandomAccessFile(p,"rw").use{it.setLength(0L)}}
+   val body=response.body?:error("Empty model response")
+   body.byteStream().use{input->
+    RandomAccessFile(p,"rw").use{output->
+     output.seek(offset);val buffer=ByteArray(65536);var totalRead=offset
+     while(true){val read=input.read(buffer);if(read<0)break;output.write(buffer,0,read);totalRead+=read;onProgress(totalRead)}
+    }
+   }
+  }
+  check(p.length()==expected){"Downloaded size mismatch: expected "+expected+", got "+p.length()}
  }
  private fun sha256(f:File):String{val d=MessageDigest.getInstance("SHA-256");f.inputStream().use{i->val b=ByteArray(65536);while(true){val n=i.read(b);if(n<0)break;d.update(b,0,n)}};return d.digest().joinToString(""){"%02x".format(it)}}
 }

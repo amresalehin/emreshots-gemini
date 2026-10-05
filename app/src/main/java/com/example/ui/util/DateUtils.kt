@@ -1,4 +1,4 @@
-package com.example.ui.util
+package com.amresalehin.emreshots.ui.util
 
 import java.text.SimpleDateFormat
 import java.util.Date

@@ -9,12 +9,13 @@
   - Preserve the current `ExifInterface` path as a fallback while evaluating the integration.
   - Add tests covering EXIF/IPTC/XMP read/write behavior and failure/fallback cases.
 
-- [ ] **Add on-device Gemma/ML inference alongside cloud models**
-  - Add a local/on-device Gemma or equivalent ML inference backend for screenshot analysis and organization.
+- [x] **Add a pluggable on-device vision model framework alongside cloud models**
+  - Add a provider-neutral on-device vision abstraction with model-family metadata, device capability detection, recommendation, persistence, and runtime adapters.
+  - Offer multiple vision families/profiles instead of locking the app to Gemma (SmolVLM, Gemma, Qwen-VL, MiniCPM-V, plus future adapters).
   - Keep cloud providers available as an optional alternative, with an explicit model/provider selection in the UI.
-  - Define capability, model-download, storage, performance, battery, and offline behavior for on-device inference.
+  - Define capability, model-download, storage, performance, battery, and offline behavior for on-device inference; runtime/model binaries remain optional so the base APK stays small.
   - Ensure sensitive screenshot content can be processed locally without requiring a cloud API key.
-  - Add tests for model selection, offline/local execution, fallback/error states, and cloud-vs-local routing.
+  - Add tests for device-tier model selection and no-compatible-model behavior; add runtime/download/privacy tests as concrete adapters are integrated.
 
 - [ ] **Add local OCR + cloud text-only AI**
   - Implement on-device OCR for extracting screenshot text without uploading the image.

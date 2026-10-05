@@ -106,15 +106,11 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     private val secureApiKeyStore = SecureApiKeyStore(application)
 
     val providers: StateFlow<List<CustomCloudProvider>> = providerRepository.allProviders
-        .combine(kotlinx.coroutines.flow.flowOf(Unit)) { list, _ ->
-            list.map { it.copy(apiKey = secureApiKeyStore.get(it.id) ?: "") }
-        }
+        .map { list -> list.map { it.copy(apiKey = secureApiKeyStore.get(it.id) ?: "") } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val activeProvider: StateFlow<CustomCloudProvider?> = providerRepository.activeProvider
-        .combine(kotlinx.coroutines.flow.flowOf(Unit)) { provider, _ ->
-            provider?.copy(apiKey = provider?.let { secureApiKeyStore.get(it.id) ?: "" } ?: "")
-        }
+        .map { provider -> provider?.copy(apiKey = secureApiKeyStore.get(provider.id) ?: "") }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     private val _searchQuery = MutableStateFlow("")

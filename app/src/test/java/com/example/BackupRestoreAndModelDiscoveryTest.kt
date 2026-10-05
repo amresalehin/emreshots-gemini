@@ -1,11 +1,11 @@
-package com.example
+package com.amresalehin.emreshots
 
-import com.example.data.model.CollectionItem
-import com.example.data.model.CustomCloudProvider
-import com.example.data.model.ScreenshotItem
-import com.example.service.ai.CloudAiService
-import com.example.service.backup.BackupRestoreManager
-import com.example.service.backup.RestoreMode
+import com.amresalehin.emreshots.data.model.CollectionItem
+import com.amresalehin.emreshots.data.model.CustomCloudProvider
+import com.amresalehin.emreshots.data.model.ScreenshotItem
+import com.amresalehin.emreshots.service.ai.CloudAiService
+import com.amresalehin.emreshots.service.backup.BackupRestoreManager
+import com.amresalehin.emreshots.service.backup.RestoreMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -172,7 +172,7 @@ class BackupRestoreAndModelDiscoveryTest {
 
     @Test
     fun testConvertersWithMalformedEntries() {
-        val converters = com.example.data.local.Converters()
+        val converters = com.amresalehin.emreshots.data.local.Converters()
         val mixedJson = """["Receipt", "", null, "Finance"]"""
         val parsed = converters.toStringList(mixedJson)
         assertEquals(2, parsed.size)

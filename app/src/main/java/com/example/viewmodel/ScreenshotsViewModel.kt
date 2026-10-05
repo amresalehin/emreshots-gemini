@@ -596,7 +596,8 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         val result = aiService.analyzeScreenshot(
             imageFile = file,
             provider = provider,
-            geminiApiKey = provider.apiKey
+            geminiApiKey = provider.apiKey,
+            qualityPreset = aiQualityPreset.value
         )
 
         if (result.isSuccess) {
@@ -612,9 +613,9 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             var updatedScreenshot = screenshot.copy(
                 title = if (result.title.isNotBlank()) result.title else screenshot.title,
                 description = if (result.description.isNotBlank()) result.description else screenshot.description,
-                ocrText = result.ocrText ?: screenshot.ocrText,
-                tags = (screenshot.tags + result.tags).distinct(),
-                links = (screenshot.links + result.detectedLinks).distinct(),
+                ocrText = if (ocrEnabled.value) result.ocrText ?: screenshot.ocrText else screenshot.ocrText,
+                tags = if (smartTagsEnabled.value) (screenshot.tags + result.tags).distinct() else screenshot.tags,
+                links = if (linksDetectionEnabled.value) (screenshot.links + result.detectedLinks).distinct() else screenshot.links,
                 collectionIds = newColIds,
                 aiProcessed = true,
                 aiModelUsed = result.modelUsed

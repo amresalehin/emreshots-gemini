@@ -1,4 +1,4 @@
-package com.example.data.local
+package com.amresalehin.emreshots.data.local
 
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey

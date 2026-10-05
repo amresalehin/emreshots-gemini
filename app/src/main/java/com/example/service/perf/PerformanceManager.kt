@@ -1,4 +1,4 @@
-package com.example.service.perf
+package com.amresalehin.emreshots.service.perf
 
 import android.app.ActivityManager
 import android.content.Context

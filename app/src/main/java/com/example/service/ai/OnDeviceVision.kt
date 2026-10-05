@@ -37,11 +37,11 @@ data class OnDeviceVisionModel(
     val sourceUrl:String,val artifacts:List<ModelArtifact>,val notes:String=""
 ){ val totalDownloadBytes get()=artifacts.sumOf{it.sizeBytes} }
 data class InstalledVisionModel(val model:OnDeviceVisionModel,val directory:File,val installedBytes:Long)
-data class OnDeviceModelRecommendation(val tier:DevicePerformanceTier,val recommended:OnDeviceVisionModel?,val alternatives:List<OnDeviceVisionModel>,val blocked:List<Pair<OnDeviceVisionModel,String>>=emptyList(),val explanation:String="")
-data class VisionAnalysisRequest(val imagePath:String,val quality:VisionQualityPreset=VisionQualityPreset.BALANCED,val ocrText:String?=null,val requestedCapabilities:Set<OnDeviceVisionCapability>=OnDeviceVisionCapability.entries.toSet())
+data class OnDeviceModelRecommendation(val tier:DevicePerformanceTier,val recommended:OnDeviceVisionModel?,val alternatives:List<OnDeviceVisionModel>,val blocked:List<Pair<OnDeviceVisionModel,String>> = emptyList(),val explanation:String="")
+data class VisionAnalysisRequest(val imagePath:String,val quality:VisionQualityPreset=VisionQualityPreset.BALANCED,val ocrText:String?=null,val requestedCapabilities:Set<OnDeviceVisionCapability> = OnDeviceVisionCapability.entries.toSet())
 data class VisionAnalysisResult(
-    val isSuccess:Boolean,val modelId:String,val title:String="",val description:String="",val tags:List<String>=emptyList(),
-    val category:String?=null,val detectedLinks:List<String>=emptyList(),val visualFeatures:FloatArray?=null,val ocrTextUsed:String?=null,
+    val isSuccess:Boolean,val modelId:String,val title:String="",val description:String="",val tags:List<String> = emptyList(),
+    val category:String?=null,val detectedLinks:List<String> = emptyList(),val visualFeatures:FloatArray?=null,val ocrTextUsed:String?=null,
     val rawText:String="",val modelUsed:String="",val processingTimeMs:Long=0L,val errorMessage:String?=null
 )
 interface VisionModelProvider{val modelId:String;val runtime:VisionRuntimeBackend;suspend fun load(model:InstalledVisionModel,quality:VisionQualityPreset);suspend fun analyze(request:VisionAnalysisRequest):VisionAnalysisResult;suspend fun cancel();suspend fun unload()}

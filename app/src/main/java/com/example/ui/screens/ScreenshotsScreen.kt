@@ -361,6 +361,16 @@ fun ScreenshotsScreen(
                                 modifier = Modifier.testTag("btn_quick_view_toggle")
                             )
 
+                             DropdownMenuItem(
+                                 text = { Text("Batch Rename Visible") },
+                                 leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                                 onClick = {
+                                     showMoreMenu = false
+                                     showBatchRenameDialog = true
+                                 },
+                                 modifier = Modifier.testTag("btn_batch_rename")
+                             )
+
                             DropdownMenuItem(
                                 text = { Text("Settings") },
                                 leadingIcon = {
@@ -954,14 +964,5 @@ fun ScreenshotsScreen(
             }
         )
     }
-}                             DropdownMenuItem(
-                                 text = { Text("Batch Rename Visible") },
-                                 leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
-                                 onClick = {
-                                     showMoreMenu = false
-                                     showBatchRenameDialog = true
-                                 },
-                                 modifier = Modifier.testTag("btn_batch_rename")
-                             )
 
 

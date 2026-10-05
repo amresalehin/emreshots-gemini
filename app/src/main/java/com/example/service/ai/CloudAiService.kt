@@ -404,11 +404,17 @@ class CloudAiService(
     suspend fun analyzeScreenshot(
         imageFile: File?,
         provider: CustomCloudProvider,
-        geminiApiKey: String = ""
+        geminiApiKey: String = "",
+        qualityPreset: String = "Balanced"
     ): AiAnalysisResult = withContext(Dispatchers.IO) {
         val startTime = System.currentTimeMillis()
         try {
-            val imageBase64 = imageFile?.let { fileToBase64(it) }
+            val targetDimension = when (qualityPreset) {
+                "Fast" -> 640
+                "Deep" -> 1200
+                else -> 800
+            }
+            val imageBase64 = imageFile?.let { fileToBase64(it, targetDimension) }
 
             if (isGeminiProvider(provider)) {
                 val effectiveKey = provider.apiKey.ifBlank { geminiApiKey }.trim()
@@ -856,9 +862,8 @@ class CloudAiService(
         return headers
     }
 
-    private fun fileToBase64(file: File): String {
-        // Safe sampled decode to avoid OOM on low-end devices with high-res camera photos
-        val targetDim = 800
+    private fun fileToBase64(file: File, targetDim: Int): String {
+        // Safe sampled decode to avoid OOM on low-end devices with high-res camera photos.
         val bitmap = com.example.service.perf.PerformanceManager.decodeSampledBitmapFromFile(
             file = file,
             targetWidth = targetDim,

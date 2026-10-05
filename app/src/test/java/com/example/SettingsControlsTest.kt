@@ -1,7 +1,7 @@
-package com.example
+package com.amresalehin.emreshots
 
 import androidx.test.core.app.ApplicationProvider
-import com.example.viewmodel.ScreenshotsViewModel
+import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

@@ -54,6 +54,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PermMedia
@@ -63,6 +64,7 @@ import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
@@ -148,6 +150,8 @@ fun ScreenshotsScreen(
     var hidePermissionBanner by remember { mutableStateOf(false) }
     var showOrganizeSheet by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
+    var showBatchRenameDialog by remember { mutableStateOf(false) }
+    var renameTemplate by remember { mutableStateOf("Screenshot_{date}_{index}") }
     var pinchNotification by remember { mutableStateOf<String?>(null) }
     val organizeSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -890,6 +894,37 @@ fun ScreenshotsScreen(
     }
 
     // Modal Bottom Sheet for View & Organize
+    if (showBatchRenameDialog) {
+        AlertDialog(
+            onDismissRequest = { showBatchRenameDialog = false },
+            title = { Text("Batch rename visible items") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = renameTemplate,
+                        onValueChange = { renameTemplate = it },
+                        singleLine = true,
+                        label = { Text("Template") },
+                        supportingText = { Text("{index} {date} {time} {title} {collection} {type}") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text("Renames the current filtered/sorted set. Device media uses MediaStore when permitted; imported files are renamed directly.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    viewModel.batchRename(groupedScreenshots.values.flatten(), renameTemplate)
+                    showBatchRenameDialog = false
+                }, enabled = groupedScreenshots.values.flatten().isNotEmpty() && renameTemplate.isNotBlank()) {
+                    Text("Rename ${groupedScreenshots.values.sumOf { it.size }}")
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showBatchRenameDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
     if (showOrganizeSheet) {
         ViewOrganizeBottomSheet(
             sheetState = organizeSheetState,
@@ -919,4 +954,14 @@ fun ScreenshotsScreen(
             }
         )
     }
-}
+}                             DropdownMenuItem(
+                                 text = { Text("Batch Rename Visible") },
+                                 leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                                 onClick = {
+                                     showMoreMenu = false
+                                     showBatchRenameDialog = true
+                                 },
+                                 modifier = Modifier.testTag("btn_batch_rename")
+                             )
+
+

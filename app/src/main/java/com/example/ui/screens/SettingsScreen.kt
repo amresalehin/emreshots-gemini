@@ -1,4 +1,4 @@
-package com.example.ui.screens
+package com.amresalehin.emreshots.ui.screens
 
 import android.Manifest
 import android.os.Build
@@ -74,9 +74,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.data.model.CustomCloudProvider
-import com.example.service.backup.RestoreMode
-import com.example.viewmodel.ScreenshotsViewModel
+import com.amresalehin.emreshots.data.model.CustomCloudProvider
+import com.amresalehin.emreshots.service.backup.RestoreMode
+import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

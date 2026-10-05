@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.CloudQueue
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.GridOn
@@ -93,6 +94,8 @@ fun SettingsScreen(
     val linksDetectionEnabled by viewModel.linksDetectionEnabled.collectAsStateWithLifecycle()
     val smartTagsEnabled by viewModel.smartTagsEnabled.collectAsStateWithLifecycle()
     val autoSyncDeviceMedia by viewModel.autoSyncDeviceMedia.collectAsStateWithLifecycle()
+    val duplicateGroups by viewModel.duplicateGroups.collectAsStateWithLifecycle()
+    val isScanningDuplicates by viewModel.isScanningDuplicates.collectAsStateWithLifecycle()
     val aiQualityPreset by viewModel.aiQualityPreset.collectAsStateWithLifecycle()
     val autoWriteExifSetting by viewModel.autoWriteExifSetting.collectAsStateWithLifecycle()
     val gridColumns by viewModel.gridColumns.collectAsStateWithLifecycle()
@@ -546,7 +549,49 @@ fun SettingsScreen(
             }
 
 
-            // SECTION 3: GALLERY DISPLAY
+            // SECTION 3: DUPLICATES
+            MinimalSectionTitle("DUPLICATES")
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Detect exact file duplicates and visually similar screenshots without deleting device media.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Button(
+                        onClick = { viewModel.scanDuplicates() },
+                        enabled = !isScanningDuplicates && allScreenshots.isNotEmpty(),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (isScanningDuplicates) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        else Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(if (isScanningDuplicates) "Scanning…" else "Scan for Duplicates")
+                    }
+                    if (duplicateGroups.isNotEmpty()) {
+                        Text("${duplicateGroups.sumOf { it.items.size - 1 }} duplicate items in ${duplicateGroups.size} groups", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                        duplicateGroups.take(8).forEachIndexed { index, group ->
+                            val keeper = group.items.first()
+                            val duplicates = group.items.drop(1)
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("${group.kind.name.lowercase().replaceFirstChar { it.uppercase() }} group ${index + 1}: ${group.items.size} items", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+                                duplicates.forEach { duplicate ->
+                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                        Text(duplicate.title.ifBlank { duplicate.filePath.substringAfterLast("/") }, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                                        TextButton(onClick = { viewModel.removeDuplicateFromLibrary(duplicate.id) }) { Text("Remove library copy") }
+                                    }
+                                }
+                                Text("Keeping: ${keeper.title.ifBlank { keeper.filePath.substringAfterLast("/") }}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        if (duplicateGroups.size > 8) Text("Showing the first 8 groups.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+
+            // SECTION 4: GALLERY DISPLAY
+
             MinimalSectionTitle("GALLERY DISPLAY")
 
             Card(
@@ -578,7 +623,7 @@ fun SettingsScreen(
                 }
             }
 
-            // SECTION 4: ACCESS & BACKUP
+            // SECTION 5: ACCESS & BACKUP
             MinimalSectionTitle("ACCESS & BACKUP")
 
             Card(

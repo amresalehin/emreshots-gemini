@@ -142,7 +142,6 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     val ocrEnabled = appPreferences.ocrEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, true)
     val linksDetectionEnabled = appPreferences.linksDetectionEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, true)
     val smartTagsEnabled = appPreferences.smartTagsEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, true)
-    val remindersDetectionEnabled = appPreferences.remindersDetectionEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, true)
     val autoSyncDeviceMedia = appPreferences.autoSyncDeviceMedia.stateIn(viewModelScope, SharingStarted.Eagerly, true)
     val aiQualityPreset = appPreferences.aiQualityPreset.stateIn(viewModelScope, SharingStarted.Eagerly, "Balanced")
     val autoWriteExifSetting = appPreferences.autoWriteExif.stateIn(viewModelScope, SharingStarted.Eagerly, false)
@@ -163,9 +162,6 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     }
     fun setSmartTagsEnabled(enabled: Boolean) {
         viewModelScope.launch { appPreferences.setSmartTagsEnabled(enabled) }
-    }
-    fun setRemindersDetectionEnabled(enabled: Boolean) {
-        viewModelScope.launch { appPreferences.setRemindersDetectionEnabled(enabled) }
     }
     fun setAutoSyncDeviceMedia(enabled: Boolean) {
         viewModelScope.launch { appPreferences.setAutoSyncDeviceMedia(enabled) }
@@ -1165,7 +1161,6 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             "ocr_enabled" to ocrEnabled.value.toString(),
             "links_detection_enabled" to linksDetectionEnabled.value.toString(),
             "smart_tags_enabled" to smartTagsEnabled.value.toString(),
-            "reminders_detection_enabled" to remindersDetectionEnabled.value.toString(),
             "auto_sync_device_media" to autoSyncDeviceMedia.value.toString(),
             "ai_quality_preset" to aiQualityPreset.value,
             "auto_write_exif" to autoWriteExifSetting.value.toString(),

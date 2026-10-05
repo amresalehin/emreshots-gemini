@@ -1,4 +1,4 @@
-package com.example.ui.components
+package com.amresalehin.emreshots.ui.components
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -59,8 +59,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.data.model.ScreenshotItem
-import com.example.service.ai.AiAnalysisResult
+import com.amresalehin.emreshots.data.model.ScreenshotItem
+import com.amresalehin.emreshots.service.ai.AiAnalysisResult
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable

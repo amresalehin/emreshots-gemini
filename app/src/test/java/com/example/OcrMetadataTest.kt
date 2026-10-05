@@ -1,8 +1,8 @@
-package com.example
+package com.amresalehin.emreshots
 
 import androidx.test.core.app.ApplicationProvider
-import com.example.service.ai.CloudAiService
-import com.example.viewmodel.ScreenshotsViewModel
+import com.amresalehin.emreshots.service.ai.CloudAiService
+import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -40,7 +40,7 @@ class OcrMetadataTest {
             {
               "title": "Hotel Reservation Receipt",
               "description": "Booking confirmation for Grand Hotel downtown with confirmation number 98765.",
-              "ocrText": "Grand Hotel ‚Ä¢ Confirmation #98765 ‚Ä¢ Total Paid: $340.00 ‚Ä¢ Check-in: Nov 12",
+              "ocrText": "Grand Hotel"È›y¯ßy“ Confirmation #98765+ßuÁ‚ùÁb Total Paid: $340.00 ∫w^~)ﬁv Check-in: Nov 12",
               "tags": ["Receipt", "Hotel", "Travel"],
               "links": ["https://grandhotel.com/confirm"],
               "suggestedCollection": "Travel & Tickets",

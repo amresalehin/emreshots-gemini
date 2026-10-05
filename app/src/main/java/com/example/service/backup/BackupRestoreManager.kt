@@ -1,10 +1,10 @@
-package com.example.service.backup
+package com.amresalehin.emreshots.service.backup
 
 import android.content.Context
 import android.net.Uri
-import com.example.data.model.CollectionItem
-import com.example.data.model.CustomCloudProvider
-import com.example.data.model.ScreenshotItem
+import com.amresalehin.emreshots.data.model.CollectionItem
+import com.amresalehin.emreshots.data.model.CustomCloudProvider
+import com.amresalehin.emreshots.data.model.ScreenshotItem
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader

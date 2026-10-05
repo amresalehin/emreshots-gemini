@@ -1,4 +1,4 @@
-package com.example.service.exif
+package com.amresalehin.emreshots.service.exif
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -7,8 +7,8 @@ import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import androidx.exifinterface.media.ExifInterface
-import com.example.data.model.ExifData
-import com.example.data.model.ScreenshotItem
+import com.amresalehin.emreshots.data.model.ExifData
+import com.amresalehin.emreshots.data.model.ScreenshotItem
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat

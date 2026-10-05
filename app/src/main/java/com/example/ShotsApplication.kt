@@ -1,4 +1,4 @@
-package com.example
+package com.amresalehin.emreshots
 
 import android.app.ActivityManager
 import android.app.Application
@@ -10,7 +10,7 @@ import coil.ImageLoaderFactory
 import coil.decode.VideoFrameDecoder
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
-import com.example.service.media.VideoThumbnailHelper
+import com.amresalehin.emreshots.service.media.VideoThumbnailHelper
 
 class ShotsApplication : Application(), ImageLoaderFactory {
 

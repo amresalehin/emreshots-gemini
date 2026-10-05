@@ -1,9 +1,9 @@
-package com.example.service.ai
+package com.amresalehin.emreshots.service.ai
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Base64
-import com.example.data.model.CustomCloudProvider
+import com.amresalehin.emreshots.data.model.CustomCloudProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -864,7 +864,7 @@ class CloudAiService(
 
     private fun fileToBase64(file: File, targetDim: Int): String {
         // Safe sampled decode to avoid OOM on low-end devices with high-res camera photos.
-        val bitmap = com.example.service.perf.PerformanceManager.decodeSampledBitmapFromFile(
+        val bitmap = com.amresalehin.emreshots.service.perf.PerformanceManager.decodeSampledBitmapFromFile(
             file = file,
             targetWidth = targetDim,
             targetHeight = targetDim,

@@ -1,7 +1,6 @@
 package com.example.viewmodel
 
 import android.app.Application
-import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -137,7 +136,6 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     private val _exifDataState = MutableStateFlow<Map<String, ExifData>>(emptyMap())
     val exifDataState: StateFlow<Map<String, ExifData>> = _exifDataState.asStateFlow()
 
-    private val prefs = application.getSharedPreferences("emreshots_settings", Context.MODE_PRIVATE)
     private val appPreferences = com.example.data.local.AppPreferences(application)
 
     // Settings are persisted in DataStore so they survive process death and are not tied to SharedPreferences.
@@ -152,8 +150,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     val isLowRamDevice = com.example.service.perf.PerformanceManager.isLowRamDevice(application)
     val gridColumns = appPreferences.gridColumns.stateIn(viewModelScope, SharingStarted.Eagerly, if (isLowEndDevice) 2 else 2)
 
-    private val _lastBackupInfo = MutableStateFlow(prefs.getString("last_backup_info", null))
-    val lastBackupInfo: StateFlow<String?> = _lastBackupInfo.asStateFlow()
+    val lastBackupInfo: StateFlow<String?> = appPreferences.lastBackupInfo.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     val isExtractingOcr = MutableStateFlow(false)
     val ocrStatusText = MutableStateFlow<String?>(null)
@@ -1212,8 +1209,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                         val count = allScreenshots.value.size
                         val timeStr = SimpleDateFormat("MMM d, yyyy HH:mm", Locale.getDefault()).format(Date())
                         val info = "Last export: $timeStr ($count items)"
-                        _lastBackupInfo.value = info
-                        prefs.edit().putString("last_backup_info", info).apply()
+                        viewModelScope.launch { appPreferences.setLastBackupInfo(info) }
                         _snackbarMessage.value = "Backup successfully exported!"
                     } else {
                         _snackbarMessage.value = "Failed to export backup: ${writeResult.exceptionOrNull()?.message}"
@@ -1261,8 +1257,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                     val count = allScreenshots.value.size
                     val timeStr = SimpleDateFormat("MMM d, yyyy HH:mm", Locale.getDefault()).format(Date())
                     val info = "Last backup: $timeStr ($count items)"
-                    _lastBackupInfo.value = info
-                    prefs.edit().putString("last_backup_info", info).apply()
+                    viewModelScope.launch { appPreferences.setLastBackupInfo(info) }
                     _snackbarMessage.value = "Backup created: ${file.name} ($count items)"
                 } else {
                     _snackbarMessage.value = "Failed to create backup: ${result.exceptionOrNull()?.message}"
@@ -1363,8 +1358,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             val totalRestored = data.screenshots.size
             val timeStr = SimpleDateFormat("MMM d, yyyy HH:mm", Locale.getDefault()).format(Date())
             val info = "Restored: $timeStr ($totalRestored items)"
-            _lastBackupInfo.value = info
-            prefs.edit().putString("last_backup_info", info).apply()
+            viewModelScope.launch { appPreferences.setLastBackupInfo(info) }
 
             val successMsg = "Successfully restored $totalRestored items, ${data.collections.size} collections, ${data.providers.size} AI providers!"
             _snackbarMessage.value = successMsg

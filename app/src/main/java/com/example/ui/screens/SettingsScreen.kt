@@ -694,6 +694,21 @@ fun SettingsScreen(
 }
 
 @Composable
+private fun PermissionStatusChip(label: String, granted: Boolean) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = if (granted) Color(0xFF10B981).copy(alpha = 0.12f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+    ) {
+        Text(
+            text = if (granted) "$" + "label: Granted" else "$" + "label: Needed",
+            style = MaterialTheme.typography.labelSmall,
+            color = if (granted) Color(0xFF10B981) else MaterialTheme.colorScheme.onErrorContainer,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+        )
+    }
+}
+
+@Composable
 private fun MinimalSectionTitle(title: String) {
     Text(
         text = title,

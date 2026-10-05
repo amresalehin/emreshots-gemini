@@ -4,16 +4,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -24,11 +20,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -48,7 +50,6 @@ import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Collections
@@ -77,7 +78,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -96,6 +96,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -108,7 +109,6 @@ import com.example.data.model.GalleryViewMode
 import com.example.data.model.MediaGroupBy
 import com.example.data.model.MediaSortOption
 import com.example.service.media.DeviceMediaScanner
-import com.example.ui.components.AiIndexerBottomSheet
 import com.example.ui.components.GalleryScrollBar
 import com.example.ui.components.ScreenshotCard
 import com.example.ui.components.ScreenshotFeedCard
@@ -142,30 +142,13 @@ fun ScreenshotsScreen(
     val groupByOption by viewModel.groupByOption.collectAsStateWithLifecycle()
     val viewMode by viewModel.viewMode.collectAsStateWithLifecycle()
     val groupedScreenshots by viewModel.groupedScreenshots.collectAsStateWithLifecycle()
-    val indexingState by viewModel.indexingState.collectAsStateWithLifecycle()
-    val activeProvider by viewModel.activeProvider.collectAsStateWithLifecycle()
-    val autoWriteExifSetting by viewModel.autoWriteExifSetting.collectAsStateWithLifecycle()
-
-    val unindexedCount = remember(allScreenshots) {
-        allScreenshots.count { !it.aiProcessed }
-    }
-    val indexedCount = remember(allScreenshots) {
-        allScreenshots.count { it.aiProcessed }
-    }
 
     var isSearchExpanded by remember { mutableStateOf(false) }
     var hidePermissionBanner by remember { mutableStateOf(false) }
     var showOrganizeSheet by remember { mutableStateOf(false) }
-    var showAiIndexerSheet by remember { mutableStateOf(false) }
+    var showMoreMenu by remember { mutableStateOf(false) }
     var pinchNotification by remember { mutableStateOf<String?>(null) }
     val organizeSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val aiIndexerSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    val animatedProgress by animateFloatAsState(
-        targetValue = if (indexingState.isIndexing) indexingState.progress.coerceIn(0f, 1f) else 0f,
-        animationSpec = tween(durationMillis = 250),
-        label = "indexing_progress_anim"
-    )
 
     LaunchedEffect(pinchNotification) {
         if (pinchNotification != null) {
@@ -200,9 +183,16 @@ fun ScreenshotsScreen(
     val photoCount = allScreenshots.size - videoCount
     val totalDisplayCount = groupedScreenshots.values.sumOf { it.size }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+    val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .nestedScroll(scrollBehavior.nestedScrollConnection)
+    ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Clean, Decluttered Top App Bar
+            // Clean, Decluttered Top App Bar with integrated status bar support
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -240,42 +230,6 @@ fun ScreenshotsScreen(
                         )
                     }
 
-                    // AI Indexer Action
-                    IconButton(
-                        onClick = { showAiIndexerSheet = true },
-                        modifier = Modifier.testTag("btn_ai_indexer")
-                    ) {
-                        BadgedBox(
-                            badge = {
-                                if (indexingState.isIndexing) {
-                                    Badge(
-                                        modifier = Modifier.size(8.dp),
-                                        containerColor = MaterialTheme.colorScheme.primary
-                                    )
-                                } else if (unindexedCount > 0) {
-                                    Badge(
-                                        containerColor = MaterialTheme.colorScheme.tertiary,
-                                        contentColor = MaterialTheme.colorScheme.onTertiary
-                                    ) {
-                                        Text(
-                                            text = if (unindexedCount > 99) "99+" else "$unindexedCount",
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AutoAwesome,
-                                contentDescription = "AI Indexer",
-                                tint = if (indexingState.isIndexing || unindexedCount > 0)
-                                    MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-
                     // Sync Gallery Media
                     IconButton(
                         onClick = {
@@ -294,30 +248,7 @@ fun ScreenshotsScreen(
                         )
                     }
 
-                    // Direct View & Organize Button
-                    IconButton(
-                        onClick = { showOrganizeSheet = true },
-                        modifier = Modifier.testTag("btn_organize_view")
-                    ) {
-                        BadgedBox(
-                            badge = {
-                                if (isCustomOrganized) {
-                                    Badge(
-                                        modifier = Modifier.size(6.dp),
-                                        containerColor = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Tune,
-                                contentDescription = "View & Organize",
-                                tint = if (isCustomOrganized) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-
-                    // Direct Settings Action
+                    // Direct Settings Action in Header
                     IconButton(
                         onClick = onNavigateToSettings,
                         modifier = Modifier.testTag("btn_top_settings")
@@ -328,9 +259,116 @@ fun ScreenshotsScreen(
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
+
+                    // Three-dot More Menu with View & Organize function
+                    Box {
+                        IconButton(
+                            onClick = { showMoreMenu = true },
+                            modifier = Modifier.testTag("btn_more_menu")
+                        ) {
+                            BadgedBox(
+                                badge = {
+                                    if (isCustomOrganized) {
+                                        Badge(
+                                            modifier = Modifier.size(6.dp),
+                                            containerColor = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "More Options",
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+
+                        DropdownMenu(
+                            expanded = showMoreMenu,
+                            onDismissRequest = { showMoreMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("View & Organize") },
+                                leadingIcon = {
+                                    BadgedBox(
+                                        badge = {
+                                            if (isCustomOrganized) {
+                                                Badge(
+                                                    modifier = Modifier.size(6.dp),
+                                                    containerColor = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Tune,
+                                            contentDescription = null,
+                                            tint = if (isCustomOrganized) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    showMoreMenu = false
+                                    showOrganizeSheet = true
+                                },
+                                modifier = Modifier.testTag("btn_organize_view")
+                            )
+
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        when (viewMode) {
+                                            GalleryViewMode.GRID -> "Switch to Masonry"
+                                            GalleryViewMode.MASONRY -> "Switch to Feed"
+                                            GalleryViewMode.FEED -> "Switch to List"
+                                            GalleryViewMode.LIST -> "Switch to Grid"
+                                        }
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = when (viewMode) {
+                                            GalleryViewMode.GRID -> Icons.Default.Dashboard
+                                            GalleryViewMode.MASONRY -> Icons.Default.ViewAgenda
+                                            GalleryViewMode.FEED -> Icons.AutoMirrored.Filled.FormatListBulleted
+                                            GalleryViewMode.LIST -> Icons.Default.GridView
+                                        },
+                                        contentDescription = null
+                                    )
+                                },
+                                onClick = {
+                                    showMoreMenu = false
+                                    val nextMode = when (viewMode) {
+                                        GalleryViewMode.GRID -> GalleryViewMode.MASONRY
+                                        GalleryViewMode.MASONRY -> GalleryViewMode.FEED
+                                        GalleryViewMode.FEED -> GalleryViewMode.LIST
+                                        GalleryViewMode.LIST -> GalleryViewMode.GRID
+                                    }
+                                    viewModel.setViewMode(nextMode)
+                                },
+                                modifier = Modifier.testTag("btn_quick_view_toggle")
+                            )
+
+                            DropdownMenuItem(
+                                text = { Text("Settings") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Settings, contentDescription = null)
+                                },
+                                onClick = {
+                                    showMoreMenu = false
+                                    onNavigateToSettings()
+                                },
+                                modifier = Modifier.testTag("btn_top_settings")
+                            )
+                        }
+                    }
                 },
+                scrollBehavior = scrollBehavior,
+                windowInsets = TopAppBarDefaults.windowInsets,
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
                 )
             )
 
@@ -379,37 +417,6 @@ fun ScreenshotsScreen(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Quick AI Indexer Pill if unindexed items exist and not currently indexing
-                if (unindexedCount > 0 && !indexingState.isIndexing) {
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.75f),
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .clickable { showAiIndexerSheet = true }
-                            .testTag("btn_quick_ai_index")
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AutoAwesome,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "AI Index ($unindexedCount)",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                    }
-                }
-
                 // Quick Organize Indicator Pill
                 Surface(
                     shape = RoundedCornerShape(20.dp),
@@ -526,135 +533,14 @@ fun ScreenshotsScreen(
                 }
             }
 
-            // Dynamic AI Indexer Progress Bar Card in Gallery
-            AnimatedVisibility(
-                visible = indexingState.isIndexing || isAnalyzing,
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+            // AI Status Progress Line
+            if (isAnalyzing) {
+                LinearProgressIndicator(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
-                        .testTag("card_indexing_progress")
-                ) {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(30.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            imageVector = Icons.Default.AutoAwesome,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onPrimary,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                }
-
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = if (indexingState.isIndexing) "AI Gallery Indexer Running" else "AI Analysis Active",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                    Text(
-                                        text = if (indexingState.isIndexing)
-                                            "${indexingState.current} of ${indexingState.total} • ${indexingState.currentItemTitle}"
-                                        else statusText ?: "Analyzing media with AI...",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
-                                        maxLines = 1,
-                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                                    )
-                                }
-                            }
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                if (indexingState.isIndexing && indexingState.total > 0) {
-                                    Text(
-                                        text = "${(animatedProgress * 100).toInt()}%",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-
-                                IconButton(
-                                    onClick = { viewModel.cancelIndexing() },
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .testTag("btn_cancel_indexing")
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "Cancel Indexing",
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                        }
-
-                        // Smooth Dynamic Progress Bar
-                        LinearProgressIndicator(
-                            progress = { animatedProgress },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(6.dp)
-                                .clip(RoundedCornerShape(3.dp))
-                                .testTag("bar_indexing_progress"),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                        )
-
-                        // Bottom status info
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = if (indexingState.currentModel.isNotBlank())
-                                    "Model: ${indexingState.currentModel}"
-                                else "Model: Gemini",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f)
-                            )
-                            if (indexingState.isIndexing) {
-                                Text(
-                                    text = "${indexingState.successCount} indexed" +
-                                            if (indexingState.failureCount > 0) " (${indexingState.failureCount} failed)" else "",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
-                                )
-                            }
-                        }
-                    }
-                }
+                        .height(3.dp),
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
 
             // Gallery Grid / Feed / List with Section Grouping & Pinch-to-Change-View
@@ -679,13 +565,12 @@ fun ScreenshotsScreen(
                                     if (prevDist > 10f && currentDist > 10f) {
                                         val delta = currentDist / prevDist
                                         zoomFactor *= delta
-                                        if (zoomFactor > 1.25f) {
-                                            // Pinch Out (Expand / Zoom In -> fewer columns / larger view)
+                                        if (zoomFactor > 1.30f) {
+                                            // Pinch Out (Expand / Zoom In)
                                             when {
                                                 viewMode == GalleryViewMode.GRID && gridColumns > 2 -> {
-                                                    val newCols = gridColumns - 1
-                                                    viewModel.setGridColumns(newCols)
-                                                    pinchNotification = "$newCols Columns Grid"
+                                                    viewModel.setGridColumns(2)
+                                                    pinchNotification = "Grid (2 columns)"
                                                 }
                                                 viewMode == GalleryViewMode.GRID && gridColumns == 2 -> {
                                                     viewModel.setViewMode(GalleryViewMode.MASONRY)
@@ -702,8 +587,8 @@ fun ScreenshotsScreen(
                                             }
                                             event.changes.forEach { it.consume() }
                                             zoomFactor = 1f
-                                        } else if (zoomFactor < 0.75f) {
-                                            // Pinch In (Contract / Zoom Out -> more columns / denser view)
+                                        } else if (zoomFactor < 0.72f) {
+                                            // Pinch In (Contract / Zoom Out)
                                             when {
                                                 viewMode == GalleryViewMode.FEED -> {
                                                     viewModel.setViewMode(GalleryViewMode.MASONRY)
@@ -712,17 +597,11 @@ fun ScreenshotsScreen(
                                                 viewMode == GalleryViewMode.MASONRY -> {
                                                     viewModel.setViewMode(GalleryViewMode.GRID)
                                                     viewModel.setGridColumns(2)
-                                                    pinchNotification = "2 Columns Grid"
+                                                    pinchNotification = "Grid (2 columns)"
                                                 }
-                                                viewMode == GalleryViewMode.GRID && gridColumns < 5 -> {
-                                                    val newCols = gridColumns + 1
-                                                    viewModel.setGridColumns(newCols)
-                                                    pinchNotification = "$newCols Columns Grid"
-                                                }
-                                                viewMode == GalleryViewMode.LIST -> {
-                                                    viewModel.setViewMode(GalleryViewMode.GRID)
+                                                viewMode == GalleryViewMode.GRID && gridColumns == 2 -> {
                                                     viewModel.setGridColumns(3)
-                                                    pinchNotification = "3 Columns Grid"
+                                                    pinchNotification = "Compact Grid (3 columns)"
                                                 }
                                             }
                                             event.changes.forEach { it.consume() }
@@ -738,177 +617,68 @@ fun ScreenshotsScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(24.dp),
+                            .padding(32.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (searchQuery.isNotEmpty() || selectedFilter != ScreenshotFilter.ALL) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.fillMaxWidth()
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier.size(72.dp)
                             ) {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
-                                    modifier = Modifier.size(68.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            imageVector = Icons.Default.Search,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(32.dp)
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                Text(
-                                    text = if (searchQuery.isNotEmpty()) "No matches for \"$searchQuery\""
-                                    else "No ${selectedFilter.displayName} found",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    textAlign = TextAlign.Center
-                                )
-
-                                Spacer(modifier = Modifier.height(6.dp))
-
-                                Text(
-                                    text = "Try adjusting your search terms or filter selection.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center
-                                )
-
-                                Spacer(modifier = Modifier.height(18.dp))
-
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    if (searchQuery.isNotEmpty()) {
-                                        Button(
-                                            onClick = { viewModel.setSearchQuery("") },
-                                            shape = RoundedCornerShape(20.dp)
-                                        ) {
-                                            Text("Clear Search")
-                                        }
-                                    }
-                                    if (selectedFilter != ScreenshotFilter.ALL) {
-                                        OutlinedButton(
-                                            onClick = { viewModel.setFilter(ScreenshotFilter.ALL) },
-                                            shape = RoundedCornerShape(20.dp)
-                                        ) {
-                                            Text("Show All Media")
-                                        }
-                                    }
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Collections,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                        modifier = Modifier.size(32.dp)
+                                    )
                                 }
                             }
-                        } else {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.fillMaxWidth()
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Text(
+                                text = if (searchQuery.isNotEmpty()) "No media matching \"$searchQuery\""
+                                else if (selectedFilter != ScreenshotFilter.ALL) "No ${selectedFilter.displayName} found"
+                                else "No photos or videos yet",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center
+                            )
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Text(
+                                text = "Import photos or videos, or sync device media to get started.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+
+                            Spacer(modifier = Modifier.height(20.dp))
+
+                            Button(
+                                onClick = {
+                                    mediaPickerLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
+                                    )
+                                },
+                                shape = RoundedCornerShape(20.dp),
+                                modifier = Modifier.testTag("btn_empty_import")
                             ) {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    modifier = Modifier.size(80.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            imageVector = Icons.Default.Collections,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(40.dp)
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(20.dp))
-
-                                Text(
-                                    text = "Your Visual Library Awaits",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    textAlign = TextAlign.Center
-                                )
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Text(
-                                    text = "Organize, analyze with AI, extract text with OCR, and manage EXIF metadata on all your media.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.padding(horizontal = 16.dp)
-                                )
-
-                                Spacer(modifier = Modifier.height(20.dp))
-
-                                // Feature Highlights Chips
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                    modifier = Modifier.padding(bottom = 24.dp)
-                                ) {
-                                    listOf("AI Vision", "OCR Text", "EXIF GPS", "Video Player").forEach { tag ->
-                                        Surface(
-                                            shape = RoundedCornerShape(12.dp),
-                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-                                        ) {
-                                            Text(
-                                                text = "✦ $tag",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                            )
-                                        }
-                                    }
-                                }
-
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Button(
-                                        onClick = {
-                                            mediaPickerLauncher.launch(
-                                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
-                                            )
-                                        },
-                                        shape = RoundedCornerShape(20.dp),
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .testTag("btn_empty_import")
-                                    ) {
-                                        Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(18.dp))
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Pick Media", fontWeight = FontWeight.Bold)
-                                    }
-
-                                    OutlinedButton(
-                                        onClick = {
-                                            if (hasMediaPermissions) {
-                                                viewModel.syncDeviceMedia()
-                                            } else {
-                                                permissionLauncher.launch(DeviceMediaScanner.getRequiredPermissions())
-                                            }
-                                        },
-                                        shape = RoundedCornerShape(20.dp),
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Sync Gallery")
-                                    }
-                                }
+                                Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Pick Photos or Videos")
                             }
                         }
                     }
                 } else {
                     if (viewMode == GalleryViewMode.MASONRY) {
-                        val staggeredCols = if (gridColumns >= 4) 3 else gridColumns.coerceIn(2, 3)
                         LazyVerticalStaggeredGrid(
-                            columns = StaggeredGridCells.Fixed(staggeredCols),
+                            columns = StaggeredGridCells.Fixed(2),
                             state = staggeredGridState,
-                            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 88.dp),
+                            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 88.dp + navBarBottom),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalItemSpacing = 8.dp,
                             modifier = Modifier
@@ -971,7 +741,7 @@ fun ScreenshotsScreen(
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(effectiveCols),
                             state = gridState,
-                            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 88.dp),
+                            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 88.dp + navBarBottom),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier
@@ -1050,6 +820,7 @@ fun ScreenshotsScreen(
                     staggeredGridState = if (viewMode == GalleryViewMode.MASONRY) staggeredGridState else null,
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
+                        .navigationBarsPadding()
                         .padding(top = 8.dp, bottom = 80.dp)
                 )
 
@@ -1102,6 +873,7 @@ fun ScreenshotsScreen(
             shape = CircleShape,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
+                .navigationBarsPadding()
                 .padding(16.dp)
                 .size(56.dp)
                 .testTag("fab_import_screenshot")
@@ -1136,30 +908,6 @@ fun ScreenshotsScreen(
                 coroutineScope.launch {
                     organizeSheetState.hide()
                     showOrganizeSheet = false
-                }
-            }
-        )
-    }
-
-    // Modal Bottom Sheet for AI Gallery Indexer
-    if (showAiIndexerSheet) {
-        AiIndexerBottomSheet(
-            sheetState = aiIndexerSheetState,
-            totalCount = allScreenshots.size,
-            unindexedCount = unindexedCount,
-            indexedCount = indexedCount,
-            isIndexing = indexingState.isIndexing,
-            activeProvider = activeProvider,
-            autoWriteExif = autoWriteExifSetting,
-            onStartIndexing = { onlyUnindexed, autoWriteExif ->
-                viewModel.startIndexing(onlyUnindexed = onlyUnindexed, autoWriteExif = autoWriteExif)
-            },
-            onCancelIndexing = { viewModel.cancelIndexing() },
-            onConfigureProvider = onNavigateToSettings,
-            onDismiss = {
-                coroutineScope.launch {
-                    aiIndexerSheetState.hide()
-                    showAiIndexerSheet = false
                 }
             }
         )

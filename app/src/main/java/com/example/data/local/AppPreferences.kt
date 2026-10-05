@@ -21,6 +21,7 @@ class AppPreferences(private val context: Context) {
         val aiQualityPreset = stringPreferencesKey("ai_quality_preset")
         val autoWriteExif = booleanPreferencesKey("auto_write_exif")
         val gridColumns = intPreferencesKey("grid_columns")
+        val lastBackupInfo = stringPreferencesKey("last_backup_info")
     }
 
     val ocrEnabled: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.ocrEnabled] ?: true }
@@ -31,6 +32,7 @@ class AppPreferences(private val context: Context) {
     val aiQualityPreset: Flow<String> = context.appPreferencesDataStore.data.map { it[Keys.aiQualityPreset] ?: "Balanced" }
     val autoWriteExif: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.autoWriteExif] ?: false }
     val gridColumns: Flow<Int> = context.appPreferencesDataStore.data.map { it[Keys.gridColumns] ?: 2 }
+    val lastBackupInfo: Flow<String?> = context.appPreferencesDataStore.data.map { it[Keys.lastBackupInfo] }
 
     suspend fun setOcrEnabled(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.ocrEnabled] = value }
     suspend fun setLinksDetectionEnabled(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.linksDetectionEnabled] = value }
@@ -40,4 +42,7 @@ class AppPreferences(private val context: Context) {
     suspend fun setAiQualityPreset(value: String) = context.appPreferencesDataStore.edit { it[Keys.aiQualityPreset] = value }
     suspend fun setAutoWriteExif(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.autoWriteExif] = value }
     suspend fun setGridColumns(value: Int) = context.appPreferencesDataStore.edit { it[Keys.gridColumns] = value.coerceIn(2, 4) }
+    suspend fun setLastBackupInfo(value: String?) = context.appPreferencesDataStore.edit { preferences ->
+        if (value == null) preferences.remove(Keys.lastBackupInfo) else preferences[Keys.lastBackupInfo] = value
+    }
 }

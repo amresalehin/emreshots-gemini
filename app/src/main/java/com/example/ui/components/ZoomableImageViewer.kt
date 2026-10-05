@@ -1,4 +1,4 @@
-package com.example.ui.components
+package com.amresalehin.emreshots.ui.components
 
 import android.content.Context
 import android.content.Intent
@@ -64,8 +64,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.data.model.ExifData
-import com.example.data.model.ScreenshotItem
+import com.amresalehin.emreshots.data.model.ExifData
+import com.amresalehin.emreshots.data.model.ScreenshotItem
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Locale

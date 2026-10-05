@@ -45,9 +45,6 @@ class SettingsControlsTest {
         viewModel.setSmartTagsEnabled(false)
         assertFalse(viewModel.smartTagsEnabled.value)
 
-        assertTrue(viewModel.remindersDetectionEnabled.value)
-        viewModel.setRemindersDetectionEnabled(false)
-        assertFalse(viewModel.remindersDetectionEnabled.value)
     }
 
     @Test

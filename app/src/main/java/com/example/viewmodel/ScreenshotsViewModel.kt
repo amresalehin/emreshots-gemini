@@ -8,8 +8,8 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.BuildConfig
 import com.example.data.local.AppDatabase
+import com.example.data.local.SecureApiKeyStore
 import com.example.data.local.seedInitialData
 import com.example.data.model.CollectionItem
 import com.example.data.model.CustomCloudProvider
@@ -103,10 +103,18 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     val collections: StateFlow<List<CollectionItem>> = collectionRepository.allCollections
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private val secureApiKeyStore = SecureApiKeyStore(application)
+
     val providers: StateFlow<List<CustomCloudProvider>> = providerRepository.allProviders
+        .combine(kotlinx.coroutines.flow.flowOf(Unit)) { list, _ ->
+            list.map { it.copy(apiKey = secureApiKeyStore.get(it.id) ?: "") }
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val activeProvider: StateFlow<CustomCloudProvider?> = providerRepository.activeProvider
+        .combine(kotlinx.coroutines.flow.flowOf(Unit)) { provider, _ ->
+            provider?.copy(apiKey = provider?.let { secureApiKeyStore.get(it.id) ?: "" } ?: "")
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     private val _searchQuery = MutableStateFlow("")
@@ -293,6 +301,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     init {
         viewModelScope.launch(Dispatchers.IO) {
             seedInitialData(database, getApplication())
+            migrateProviderApiKeysToKeystore()
             ensureDefaultProviderIfNeeded()
             // Ensure that if providers exist but none is currently marked active, activate the first one
             val active = providerRepository.getActiveProviderSync()
@@ -306,17 +315,22 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         checkPermissions()
     }
 
+    private suspend fun migrateProviderApiKeysToKeystore() {
+        providerRepository.getAllProvidersSync().forEach { provider ->
+            if (provider.apiKey.isNotBlank()) {
+                secureApiKeyStore.put(provider.id, provider.apiKey)
+                providerRepository.update(provider.copy(apiKey = ""))
+            }
+        }
+    }
+
     private suspend fun ensureDefaultProviderIfNeeded() {
         val existing = providerRepository.getAllProvidersSync()
         if (existing.isEmpty()) {
-            val geminiKey = try {
-                BuildConfig::class.java.getField("GEMINI_API_KEY").get(null) as? String ?: ""
-            } catch (_: Exception) { "" }
             val defaultProvider = CustomCloudProvider(
                 id = "default-gemini",
                 name = "Google Gemini",
                 baseUrl = "https://generativelanguage.googleapis.com",
-                apiKey = geminiKey,
                 selectedModel = "gemini-2.5-flash",
                 isActive = true,
                 isDefaultGemini = true
@@ -1118,7 +1132,10 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             val updated = provider.copy(
                 isDefaultGemini = isGemini || provider.isDefaultGemini
             )
-            providerRepository.saveProvider(updated, makeActive)
+            if (provider.apiKey.isNotBlank()) {
+                secureApiKeyStore.put(provider.id, provider.apiKey)
+            }
+            providerRepository.saveProvider(updated.copy(apiKey = ""), makeActive)
             val action = if (makeActive) "saved & activated" else "saved"
             _snackbarMessage.value = "AI Provider '${updated.name}' $action!"
         }
@@ -1127,6 +1144,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     fun deleteProvider(provider: CustomCloudProvider) {
         viewModelScope.launch(Dispatchers.IO) {
             providerRepository.deleteProviderWithFallback(provider)
+            secureApiKeyStore.remove(provider.id)
             _snackbarMessage.value = "Provider '${provider.name}' removed"
         }
     }
@@ -1141,10 +1159,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     fun testProviderConnection(provider: CustomCloudProvider, onResult: (ConnectionTestResult) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
-            val geminiKey = try {
-                BuildConfig::class.java.getField("GEMINI_API_KEY").get(null) as? String ?: ""
-            } catch (_: Exception) { "" }
-            val result = aiService.testConnection(provider, geminiKey)
+            val result = aiService.testConnection(provider, provider.apiKey)
             val updated = provider.copy(
                 lastTestedTime = System.currentTimeMillis(),
                 lastTestStatus = if (result.isSuccess) "Connected (${result.latencyMs}ms)" else result.message
@@ -1156,10 +1171,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     fun fetchProviderModels(provider: CustomCloudProvider, onResult: (com.example.service.ai.FetchModelsResult) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
-            val geminiKey = try {
-                BuildConfig::class.java.getField("GEMINI_API_KEY").get(null) as? String ?: ""
-            } catch (_: Exception) { "" }
-            val result = aiService.fetchModels(provider, geminiKey)
+            val result = aiService.fetchModels(provider, provider.apiKey)
             onResult(result)
         }
     }
@@ -1182,14 +1194,14 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         // Safe synchronous fallback using current state (never blocks main thread or Room)
         val shots = allScreenshots.value
         val cols = collections.value
-        val provs = providers.value
+        val provs = providers.value.map { it.copy(apiKey = "") }
         return BackupRestoreManager.createBackupJson(shots, cols, provs, getSettingsMap())
     }
 
     suspend fun generateBackupJson(): String = withContext(Dispatchers.IO) {
         val shots = screenshotRepository.getAllScreenshotsSync()
         val cols = collectionRepository.getAllCollectionsSync()
-        val provs = providerRepository.getAllProvidersSync()
+        val provs = providerRepository.getAllProvidersSync().map { it.copy(apiKey = "") }
         BackupRestoreManager.createBackupJson(shots, cols, provs, getSettingsMap())
     }
 
@@ -1326,7 +1338,12 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
             // Restore providers
             if (data.providers.isNotEmpty()) {
-                providerRepository.insertAll(data.providers)
+                data.providers.forEach { provider ->
+                    if (provider.apiKey.isNotBlank()) {
+                        secureApiKeyStore.put(provider.id, provider.apiKey)
+                    }
+                }
+                providerRepository.insertAll(data.providers.map { it.copy(apiKey = "") })
                 val active = providerRepository.getActiveProviderSync()
                 if (active == null) {
                     providerRepository.setActiveProvider(data.providers.first().id)

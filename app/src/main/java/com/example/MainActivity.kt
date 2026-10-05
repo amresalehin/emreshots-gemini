@@ -1,4 +1,4 @@
-package com.example
+package com.amresalehin.emreshots
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -21,13 +21,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.ui.navigation.Screen
-import com.example.ui.screens.ScreenshotDetailScreen
-import com.example.ui.screens.ScreenshotsScreen
-import com.example.ui.screens.SettingsScreen
-import com.example.ui.theme.MyApplicationTheme
-import com.example.viewmodel.ScreenshotsViewModel
-import com.example.service.media.BackgroundSyncScheduler
+import com.amresalehin.emreshots.ui.navigation.Screen
+import com.amresalehin.emreshots.ui.screens.ScreenshotDetailScreen
+import com.amresalehin.emreshots.ui.screens.ScreenshotsScreen
+import com.amresalehin.emreshots.ui.screens.SettingsScreen
+import com.amresalehin.emreshots.ui.theme.EmreShotsTheme
+import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
+import com.amresalehin.emreshots.service.media.BackgroundSyncScheduler
 
 class MainActivity : ComponentActivity() {
 
@@ -38,7 +38,7 @@ class MainActivity : ComponentActivity() {
         BackgroundSyncScheduler.schedule(this)
         enableEdgeToEdge()
         setContent {
-            MyApplicationTheme {
+            EmreShotsTheme {
                 val navController = rememberNavController()
                 val snackbarHostState = remember { SnackbarHostState() }
                 val snackbarMessage by viewModel.snackbarMessage.collectAsStateWithLifecycle()

@@ -16,7 +16,6 @@ class AppPreferences(private val context: Context) {
         val ocrEnabled = booleanPreferencesKey("ocr_enabled")
         val linksDetectionEnabled = booleanPreferencesKey("links_detection_enabled")
         val smartTagsEnabled = booleanPreferencesKey("smart_tags_enabled")
-        val remindersDetectionEnabled = booleanPreferencesKey("reminders_detection_enabled")
         val autoSyncDeviceMedia = booleanPreferencesKey("auto_sync_device_media")
         val aiQualityPreset = stringPreferencesKey("ai_quality_preset")
         val autoWriteExif = booleanPreferencesKey("auto_write_exif")
@@ -27,7 +26,6 @@ class AppPreferences(private val context: Context) {
     val ocrEnabled: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.ocrEnabled] ?: true }
     val linksDetectionEnabled: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.linksDetectionEnabled] ?: true }
     val smartTagsEnabled: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.smartTagsEnabled] ?: true }
-    val remindersDetectionEnabled: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.remindersDetectionEnabled] ?: true }
     val autoSyncDeviceMedia: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.autoSyncDeviceMedia] ?: true }
     val aiQualityPreset: Flow<String> = context.appPreferencesDataStore.data.map { it[Keys.aiQualityPreset] ?: "Balanced" }
     val autoWriteExif: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.autoWriteExif] ?: false }

@@ -30,7 +30,7 @@ jobs:
           mkdir -p app/src/main/jniLibs/arm64-v8a app/src/main/assets
           RUNTIME_APK="$RUNNER_TEMP/exiftoolwrapper-arm64.apk"
           curl -fsSL -o "$RUNTIME_APK" "https://github.com/bestvibes/exiftoolwrapper-android/releases/download/release-20260610/ExifToolWrapper-release-20260610-arm64-v8a.apk"
-          echo "47851825ec30601dfe2edb3d9ff023bc7aa748344ae99aee417769df9742286  $RUNTIME_APK" | sha256sum -c -
+          echo "47851825ec30601fce2edb3d9ff023bc7aa748344ae99aee417769df9742286  $RUNTIME_APK" | sha256sum -c -
           unzip -q "$RUNTIME_APK" -d "$RUNNER_TEMP/exiftoolwrapper"
           cp "$RUNNER_TEMP/exiftoolwrapper/lib/arm64-v8a/"lib*.so app/src/main/jniLibs/arm64-v8a/
           cp "$RUNNER_TEMP/exiftoolwrapper/assets/perl5.tar" app/src/main/assets/perl5.tar

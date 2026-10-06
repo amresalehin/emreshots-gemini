@@ -20,8 +20,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -222,7 +220,7 @@ fun ScreenshotDetailScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(Color(0xFFF6F7F9))
             .verticalScroll(detailScrollState)
             .navigationBarsPadding()
             .pointerInput(screenshotId) {
@@ -255,7 +253,8 @@ fun ScreenshotDetailScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(galleryHeight)
-                .background(Color.White)
+                .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
+                .background(Color(0xFFF1F2F4))
         ) {
             if (screenshot.isVideo) {
                 InAppVideoPlayer(
@@ -275,67 +274,88 @@ fun ScreenshotDetailScreen(
             }
 
             if (showGalleryControls) {
-                Row(
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                        .border(
+                            1.dp,
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
+                            RoundedCornerShape(18.dp)
+                        ),
+                    shape = RoundedCornerShape(18.dp),
+                    color = Color.White.copy(alpha = 0.96f),
+                    tonalElevation = 2.dp,
+                    shadowElevation = 3.dp
                 ) {
-                    IconButton(
-                        onClick = onNavigateBack,
-                        modifier = Modifier.size(48.dp).testTag("btn_detail_back")
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
-                    }
+                        IconButton(
+                            onClick = onNavigateBack,
+                            modifier = Modifier.size(44.dp).testTag("btn_detail_back")
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
 
-                    Column(
-                        modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
-                        horizontalAlignment = Alignment.Start
-                    ) {
-                        Text(
-                            text = screenshot.title.ifBlank { "Untitled" },
-                            color = MaterialTheme.colorScheme.onSurface,
-                            style = MaterialTheme.typography.titleSmall,
-                            maxLines = 1,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = "${currentIndex + 1} / ${allScreenshots.size}",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    }
+                        Column(
+                            modifier = Modifier.weight(1f).padding(horizontal = 6.dp),
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = screenshot.title.ifBlank { "Untitled" },
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.titleSmall,
+                                maxLines = 1,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = "${currentIndex + 1} of ${allScreenshots.size}",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
 
-                    IconButton(
-                        onClick = { viewModel.toggleFavorite(screenshot) },
-                        modifier = Modifier.size(48.dp).testTag("btn_detail_fav")
-                    ) {
-                        Icon(
-                            imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = "Favorite",
-                            tint = if (screenshot.isFavorite) Color(0xFFFF5C7A) else MaterialTheme.colorScheme.onSurface
-                        )
-                    }
+                        IconButton(
+                            onClick = { viewModel.toggleFavorite(screenshot) },
+                            modifier = Modifier.size(44.dp).testTag("btn_detail_fav")
+                        ) {
+                            Icon(
+                                imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = "Favorite",
+                                tint = if (screenshot.isFavorite) Color(0xFFE54868) else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
 
-                    IconButton(
-                        onClick = {
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_SUBJECT, screenshot.title)
-                                putExtra(
-                                    Intent.EXTRA_TEXT,
-                                    "${screenshot.title}\\n\\n${screenshot.description}\\nTags: ${screenshot.tags.joinToString(", ")}"
-                                )
-                            }
-                            context.startActivity(Intent.createChooser(shareIntent, "Share"))
-                        },
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(Icons.Default.Share, contentDescription = "Share", tint = MaterialTheme.colorScheme.onSurface)
+                        IconButton(
+                            onClick = {
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_SUBJECT, screenshot.title)
+                                    putExtra(
+                                        Intent.EXTRA_TEXT,
+                                        "${screenshot.title}\\n\\n${screenshot.description}\\nTags: ${screenshot.tags.joinToString(", ")}"
+                                    )
+                                }
+                                context.startActivity(Intent.createChooser(shareIntent, "Share"))
+                            },
+                            modifier = Modifier.size(44.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Share,
+                                contentDescription = "Share",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
-
                 }
 
             }
@@ -389,12 +409,25 @@ fun ScreenshotDetailScreen(
             }
 
             // Main Details Content
-            Column(
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 22.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+                    .padding(horizontal = 12.dp, vertical = 12.dp)
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
+                        RoundedCornerShape(28.dp)
+                    ),
+                shape = RoundedCornerShape(28.dp),
+                color = Color.White,
+                tonalElevation = 1.dp
             ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
+                ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -402,8 +435,9 @@ fun ScreenshotDetailScreen(
                     Button(
                         onClick = { viewModel.analyzeLocalVision(screenshot, autoWriteExif = false) },
                         enabled = !isAnalyzing,
-                        shape = RoundedCornerShape(14.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 9.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 11.dp),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp),
                         modifier = Modifier.weight(1f).testTag("btn_analyze_now")
                     ) {
                         if (isAnalyzing) {
@@ -421,8 +455,8 @@ fun ScreenshotDetailScreen(
 
                     OutlinedButton(
                         onClick = { showOcrSheet = true },
-                        shape = RoundedCornerShape(14.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 9.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 11.dp),
                         modifier = Modifier.weight(1f).testTag("btn_open_ocr_sheet")
                     ) {
                         Icon(Icons.Default.DocumentScanner, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -440,8 +474,8 @@ fun ScreenshotDetailScreen(
                                 }
                                 showExifEditor = true
                             },
-                            shape = RoundedCornerShape(14.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 9.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 11.dp),
                             modifier = Modifier.weight(1f).testTag("btn_open_exif_editor")
                         ) {
                             Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -492,9 +526,9 @@ fun ScreenshotDetailScreen(
                             Spacer(modifier = Modifier.height(3.dp))
                             Text(
                                 text = screenshot.title.ifBlank { "Untitled" },
-                                style = MaterialTheme.typography.headlineSmall,
+                                style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold,
-                                lineHeight = 28.sp
+                                lineHeight = 32.sp
                             )
                             if (screenshot.description.isNotBlank()) {
                                 Spacer(modifier = Modifier.height(6.dp))
@@ -774,6 +808,7 @@ fun ScreenshotDetailScreen(
                     }
                 }
             }
+            }
         }
 
     // EXIF Editor Modal
@@ -911,7 +946,7 @@ private fun GestureImage(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(Color(0xFFF1F2F4))
             .pointerInput(model.data) {
                 detectTapGestures(onTap = { onTap() })
             },

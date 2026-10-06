@@ -59,6 +59,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -167,6 +169,7 @@ private fun VideoPlayerSurface(
     var playbackSpeed by remember { mutableFloatStateOf(1.0f) }
     var isUserScrubbing by remember { mutableStateOf(false) }
     var scrubProgress by remember { mutableFloatStateOf(0f) }
+    var playerWidthPx by remember { mutableIntStateOf(1) }
 
     // Auto-update playback progress
     LaunchedEffect(isPlaying, isUserScrubbing) {
@@ -204,12 +207,13 @@ private fun VideoPlayerSurface(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
+            .onSizeChanged { playerWidthPx = it.width.coerceAtLeast(1) }
             .pointerInput(videoUri) {
                 detectTapGestures(
                     onTap = { showControls = !showControls },
                     onDoubleTap = { position ->
                         videoViewRef?.let { vv ->
-                            val target = if (position.x < size.width / 2f) {
+                            val target = if (position.x < playerWidthPx / 2f) {
                                 (vv.currentPosition - 10_000).coerceAtLeast(0)
                             } else {
                                 val maxPosition = if (durationMs > 0) durationMs else vv.duration

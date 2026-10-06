@@ -145,7 +145,7 @@ private fun VideoPlayerSurface(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(Color.White)
             .pointerInput(videoUri) {
                 detectTapGestures(
                     onTap = {
@@ -169,6 +169,9 @@ private fun VideoPlayerSurface(
                         isPrepared = true
                         if (mp.duration > 0) durationMs = mp.duration
                         mp.setVolume(1f, 1f)
+                        // Start immediately so opening a video never presents a blank frame.
+                        mp.start()
+                        isPlaying = true
                     }
                     setOnCompletionListener {
                         isPlaying = false

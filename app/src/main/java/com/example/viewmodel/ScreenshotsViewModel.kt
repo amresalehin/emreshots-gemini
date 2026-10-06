@@ -755,7 +755,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                     ocrText = if (ocrEnabled.value) screenshot.ocrText else null,
                     requestedCapabilities = com.amresalehin.emreshots.service.ai.OnDeviceVisionCapability.entries.toSet()
                 ),
-                mode = mode,
+                modePreference = mode,
                 modelPreference = onDeviceVisionModel.value
             )
             if (local.isSuccess || mode == com.amresalehin.emreshots.service.ai.OnDeviceVisionMode.FORCE_LOCAL) {

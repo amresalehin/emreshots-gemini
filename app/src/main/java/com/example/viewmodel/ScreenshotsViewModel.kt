@@ -922,25 +922,15 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         onComplete: ((AiAnalysisResult) -> Unit)? = null
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val provider = activeProvider.value
-            if (provider == null) {
-                _snackbarMessage.value = "No AI provider configured. Please set up your endpoint in Settings."
-                val errorResult = AiAnalysisResult(isSuccess = false, errorMessage = "No AI provider configured. Please set up your endpoint in Settings.")
-                withContext(Dispatchers.Main) {
-                    onComplete?.invoke(errorResult)
-                }
-                return@launch
-            }
-
             _isAnalyzing.value = true
-            _analysisStatusText.value = "Analyzing with ${provider.name}..."
+            _analysisStatusText.value = if (onDeviceVisionMode.value.equals("FORCE_LOCAL", ignoreCase = true)) "Analyzing locally…" else "Analyzing…"
 
             val result = analyzeScreenshotInternal(screenshot, autoWriteExif)
 
-            if (result.isSuccess) {
-                _snackbarMessage.value = "AI Analysis complete via ${result.modelUsed} (${result.processingTimeMs}ms)!"
+            _snackbarMessage.value = if (result.isSuccess) {
+                "AI analysis complete via ${result.modelUsed} (${result.processingTimeMs}ms)."
             } else {
-                _snackbarMessage.value = "AI Analysis failed: ${result.errorMessage ?: "Unknown error"}"
+                "AI analysis failed: ${result.errorMessage ?: "Unknown error"}"
             }
 
             _isAnalyzing.value = false
@@ -950,7 +940,6 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             }
         }
     }
-
     fun extractOcr(screenshot: ScreenshotItem, onComplete: ((String?) -> Unit)? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             _isExtractingOcr.value = true

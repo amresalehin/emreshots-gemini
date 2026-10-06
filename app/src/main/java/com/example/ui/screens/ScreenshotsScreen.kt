@@ -157,6 +157,9 @@ fun ScreenshotsScreen(
     var hidePermissionBanner by remember { mutableStateOf(false) }
     var showViewMenu by remember { mutableStateOf(false) }
     var showSortMenu by remember { mutableStateOf(false) }
+    var showFolderMenu by remember { mutableStateOf(false) }
+    var selectedMediaType by remember { mutableStateOf<String?>(null) }
+    var selectedFolder by remember { mutableStateOf<String?>(null) }
     var showMoreMenu by remember { mutableStateOf(false) }
     var showProcessingMenu by remember { mutableStateOf(false) }
     val searchFocusRequester = remember { FocusRequester() }
@@ -209,7 +212,24 @@ fun ScreenshotsScreen(
     val aiVisionPendingCount = allScreenshots.count { !it.isVideo && !it.aiProcessed }
     val ocrPendingCount = allScreenshots.count { !it.isVideo && it.ocrText.orEmpty().isBlank() }
     val aiOcrEligibleCount = allScreenshots.count { !it.isVideo && it.ocrText.orEmpty().isNotBlank() && !it.aiProcessed }
-    val totalDisplayCount = groupedScreenshots.values.sumOf { it.size }
+    val availableFileTypes = remember(allScreenshots) {
+        allScreenshots.mapNotNull { item ->
+            item.filePath.substringAfterLast(".").takeIf { it.isNotBlank() }?.lowercase(Locale.ROOT)
+        }.distinct().sorted()
+    }
+    val availableFolders = remember(allScreenshots) {
+        allScreenshots.mapNotNull { item ->
+            item.filePath.substringBeforeLast("/", "").substringAfterLast("/", "").takeIf { it.isNotBlank() }
+        }.distinct().sorted()
+    }
+    val displayGroups = groupedScreenshots.mapValues { (_, items) ->
+        items.filter { item ->
+            val typeMatch = selectedMediaType == null || item.filePath.substringAfterLast(".").equals(selectedMediaType, ignoreCase = true)
+            val folderMatch = selectedFolder == null || item.filePath.substringBeforeLast("/", "").substringAfterLast("/", "").equals(selectedFolder, ignoreCase = true)
+            typeMatch && folderMatch
+        }
+    }.filterValues { it.isNotEmpty() }
+    val totalDisplayCount = displayGroups.values.sumOf { it.size }
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -254,95 +274,40 @@ fun ScreenshotsScreen(
                             modifier = Modifier.fillMaxWidth().focusRequester(searchFocusRequester).testTag("input_gallery_search")
                         )
                     } else {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("EmreShots", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.width(8.dp))
+                        Box {
                             Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                                onClick = { showFolderMenu = true },
+                                shape = RoundedCornerShape(20.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
                             ) {
-                                Text(
-                                    "${allScreenshots.size}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                )
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.Collections, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(7.dp))
+                                    Text(selectedFolder ?: "All media", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                                    Spacer(modifier = Modifier.width(5.dp))
+                                    Text(totalDisplayCount.toString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                            DropdownMenu(expanded = showFolderMenu, onDismissRequest = { showFolderMenu = false }) {
+                                DropdownMenuItem(text = { Text("All media") }, trailingIcon = { if (selectedFolder == null) Text("✓") }, onClick = { selectedFolder = null; showFolderMenu = false })
+                                if (availableFolders.isNotEmpty()) {
+                                    androidx.compose.material3.HorizontalDivider()
+                                    availableFolders.take(24).forEach { folder ->
+                                        DropdownMenuItem(text = { Text(folder, maxLines = 1) }, trailingIcon = { if (selectedFolder == folder) Text("✓") }, onClick = { selectedFolder = folder; showFolderMenu = false })
+                                    }
+                                }
                             }
                         }
+                    }
                     }
                 },
                 actions = {
                     if (!isSearchExpanded) {
                         IconButton(onClick = { isSearchExpanded = true }, modifier = Modifier.testTag("btn_toggle_search")) {
                             Icon(Icons.Default.Search, contentDescription = "Search")
-                        }
-                    }
-
-                    Box {
-                        IconButton(onClick = { showViewMenu = true }, modifier = Modifier.testTag("btn_view_menu")) {
-                            BadgedBox(
-                                badge = { if (viewMode != GalleryViewMode.GRID || gridColumns != 2) Badge(modifier = Modifier.size(6.dp), containerColor = MaterialTheme.colorScheme.primary) }
-                            ) {
-                                Icon(
-                                    when (viewMode) {
-                                        GalleryViewMode.GRID -> Icons.Default.GridView
-                                        GalleryViewMode.MASONRY -> Icons.Default.Dashboard
-                                        GalleryViewMode.FEED -> Icons.Default.ViewAgenda
-                                        GalleryViewMode.LIST -> Icons.AutoMirrored.Filled.FormatListBulleted
-                                    },
-                                    contentDescription = "View options"
-                                )
-                            }
-                        }
-                        DropdownMenu(expanded = showViewMenu, onDismissRequest = { showViewMenu = false }) {
-                            listOf(
-                                GalleryViewMode.GRID to "Grid",
-                                GalleryViewMode.MASONRY to "Masonry",
-                                GalleryViewMode.FEED to "Feed",
-                                GalleryViewMode.LIST to "List"
-                            ).forEach { (mode, label) ->
-                                DropdownMenuItem(
-                                    text = { Text(label) },
-                                    trailingIcon = { if (viewMode == mode) Text("✓") },
-                                    onClick = { viewModel.setViewMode(mode); showViewMenu = false }
-                                )
-                            }
-                            androidx.compose.material3.HorizontalDivider()
-                            listOf(2, 3, 4, 5).forEach { columns ->
-                                DropdownMenuItem(
-                                    text = { Text("$columns columns") },
-                                    trailingIcon = { if (gridColumns == columns) Text("✓") },
-                                    onClick = { viewModel.setGridColumns(columns); showViewMenu = false }
-                                )
-                            }
-                        }
-                    }
-
-                    Box {
-                        IconButton(onClick = { showSortMenu = true }, modifier = Modifier.testTag("btn_sort_menu")) {
-                            BadgedBox(
-                                badge = { if (sortOption != MediaSortOption.NEWEST || groupByOption != MediaGroupBy.NONE) Badge(modifier = Modifier.size(6.dp), containerColor = MaterialTheme.colorScheme.primary) }
-                            ) {
-                                Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Sort and group")
-                            }
-                        }
-                        DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
-                            MediaSortOption.entries.forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text("Sort: ${option.displayName}") },
-                                    trailingIcon = { if (sortOption == option) Text("✓") },
-                                    onClick = { viewModel.setSortOption(option); showSortMenu = false }
-                                )
-                            }
-                            androidx.compose.material3.HorizontalDivider()
-                            MediaGroupBy.entries.forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text("Group: ${option.displayName}") },
-                                    trailingIcon = { if (groupByOption == option) Text("✓") },
-                                    onClick = { viewModel.setGroupByOption(option); showSortMenu = false }
-                                )
-                            }
                         }
                     }
 
@@ -425,10 +390,27 @@ fun ScreenshotsScreen(
                         border = null,
                         modifier = Modifier.testTag("filter_chip_${filter.name.lowercase()}")
                     )
-                }
-            }
+                 }
+                 availableFileTypes.forEach { type ->
+                     val isSelected = selectedMediaType == type
+                     FilterChip(
+                         selected = isSelected,
+                         onClick = { selectedMediaType = if (isSelected) null else type },
+                         label = { Text(type.uppercase(Locale.ROOT), fontSize = 12.sp, fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal) },
+                         shape = RoundedCornerShape(20.dp),
+                         colors = FilterChipDefaults.filterChipColors(
+                             selectedContainerColor = MaterialTheme.colorScheme.primary,
+                             selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                             labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                         ),
+                         border = null,
+                         modifier = Modifier.testTag("filter_chip_type_${type}")
+                     )
+                 }
+             }
 
-            // Compact, non-intrusive permission card (only if not granted and not dismissed)
+             // Compact, non-intrusive permission card (only if not granted and not dismissed)
             if (!hasMediaPermissions && !hidePermissionBanner) {
                 Surface(
                     color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
@@ -525,32 +507,7 @@ fun ScreenshotsScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .pointerInput(Unit) {
-                        awaitEachGesture {
-                            awaitFirstDown(requireUnconsumed = false)
-                            var zoomFactor = 1f
-                            do {
-                                val event = awaitPointerEvent()
-                                if (event.changes.size >= 2) {
-                                    val p1 = event.changes[0].position
-                                    val p2 = event.changes[1].position
-                                    val prevP1 = event.changes[0].previousPosition
-                                    val prevP2 = event.changes[1].previousPosition
-                                    val currentDist = hypot(p1.x - p2.x, p1.y - p2.y)
-                                    val prevDist = hypot(prevP1.x - prevP2.x, prevP1.y - prevP2.y)
-                                    if (prevDist > 10f && currentDist > 10f) {
-                                        zoomFactor *= currentDist / prevDist
-                                        if (zoomFactor > 1.30f) {
-                                            when (viewMode) {
-                                                GalleryViewMode.GRID -> {
-                                                    if (gridColumns > 2) {
-                                                        viewModel.setGridColumns(gridColumns - 1)
-                                                        pinchNotification = "Grid (" + (gridColumns - 1) + " columns)"
-                                                    } else {
-                                                        viewModel.setViewMode(GalleryViewMode.MASONRY)
-                                                        pinchNotification = "Masonry View"
-                                                    }
-                                                }
+                    
                                                 GalleryViewMode.MASONRY -> {
                                                     if (gridColumns > 2) {
                                                         viewModel.setGridColumns(gridColumns - 1)
@@ -665,7 +622,7 @@ fun ScreenshotsScreen(
                                 .fillMaxSize()
                                 .testTag("grid_screenshots")
                         ) {
-                            groupedScreenshots.forEach { (header, items) ->
+                            displayGroups.forEach { (header, items) ->
                                 if (header.isNotBlank()) {
                                     item(span = StaggeredGridItemSpan.FullLine, key = "staggered_header_$header") {
                                         Row(
@@ -706,8 +663,8 @@ fun ScreenshotsScreen(
                                         screenshot = item,
                                         onClick = { onNavigateToDetail(item.id) },
                                         onToggleFavorite = { viewModel.toggleFavorite(item) },
-                                        showFileName = showFileNames,
-                                        showTags = showTags
+                                        showFileName = false,
+                                             showTags = false
                                     )
                                 }
                             }
@@ -730,7 +687,7 @@ fun ScreenshotsScreen(
                                 .fillMaxSize()
                                 .testTag("grid_screenshots")
                         ) {
-                            groupedScreenshots.forEach { (header, items) ->
+                            displayGroups.forEach { (header, items) ->
                                 if (header.isNotBlank()) {
                                     item(span = { GridItemSpan(maxLineSpan) }, key = "header_$header") {
                                         Row(
@@ -777,22 +734,22 @@ fun ScreenshotsScreen(
                                             screenshot = item,
                                             onClick = { onNavigateToDetail(item.id) },
                                             onToggleFavorite = { viewModel.toggleFavorite(item) },
-                                            showFileName = showFileNames,
-                                            showTags = showTags
+                                            showFileName = false,
+                                             showTags = false
                                         )
                                         GalleryViewMode.LIST -> ScreenshotListItem(
                                             screenshot = item,
                                             onClick = { onNavigateToDetail(item.id) },
                                             onToggleFavorite = { viewModel.toggleFavorite(item) },
-                                            showFileName = showFileNames,
-                                            showTags = showTags
+                                            showFileName = false,
+                                             showTags = false
                                         )
                                         GalleryViewMode.MASONRY -> ScreenshotMasonryCard(
                                         screenshot = item,
                                         onClick = { onNavigateToDetail(item.id) },
                                         onToggleFavorite = { viewModel.toggleFavorite(item) },
-                                        showFileName = showFileNames,
-                                        showTags = showTags
+                                        showFileName = false,
+                                             showTags = false
                                     )
                                     }
                                 }

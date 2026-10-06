@@ -11,8 +11,8 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -72,8 +71,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -86,10 +83,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -171,7 +167,8 @@ fun ScreenshotDetailScreen(
     val isExtractingOcr by viewModel.isExtractingOcr.collectAsStateWithLifecycle()
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
-    var showFullscreenImage by remember { mutableStateOf(false) }
+    var showGalleryControls by remember { mutableStateOf(false) }
+    val detailScrollState = rememberScrollState()
     var showAddTagDialog by remember { mutableStateOf(false) }
     var showReminderDialog by remember { mutableStateOf(false) }
     var showCollectionsSheet by remember { mutableStateOf(false) }
@@ -207,245 +204,172 @@ fun ScreenshotDetailScreen(
 
     val imageFile = File(screenshot.filePath)
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { },
-                navigationIcon = {
-                    IconButton(
-                        onClick = onNavigateBack,
-                        modifier = Modifier.testTag("btn_detail_back")
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = { viewModel.toggleFavorite(screenshot) },
-                        modifier = Modifier.testTag("btn_detail_fav")
-                    ) {
-                        Icon(
-                            imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = "Favorite",
-                            tint = if (screenshot.isFavorite) Color(0xFFF43F5E) else MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                    IconButton(
-                        onClick = {
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_SUBJECT, screenshot.title)
-                                putExtra(Intent.EXTRA_TEXT, "${screenshot.title}\n\n${screenshot.description}\nTags: ${screenshot.tags.joinToString(", ")}")
+    val configuration = LocalConfiguration.current
+    val galleryHeight = (configuration.screenHeightDp.dp * 0.80f).coerceAtLeast(520.dp)
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface)
+            .verticalScroll(detailScrollState)
+            .navigationBarsPadding()
+            .pointerInput(screenshotId) {
+                var totalDrag = 0f
+                var triggered = false
+                detectHorizontalDragGestures(
+                    onHorizontalDrag = { _, dragAmount ->
+                        totalDrag += dragAmount
+                        if (!triggered && kotlin.math.abs(totalDrag) >= 120f) {
+                            triggered = true
+                            if (totalDrag < 0) {
+                                nextScreenshotId?.let(onNavigateToScreenshot)
+                            } else {
+                                previousScreenshotId?.let(onNavigateToScreenshot)
                             }
-                            context.startActivity(Intent.createChooser(shareIntent, "Share details"))
                         }
-                    ) {
-                        Icon(Icons.Default.Share, contentDescription = "Share")
+                    },
+                    onDragEnd = {
+                        totalDrag = 0f
+                        triggered = false
+                    },
+                    onDragCancel = {
+                        totalDrag = 0f
+                        triggered = false
                     }
-                    IconButton(
-                        onClick = { showDeleteConfirm = true },
-                        modifier = Modifier.testTag("btn_detail_delete")
-                    ) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
-                    }
-                },
-                windowInsets = TopAppBarDefaults.windowInsets,
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
                 )
-            )
-        }
-    ) { padding ->
-        Column(
+            }
+    ) {
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .navigationBarsPadding()
-        ) {
-            // Media preview — framed like a focused gallery surface rather than a full-bleed utility view.
-            val headerAspectRatio = if (screenshot.width > 0 && screenshot.height > 0) {
-                (screenshot.width.toFloat() / screenshot.height.toFloat()).coerceIn(0.75f, 1.78f)
-            } else if (screenshot.isVideo) {
-                1.777f
-            } else {
-                1.25f
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .aspectRatio(headerAspectRatio)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(Color.Black)
-            ) {
-                if (screenshot.isVideo) {
-                    InAppVideoPlayer(
-                        screenshot = screenshot,
-                        modifier = Modifier.fillMaxSize(),
-                        onExternalPlayerRequested = {
-                            try {
-                                val uri = if (!screenshot.uriString.isNullOrBlank()) {
-                                    Uri.parse(screenshot.uriString)
-                                } else {
-                                    Uri.fromFile(imageFile)
-                                }
-                                val intent = Intent(Intent.ACTION_VIEW).apply {
-                                    setDataAndType(uri, "video/*")
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                }
-                                context.startActivity(intent)
-                            } catch (_: Exception) {
-                                viewModel.showMessage("No external video player found")
-                            }
-                        },
-                        onSwipePrevious = previousScreenshotId?.let { id -> { onNavigateToScreenshot(id) } },
-                        onSwipeNext = nextScreenshotId?.let { id -> { onNavigateToScreenshot(id) } }
-                    )
-                } else if (imageFile.exists() || !screenshot.uriString.isNullOrBlank()) {
-                    GestureImage(
-                        model = ImageRequest.Builder(context)
-                            .data(if (imageFile.exists()) imageFile else screenshot.uriString)
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = screenshot.title,
-                        onSwipePrevious = previousScreenshotId?.let { id -> { onNavigateToScreenshot(id) } },
-                        onSwipeNext = nextScreenshotId?.let { id -> { onNavigateToScreenshot(id) } },
-                        onOpenFullscreen = { showFullscreenImage = true }
-                    )
+                .fillMaxWidth()
+                .height(galleryHeight)
+                .background(Color.Black)
+                .pointerInput(screenshotId) {
+                    detectTapGestures(onTap = { showGalleryControls = !showGalleryControls })
                 }
+        ) {
+            if (screenshot.isVideo) {
+                InAppVideoPlayer(
+                    screenshot = screenshot,
+                    modifier = Modifier.fillMaxSize(),
+                    onExternalPlayerRequested = null,
+                    onSwipePrevious = null,
+                    onSwipeNext = null,
+                    onTap = { showGalleryControls = !showGalleryControls }
+                )
+            } else if (imageFile.exists() || !screenshot.uriString.isNullOrBlank()) {
+                GestureImage(
+                    model = ImageRequest.Builder(context)
+                        .data(if (imageFile.exists()) imageFile else screenshot.uriString)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = screenshot.title,
+                    onTap = { showGalleryControls = !showGalleryControls }
+                )
             }
 
-            // One compact, scrollable tool rail keeps the primary actions discoverable without
-            // competing with the media itself.
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            AnimatedVisibility(
+                visible = showGalleryControls,
+                modifier = Modifier.fillMaxSize()
             ) {
-                Text(
-                    text = "TOOLS",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.2.sp,
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                )
-                Surface(
-                    color = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 1.dp,
-                    modifier = Modifier.fillMaxWidth()
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            androidx.compose.ui.graphics.Brush.verticalGradient(
+                                listOf(
+                                    Color.Black.copy(alpha = 0.55f),
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.72f)
+                                )
+                            )
+                        )
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            .statusBarsPadding()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Button(
-                            onClick = { viewModel.analyzeLocalVision(screenshot, autoWriteExif = false) },
-                            enabled = !isAnalyzing,
-                            shape = RoundedCornerShape(14.dp),
-                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-                            modifier = Modifier.testTag("btn_analyze_now")
+                        IconButton(
+                            onClick = onNavigateBack,
+                            modifier = Modifier
+                                .size(44.dp)
+                                .background(Color.Black.copy(alpha = 0.42f), CircleShape)
+                                .testTag("btn_detail_back")
                         ) {
-                            if (isAnalyzing) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(14.dp),
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    strokeWidth = 2.dp
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            IconButton(
+                                onClick = { viewModel.toggleFavorite(screenshot) },
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(Color.Black.copy(alpha = 0.42f), CircleShape)
+                                    .testTag("btn_detail_fav")
+                            ) {
+                                Icon(
+                                    imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                    contentDescription = "Favorite",
+                                    tint = if (screenshot.isFavorite) Color(0xFFFF5C7A) else Color.White
                                 )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Analyzing...", fontSize = 12.sp)
-                            } else {
-                                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Local AI", fontSize = 12.sp)
                             }
-                        }
-
-                        OutlinedButton(
-                            onClick = { viewModel.analyzeCloudVision(screenshot, autoWriteExif = false) },
-                            enabled = !isAnalyzing,
-                            shape = RoundedCornerShape(14.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                            modifier = Modifier.testTag("btn_cloud_vision")
-                        ) {
-                            Icon(Icons.Default.Cloud, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(5.dp))
-                            Text("Cloud Vision", fontSize = 12.sp)
-                        }
-
-                        OutlinedButton(
-                            onClick = { showOcrSheet = true },
-                            shape = RoundedCornerShape(14.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                            modifier = Modifier.testTag("btn_open_ocr_sheet")
-                        ) {
-                            Icon(Icons.Default.DocumentScanner, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(5.dp))
-                            Text(
-                                if (!screenshot.ocrText.isNullOrBlank()) "OCR (${screenshot.ocrText.length})" else "OCR",
-                                fontSize = 12.sp
-                            )
-                        }
-
-                        if (!screenshot.isVideo) {
-                            OutlinedButton(
+                            IconButton(
                                 onClick = {
-                                    if (!hasMediaLocationPermission) {
-                                        permissionLauncher.launch(
-                                            com.amresalehin.emreshots.service.media.DeviceMediaScanner.getRequiredPermissions()
+                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_SUBJECT, screenshot.title)
+                                        putExtra(
+                                            Intent.EXTRA_TEXT,
+                                            "${screenshot.title}\\n\\n${screenshot.description}\\nTags: ${screenshot.tags.joinToString(", ")}"
                                         )
                                     }
-                                    showExifEditor = true
+                                    context.startActivity(Intent.createChooser(shareIntent, "Share details"))
                                 },
-                                shape = RoundedCornerShape(14.dp),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                                modifier = Modifier.testTag("btn_open_exif_editor")
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(Color.Black.copy(alpha = 0.42f), CircleShape)
                             ) {
-                                Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(5.dp))
-                                Text("EXIF", fontSize = 12.sp)
+                                Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
+                            }
+                            IconButton(
+                                onClick = { showDeleteConfirm = true },
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(Color.Black.copy(alpha = 0.42f), CircleShape)
+                                    .testTag("btn_detail_delete")
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFFF6B6B))
                             }
                         }
+                    }
 
-                        IconButton(
-                            onClick = { showReminderDialog = true },
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Alarm,
-                                contentDescription = "Reminder",
-                                tint = if (screenshot.reminderTime != null) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                }
-                            )
-                        }
-
-                        IconButton(
-                            onClick = { showCollectionsSheet = true },
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Folder,
-                                contentDescription = "Collections",
-                                tint = if (screenshot.collectionIds.isNotEmpty()) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                }
-                            )
-                        }
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(horizontal = 20.dp, vertical = 22.dp)
+                    ) {
+                        Text(
+                            text = screenshot.title.ifBlank { "Untitled" },
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 2
+                        )
+                        Text(
+                            text = "${currentIndex + 1} / ${allScreenshots.size}  •  Swipe up for details",
+                            color = Color.White.copy(alpha = 0.78f),
+                            style = MaterialTheme.typography.labelMedium
+                        )
                     }
                 }
             }
+        }
+
+        Spacer(modifier = Modifier.height(2.dp))
 
             // Permission Banner if Location or Media Permissions are not yet fully granted
             if (!hasMediaLocationPermission) {
@@ -499,6 +423,62 @@ fun ScreenshotDetailScreen(
                     .padding(horizontal = 20.dp, vertical = 22.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = { viewModel.analyzeLocalVision(screenshot, autoWriteExif = false) },
+                        enabled = !isAnalyzing,
+                        shape = RoundedCornerShape(14.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 9.dp),
+                        modifier = Modifier.weight(1f).testTag("btn_analyze_now")
+                    ) {
+                        if (isAnalyzing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(14.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(if (isAnalyzing) "Analyzing" else "Analyze", fontSize = 12.sp)
+                    }
+
+                    OutlinedButton(
+                        onClick = { showOcrSheet = true },
+                        shape = RoundedCornerShape(14.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 9.dp),
+                        modifier = Modifier.weight(1f).testTag("btn_open_ocr_sheet")
+                    ) {
+                        Icon(Icons.Default.DocumentScanner, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("OCR", fontSize = 12.sp)
+                    }
+
+                    if (!screenshot.isVideo) {
+                        OutlinedButton(
+                            onClick = {
+                                if (!hasMediaLocationPermission) {
+                                    permissionLauncher.launch(
+                                        com.amresalehin.emreshots.service.media.DeviceMediaScanner.getRequiredPermissions()
+                                    )
+                                }
+                                showExifEditor = true
+                            },
+                            shape = RoundedCornerShape(14.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 9.dp),
+                            modifier = Modifier.weight(1f).testTag("btn_open_exif_editor")
+                        ) {
+                            Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("EXIF", fontSize = 12.sp)
+                        }
+                    }
+                }
+
                 // Title and Description
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1029,48 +1009,7 @@ fun ScreenshotDetailScreen(
         )
     }
 
-    if (showFullscreenImage) {
-        Dialog(
-            onDismissRequest = { showFullscreenImage = false },
-            properties = DialogProperties(
-                usePlatformDefaultWidth = false,
-                decorFitsSystemWindows = false
-            )
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black)
-            ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(if (imageFile.exists()) imageFile else screenshot.uriString)
-                        .build(),
-                    contentDescription = screenshot.title,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize()
-                )
-                IconButton(
-                    onClick = { showFullscreenImage = false },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .statusBarsPadding()
-                        .padding(16.dp)
-                        .size(44.dp)
-                        .testTag("btn_close_fullscreen_image")
-                ) {
-                    Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.6f)) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = Color.White,
-                            modifier = Modifier.padding(8.dp)
-                        )
-                    }
-                }
-            }
-        }
-    }
+
 }
 
 @Composable
@@ -1099,91 +1038,22 @@ fun DetailRow(label: String, value: String) {
 private fun GestureImage(
     model: ImageRequest,
     contentDescription: String?,
-    onSwipePrevious: (() -> Unit)?,
-    onSwipeNext: (() -> Unit)?,
-    onOpenFullscreen: () -> Unit
+    onTap: () -> Unit
 ) {
-    var scale by remember { mutableStateOf(1f) }
-    var offset by remember { mutableStateOf(Offset.Zero) }
-    var swipeDistance by remember { mutableStateOf(0f) }
-    var swipeTriggered by remember { mutableStateOf(false) }
-
-    LaunchedEffect(model.data) {
-        scale = 1f
-        offset = Offset.Zero
-        swipeDistance = 0f
-        swipeTriggered = false
-    }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
             .pointerInput(model.data) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    val oldScale = scale
-                    val newScale = (scale * zoom).coerceIn(1f, 4f)
-
-                    if (oldScale <= 1.02f && newScale <= 1.02f) {
-                        swipeDistance += pan.x
-                        if (!swipeTriggered && kotlin.math.abs(swipeDistance) >= 120f) {
-                            swipeTriggered = true
-                            if (swipeDistance < 0) onSwipeNext?.invoke() else onSwipePrevious?.invoke()
-                        }
-                        offset = Offset.Zero
-                    } else {
-                        scale = newScale
-                        offset = if (scale > 1f) {
-                            Offset(
-                                x = (offset.x + pan.x).coerceIn(-900f, 900f),
-                                y = (offset.y + pan.y).coerceIn(-900f, 900f)
-                            )
-                        } else {
-                            Offset.Zero
-                        }
-                    }
-                }
-            }
-            .pointerInput(model.data) {
-                detectTapGestures(
-                    onDoubleTap = {
-                        scale = if (scale > 1.05f) 1f else 2.5f
-                        if (scale == 1f) offset = Offset.Zero
-                    },
-                    onTap = { if (scale <= 1.05f) onOpenFullscreen() }
-                )
-            }
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-                translationX = offset.x
-                translationY = offset.y
+                detectTapGestures(onTap = { onTap() })
             },
         contentAlignment = Alignment.Center
     ) {
         AsyncImage(
             model = model,
             contentDescription = contentDescription,
-            contentScale = ContentScale.Fit,
+            contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
-
-        if (scale > 1.05f) {
-            Surface(
-                color = Color.Black.copy(alpha = 0.62f),
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 14.dp)
-            ) {
-                Text(
-                    text = "Pinch to zoom • Drag to explore • Double-tap to reset",
-                    color = Color.White,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
-                )
-            }
-        }
     }
 }

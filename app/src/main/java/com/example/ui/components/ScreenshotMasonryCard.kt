@@ -66,6 +66,8 @@ fun ScreenshotMasonryCard(
     screenshot: ScreenshotItem,
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit,
+    showFileName: Boolean = true,
+    showTags: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -253,7 +255,7 @@ fun ScreenshotMasonryCard(
                     .padding(horizontal = 8.dp, vertical = 6.dp)
             ) {
                 Column {
-                    if (screenshot.title.isNotBlank()) {
+                    if (showFileName && screenshot.title.isNotBlank()) {
                         Text(
                             text = screenshot.title,
                             color = Color.White,
@@ -307,7 +309,7 @@ fun ScreenshotMasonryCard(
                             Spacer(modifier = Modifier.width(1.dp))
                         }
 
-                        if (screenshot.tags.isNotEmpty()) {
+                        if (showTags && screenshot.tags.isNotEmpty()) {
                             Text(
                                 text = "#${screenshot.tags.first()}",
                                 color = MaterialTheme.colorScheme.primaryContainer,

@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -114,7 +115,7 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
     val processed = allScreenshots.count { it.aiProcessed }
     val pending = (total - processed).coerceAtLeast(0)
     val failed = indexingState.failureCount
-    val progress = when { indexingState.total > 0 -> indexingState.progress else if (total == 0) 0f else processed.toFloat() / total.toFloat() }
+    val progress = if (indexingState.total > 0) indexingState.progress else if (total == 0) 0f else processed.toFloat() / total.toFloat()
 
     if (onNavigateBack != null) BackHandler(onBack = onNavigateBack)
 

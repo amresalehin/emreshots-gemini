@@ -254,7 +254,7 @@ fun ScreenshotDetailScreen(
                 .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()
         ) {
-            // Smart Adaptive Media Header (in-app video player or zoomable photo)
+            // Media preview — framed like a focused gallery surface rather than a full-bleed utility view.
             val headerAspectRatio = if (screenshot.width > 0 && screenshot.height > 0) {
                 (screenshot.width.toFloat() / screenshot.height.toFloat()).coerceIn(0.75f, 1.78f)
             } else if (screenshot.isVideo) {
@@ -266,7 +266,9 @@ fun ScreenshotDetailScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
                     .aspectRatio(headerAspectRatio)
+                    .clip(RoundedCornerShape(24.dp))
                     .background(Color.Black)
             ) {
                 if (screenshot.isVideo) {
@@ -305,104 +307,132 @@ fun ScreenshotDetailScreen(
                 }
             }
 
-            // Streamlined Action Pills Bar
-            Surface(
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 2.dp,
-                modifier = Modifier.fillMaxWidth()
+            // One compact, scrollable tool rail keeps the primary actions discoverable without
+            // competing with the media itself.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 10.dp)
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Text(
+                    text = "TOOLS",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.2.sp,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 1.dp,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Button(
-                        onClick = { viewModel.analyzeLocalVision(screenshot, autoWriteExif = false) },
-                        enabled = !isAnalyzing,
-                        shape = RoundedCornerShape(20.dp),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                        modifier = Modifier.testTag("btn_analyze_now")
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (isAnalyzing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(14.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Analyzing...", fontSize = 12.sp)
-                        } else {
-                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Local AI", fontSize = 12.sp)
-                        }
-                    }
-
-                    OutlinedButton(
-                        onClick = { viewModel.analyzeCloudVision(screenshot, autoWriteExif = false) },
-                        enabled = !isAnalyzing,
-                        shape = RoundedCornerShape(20.dp),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                        modifier = Modifier.testTag("btn_cloud_vision")
-                    ) {
-                        Icon(Icons.Default.Cloud, contentDescription = null, modifier = Modifier.size(15.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Cloud Vision", fontSize = 11.sp)
-                    }
-
-                    // OCR Feature Button
-                    OutlinedButton(
-                        onClick = { showOcrSheet = true },
-                        shape = RoundedCornerShape(20.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                        modifier = Modifier.testTag("btn_open_ocr_sheet")
-                    ) {
-                        Icon(Icons.Default.DocumentScanner, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(if (!screenshot.ocrText.isNullOrBlank()) "OCR (${screenshot.ocrText.length})" else "OCR", fontSize = 12.sp)
-                    }
-
-                    if (!screenshot.isVideo) {
-                        OutlinedButton(
-                            onClick = {
-                                if (!hasMediaLocationPermission) {
-                                    permissionLauncher.launch(com.amresalehin.emreshots.service.media.DeviceMediaScanner.getRequiredPermissions())
-                                }
-                                showExifEditor = true
-                            },
-                            shape = RoundedCornerShape(20.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                            modifier = Modifier.testTag("btn_open_exif_editor")
+                        Button(
+                            onClick = { viewModel.analyzeLocalVision(screenshot, autoWriteExif = false) },
+                            enabled = !isAnalyzing,
+                            shape = RoundedCornerShape(14.dp),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                            modifier = Modifier.testTag("btn_analyze_now")
                         ) {
-                            Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("EXIF", fontSize = 12.sp)
+                            if (isAnalyzing) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(14.dp),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Analyzing...", fontSize = 12.sp)
+                            } else {
+                                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Local AI", fontSize = 12.sp)
+                            }
                         }
-                    }
 
-                    IconButton(
-                        onClick = { showReminderDialog = true },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Alarm,
-                            contentDescription = "Reminder",
-                            tint = if (screenshot.reminderTime != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                        OutlinedButton(
+                            onClick = { viewModel.analyzeCloudVision(screenshot, autoWriteExif = false) },
+                            enabled = !isAnalyzing,
+                            shape = RoundedCornerShape(14.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                            modifier = Modifier.testTag("btn_cloud_vision")
+                        ) {
+                            Icon(Icons.Default.Cloud, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text("Cloud Vision", fontSize = 12.sp)
+                        }
 
-                    IconButton(
-                        onClick = { showCollectionsSheet = true },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Folder,
-                            contentDescription = "Collections",
-                            tint = if (screenshot.collectionIds.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        OutlinedButton(
+                            onClick = { showOcrSheet = true },
+                            shape = RoundedCornerShape(14.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                            modifier = Modifier.testTag("btn_open_ocr_sheet")
+                        ) {
+                            Icon(Icons.Default.DocumentScanner, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text(
+                                if (!screenshot.ocrText.isNullOrBlank()) "OCR (${screenshot.ocrText.length})" else "OCR",
+                                fontSize = 12.sp
+                            )
+                        }
+
+                        if (!screenshot.isVideo) {
+                            OutlinedButton(
+                                onClick = {
+                                    if (!hasMediaLocationPermission) {
+                                        permissionLauncher.launch(
+                                            com.amresalehin.emreshots.service.media.DeviceMediaScanner.getRequiredPermissions()
+                                        )
+                                    }
+                                    showExifEditor = true
+                                },
+                                shape = RoundedCornerShape(14.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                                modifier = Modifier.testTag("btn_open_exif_editor")
+                            ) {
+                                Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(5.dp))
+                                Text("EXIF", fontSize = 12.sp)
+                            }
+                        }
+
+                        IconButton(
+                            onClick = { showReminderDialog = true },
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Alarm,
+                                contentDescription = "Reminder",
+                                tint = if (screenshot.reminderTime != null) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { showCollectionsSheet = true },
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Folder,
+                                contentDescription = "Collections",
+                                tint = if (screenshot.collectionIds.isNotEmpty()) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -456,8 +486,8 @@ fun ScreenshotDetailScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(horizontal = 20.dp, vertical = 22.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 // Title and Description
                 Row(
@@ -491,9 +521,18 @@ fun ScreenshotDetailScreen(
                             )
                         } else {
                             Text(
+                                text = if (screenshot.isVideo) "VIDEO" else "SCREENSHOT",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.1.sp
+                            )
+                            Spacer(modifier = Modifier.height(3.dp))
+                            Text(
                                 text = screenshot.title.ifBlank { "Untitled" },
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 28.sp
                             )
                             if (screenshot.description.isNotBlank()) {
                                 Spacer(modifier = Modifier.height(6.dp))
@@ -579,7 +618,7 @@ fun ScreenshotDetailScreen(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
+                        letterSpacing = 1.2.sp
                     )
 
                     FlowRow(

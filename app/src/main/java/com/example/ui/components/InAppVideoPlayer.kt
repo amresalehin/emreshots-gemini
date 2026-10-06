@@ -231,10 +231,10 @@ private fun VideoPlayerSurface(
                 var totalDrag = 0f
                 detectHorizontalDragGestures(
                     onHorizontalDrag = { _, dragAmount ->
-                        totalDrag += dragAmount
+                        if (!showControls) totalDrag += dragAmount
                     },
                     onDragEnd = {
-                        if (kotlin.math.abs(totalDrag) >= 140f) {
+                        if (!showControls && kotlin.math.abs(totalDrag) >= 140f) {
                             if (totalDrag < 0) onSwipeNext?.invoke() else onSwipePrevious?.invoke()
                         }
                         totalDrag = 0f

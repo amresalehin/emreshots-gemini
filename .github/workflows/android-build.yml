@@ -25,6 +25,8 @@ jobs:
 
       - name: Install verified ExifTool Android runtime
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           mkdir -p app/src/main/jniLibs/arm64-v8a app/src/main/assets

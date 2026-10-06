@@ -217,7 +217,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     fun getOnDeviceVisionRecommendation(callback: (com.amresalehin.emreshots.service.ai.OnDeviceModelRecommendation) -> Unit) {
         viewModelScope.launch {
-            callback(onDeviceVisionService.recommend())
+            callback(onDeviceVisionService.recommendation())
         }
     }
 

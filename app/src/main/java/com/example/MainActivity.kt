@@ -25,6 +25,7 @@ import com.amresalehin.emreshots.ui.navigation.Screen
 import com.amresalehin.emreshots.ui.screens.ScreenshotDetailScreen
 import com.amresalehin.emreshots.ui.screens.ScreenshotsScreen
 import com.amresalehin.emreshots.ui.screens.SettingsScreen
+import com.amresalehin.emreshots.ui.screens.ProcessingScreen
 import com.amresalehin.emreshots.ui.theme.EmreShotsTheme
 import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 import com.amresalehin.emreshots.service.media.BackgroundSyncScheduler
@@ -74,6 +75,14 @@ class MainActivity : ComponentActivity() {
 
                         composable(Screen.Settings.route) {
                             SettingsScreen(
+                                viewModel = viewModel,
+                                onNavigateBack = { navController.popBackStack() },
+                                onOpenProcessing = { navController.navigate(Screen.Processing.route) }
+                            )
+                        }
+
+                        composable(Screen.Processing.route) {
+                            ProcessingScreen(
                                 viewModel = viewModel,
                                 onNavigateBack = { navController.popBackStack() }
                             )

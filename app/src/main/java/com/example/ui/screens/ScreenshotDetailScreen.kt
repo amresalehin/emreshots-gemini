@@ -244,17 +244,11 @@ fun ScreenshotDetailScreen(
                 .fillMaxWidth()
                 .height(galleryHeight)
                 .background(Color.Black)
-                .pointerInput(screenshotId) {
-                    detectTapGestures(onTap = { showGalleryControls = !showGalleryControls })
-                }
         ) {
             if (screenshot.isVideo) {
                 InAppVideoPlayer(
                     screenshot = screenshot,
                     modifier = Modifier.fillMaxSize(),
-                    onExternalPlayerRequested = null,
-                    onSwipePrevious = null,
-                    onSwipeNext = null,
                     onTap = { showGalleryControls = !showGalleryControls }
                 )
             } else if (imageFile.exists() || !screenshot.uriString.isNullOrBlank()) {

@@ -17,8 +17,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -38,22 +36,18 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.OpenInBrowser
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -63,7 +57,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -107,7 +100,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenshotDetailScreen(
     screenshotId: String,
@@ -117,12 +110,9 @@ fun ScreenshotDetailScreen(
 ) {
     val context = LocalContext.current
     val allScreenshots by viewModel.allScreenshots.collectAsStateWithLifecycle()
-    val collections by viewModel.collections.collectAsStateWithLifecycle()
-    val activeProvider by viewModel.activeProvider.collectAsStateWithLifecycle()
     val isAnalyzing by viewModel.isAnalyzing.collectAsStateWithLifecycle()
     val exifDataMap by viewModel.exifDataState.collectAsStateWithLifecycle()
     val hasMediaLocationPermission by viewModel.hasMediaLocationPermission.collectAsStateWithLifecycle()
-    val hasAllMetadataPermissions by viewModel.hasAllMetadataPermissions.collectAsStateWithLifecycle()
     val pendingIntentSender by viewModel.pendingWriteIntentSender.collectAsStateWithLifecycle()
 
     val screenshot = allScreenshots.find { it.id == screenshotId }
@@ -170,8 +160,6 @@ fun ScreenshotDetailScreen(
     var showGalleryControls by remember { mutableStateOf(false) }
     val detailScrollState = rememberScrollState()
     var showAddTagDialog by remember { mutableStateOf(false) }
-    var showReminderDialog by remember { mutableStateOf(false) }
-    var showCollectionsSheet by remember { mutableStateOf(false) }
     var newTagInput by remember { mutableStateOf("") }
 
     var isEditingDetails by remember { mutableStateOf(false) }
@@ -849,40 +837,6 @@ fun ScreenshotDetailScreen(
         )
     }
 
-    // Collections Management Dialog
-    if (showCollectionsSheet) {
-        AlertDialog(
-            onDismissRequest = { showCollectionsSheet = false },
-            title = { Text("Assign Collections") },
-            text = {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    collections.forEach { col ->
-                        val isInCol = screenshot.collectionIds.contains(col.id)
-                        InputChip(
-                            selected = isInCol,
-                            onClick = {
-                                if (isInCol) {
-                                    viewModel.removeScreenshotFromCollection(screenshot.id, col.id)
-                                } else {
-                                    viewModel.addScreenshotToCollection(screenshot.id, col.id)
-                                }
-                            },
-                            label = { Text(col.name) }
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                Button(onClick = { showCollectionsSheet = false }) {
-                    Text("Done")
-                }
-            }
-        )
-    }
-
     // Add Tag Dialog
     if (showAddTagDialog) {
         AlertDialog(
@@ -912,43 +866,6 @@ fun ScreenshotDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showAddTagDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    // Reminder Dialog
-    if (showReminderDialog) {
-        var reminderText by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showReminderDialog = false },
-            title = { Text("Set Reminder") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Schedule a reminder for tomorrow at 9:00 AM:")
-                    OutlinedTextField(
-                        value = reminderText,
-                        onValueChange = { reminderText = it },
-                        label = { Text("Reminder note") },
-                        placeholder = { Text("Check this media item...") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val tomorrowNineAm = System.currentTimeMillis() + 86400000L
-                        viewModel.setReminder(screenshot, tomorrowNineAm, reminderText.ifBlank { "Check item: ${screenshot.title}" })
-                        showReminderDialog = false
-                    }
-                ) {
-                    Text("Schedule")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showReminderDialog = false }) {
                     Text("Cancel")
                 }
             }

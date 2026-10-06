@@ -902,6 +902,66 @@ fun ScreenshotsScreen(
         }
     }
 
+    if (showSortMenu) {
+        AlertDialog(
+            onDismissRequest = { showSortMenu = false },
+            title = { Text("Sort media") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    MediaSortOption.entries.forEach { option ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                viewModel.setSortOption(option)
+                                showSortMenu = false
+                            }.padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = sortOption == option,
+                                onClick = {
+                                    viewModel.setSortOption(option)
+                                    showSortMenu = false
+                                }
+                            )
+                            Text(option.displayName)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showSortMenu = false }) { Text("Done") } }
+        )
+    }
+
+    if (showGroupByMenu) {
+        AlertDialog(
+            onDismissRequest = { showGroupByMenu = false },
+            title = { Text("Group media") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    MediaGroupBy.entries.forEach { option ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                viewModel.setGroupByOption(option)
+                                showGroupByMenu = false
+                            }.padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = groupByOption == option,
+                                onClick = {
+                                    viewModel.setGroupByOption(option)
+                                    showGroupByMenu = false
+                                }
+                            )
+                            Text(option.displayName)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showGroupByMenu = false }) { Text("Done") } }
+        )
+    }
+
     if (showBatchRenameDialog) {
         AlertDialog(
             onDismissRequest = { showBatchRenameDialog = false },

@@ -64,6 +64,8 @@ fun ScreenshotListItem(
     screenshot: ScreenshotItem,
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit,
+    showFileName: Boolean = true,
+    showTags: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -171,7 +173,7 @@ fun ScreenshotListItem(
 
             // Details Column
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                if (showFileName) Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = screenshot.title.ifBlank { "Untitled" },
                         style = MaterialTheme.typography.titleSmall,
@@ -203,7 +205,7 @@ fun ScreenshotListItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                if (screenshot.tags.isNotEmpty()) {
+                if (showTags && screenshot.tags.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = screenshot.tags.take(3).joinToString("  ") { "#$it" },

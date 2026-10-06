@@ -55,7 +55,7 @@ object OnDeviceVisionCatalog {
             expectedSpeed="Fastest local VLM profile",license="Apache-2.0",sourceUrl="$HF/ggml-org/SmolVLM-256M-Instruct-GGUF",artifacts=listOf(
                 ModelArtifact("base","SmolVLM-256M-Instruct-Q4_K_M.gguf","$HF/ggml-org/SmolVLM-256M-Instruct-GGUF/resolve/main/SmolVLM-256M-Instruct-Q4_K_M.gguf",125_053_120,"8f19fa336b353f60389efcdcfe75ab52e584193266646fe397e0de7903319e57"),
                 ModelArtifact("mmproj","mmproj-SmolVLM-256M-Instruct-Q8_0.gguf","$HF/ggml-org/SmolVLM-256M-Instruct-GGUF/resolve/main/mmproj-SmolVLM-256M-Instruct-Q8_0.gguf",103_769_856,"7e943f7c53f0382a6fc41b6ee0c2def63ba4fded9ab8ed039cc9e2ab905e0edd"))),
-        OnDeviceVisionModel("smolvlm-256m-q8","SmolVLM","SmolVLM 256M Instruct Q8_0","0.26B","Q8_0",279,1800,3200,
+        OnDeviceVisionModel("smolvlm-256m-q8","SmolVLM","SmolVLM 256M Instruct Q8_0","0.26B","Q8_0",279,1800,6000,
             capabilities=setOf(OnDeviceVisionCapability.TITLE_GENERATION,OnDeviceVisionCapability.DESCRIPTION_SUMMARY,OnDeviceVisionCapability.TAG_SUGGESTIONS,OnDeviceVisionCapability.CATEGORY_TOPIC,OnDeviceVisionCapability.LINK_DETECTION,OnDeviceVisionCapability.VISUAL_QA,OnDeviceVisionCapability.OCR_CONTEXT),
             expectedSpeed="Higher-quality 256M local profile",license="Apache-2.0",sourceUrl="$HF/ggml-org/SmolVLM-256M-Instruct-GGUF",artifacts=listOf(
                 ModelArtifact("base","SmolVLM-256M-Instruct-Q8_0.gguf","$HF/ggml-org/SmolVLM-256M-Instruct-GGUF/resolve/main/SmolVLM-256M-Instruct-Q8_0.gguf",175_000_000,"2a31195d3769c0b0fd0a4906201666108834848db768af11de1d2cef7cd35e65"),

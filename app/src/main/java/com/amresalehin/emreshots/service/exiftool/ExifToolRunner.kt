@@ -21,6 +21,8 @@ import java.io.File
  * no way for a token in <user args> or <target paths> to escape into a shell
  * metacharacter. This is the foundation the CommandParser relies on.
  */
+data class ExifToolResult(val exitCode: Int, val output: String)
+
 object ExifToolRunner {
 
     fun perlBinary(context: Context): String =
@@ -53,12 +55,13 @@ object ExifToolRunner {
         }
     }
 
-    suspend fun run(command: List<String>): String = withContext(Dispatchers.IO) {
+    suspend fun run(command: List<String>): ExifToolResult = withContext(Dispatchers.IO) {
+        require(command.isNotEmpty()) { "ExifTool command must not be empty" }
         val process = ProcessBuilder(command)
             .redirectErrorStream(true)
             .start()
         val output = process.inputStream.bufferedReader().use(BufferedReader::readText)
-        process.waitFor()
-        output
+        val exitCode = process.waitFor()
+        ExifToolResult(exitCode, output)
     }
 }

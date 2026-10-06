@@ -1,59 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    
-    <!-- Screenshot Frame / Window -->
-    <path
-        android:pathData="M34,26 L74,26 A8,8 0 0,1 82,34 L82,74 A8,8 0 0,1 74,82 L34,82 A8,8 0 0,1 26,74 L26,34 A8,8 0 0,1 34,26 Z"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="3.5"
-        android:fillColor="#15FFFFFF" />
 
-    <!-- Top window header notch / bar -->
+    <!-- Minimal EmreShots mark: a clean viewfinder frame and lens -->
     <path
-        android:pathData="M33,33 L75,33"
-        android:strokeColor="#60FFFFFF"
-        android:strokeWidth="2"
-        android:strokeLineCap="round" />
-
-    <!-- Camera / Viewfinder Center Lens -->
-    <path
-        android:pathData="M54,58 A12,12 0 1,0 54,34 A12,12 0 1,0 54,58 Z"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="3"
-        android:fillColor="#30FFFFFF" />
-
-    <!-- Inner Shutter Aperture Core -->
-    <path
-        android:pathData="M54,52 A6,6 0 1,0 54,40 A6,6 0 1,0 54,52 Z"
-        android:fillColor="#60A5FA" />
-
-    <!-- Photo Corner Bracket Accents -->
-    <path
-        android:pathData="M32,68 L32,76 L40,76"
-        android:strokeColor="#93C5FD"
-        android:strokeWidth="2.5"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
-    <path
-        android:pathData="M76,68 L76,76 L68,76"
-        android:strokeColor="#93C5FD"
-        android:strokeWidth="2.5"
-        android:strokeLineCap="round"
+        android:pathData="M34,27 L74,27 A7,7 0 0,1 81,34 L81,74 A7,7 0 0,1 74,81 L34,81 A7,7 0 0,1 27,74 L27,34 A7,7 0 0,1 34,27 Z"
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="4"
         android:strokeLineJoin="round" />
 
-    <!-- AI Spark 4-pointed Star at Top-Right -->
     <path
-        android:pathData="M76,20 Q76,29 85,29 Q76,29 76,38 Q76,29 67,29 Q76,29 76,20 Z"
-        android:fillColor="#FBBF24" />
+        android:pathData="M54,39 A15,15 0 1,0 54,69 A15,15 0 1,0 54,39 Z"
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="4" />
 
-    <!-- Secondary small sparkle -->
     <path
-        android:pathData="M66,19 Q66,23 70,23 Q66,23 66,27 Q66,23 62,23 Q66,23 66,19 Z"
-        android:fillColor="#FDE68A" />
-
+        android:pathData="M54,49 A5,5 0 1,0 54,59 A5,5 0 1,0 54,49 Z"
+        android:fillColor="#FFFFFFFF" />
 </vector>

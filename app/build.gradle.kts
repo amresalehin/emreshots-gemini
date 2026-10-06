@@ -57,12 +57,15 @@ android {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
   }
+  ndkVersion = "26.3.11579264"
+
   buildFeatures {
     compose = true
     buildConfig = true
   }
 
   defaultConfig {
+    ndk { abiFilters += listOf("arm64-v8a") }
     buildConfigField("Int", "PERL5_ASSET_VERSION", "2")
   }
 

@@ -944,8 +944,8 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     fun extractOcr(screenshot: ScreenshotItem, onComplete: ((String?) -> Unit)? = null) {
         viewModelScope.launch(Dispatchers.IO) {
-            isExtractingOcr.value = true
-            ocrStatusText.value = "Extracting text locally on this device…"
+            _isExtractingOcr.value = true
+            _ocrStatusText.value = "Extracting text locally on this device…"
 
             val file = resolveImageFile(screenshot)
             val result = if (file != null) {
@@ -954,8 +954,8 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                 Result.failure(IllegalArgumentException("Screenshot image is not accessible."))
             }
 
-            isExtractingOcr.value = false
-            ocrStatusText.value = null
+            _isExtractingOcr.value = false
+            _ocrStatusText.value = null
 
             if (result.isSuccess) {
                 val ocr = result.getOrNull().orEmpty()
@@ -983,13 +983,13 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         }
 
         viewModelScope.launch(Dispatchers.IO) {
-            isExtractingOcr.value = true
+            _isExtractingOcr.value = true
             var completed = 0
             var failed = 0
             try {
                 targets.forEachIndexed { index, item ->
                     if (!isActive) return@forEachIndexed
-                    ocrStatusText.value = "Local OCR (" + (index + 1) + "/" + targets.size + "): " + item.title.ifBlank { "Image " + (index + 1) }
+                    _ocrStatusText.value = "Local OCR (" + (index + 1) + "/" + targets.size + "): " + item.title.ifBlank { "Image " + (index + 1) }
                     val file = resolveImageFile(item)
                     val result = if (file != null) {
                         localOcrService.recognize(file)
@@ -1004,8 +1004,8 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                     }
                 }
             } finally {
-                isExtractingOcr.value = false
-                ocrStatusText.value = null
+                _isExtractingOcr.value = false
+                _ocrStatusText.value = null
             }
             _snackbarMessage.value = "Local OCR complete: " + completed + " processed" + (if (failed > 0) ", " + failed + " failed" else "") + ". No AI features were triggered."
         }

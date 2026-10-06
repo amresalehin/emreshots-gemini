@@ -112,6 +112,9 @@ class OnDeviceVisionService(private val context:Context,private val runtimeFacto
     suspend fun delete(model:OnDeviceVisionModel)=manager.delete(model)
     suspend fun storageUsageBytes()=manager.storageUsageBytes()
     suspend fun isInstalled(model:OnDeviceVisionModel)=manager.isInstalled(model)
+    suspend fun analyze(request: VisionAnalysisRequest, modePreference: String, modelPreference: String, selectionMode: VisionSelectionMode = VisionSelectionMode.AUTOMATIC): VisionAnalysisResult =
+        analyze(request, OnDeviceVisionMode.fromPreference(modePreference), modelPreference, selectionMode)
+
     suspend fun analyze(request:VisionAnalysisRequest,mode:OnDeviceVisionMode,modelPreference:String,selectionMode:VisionSelectionMode=VisionSelectionMode.AUTOMATIC):VisionAnalysisResult{
         if(mode==OnDeviceVisionMode.DISABLED)return VisionAnalysisResult(false,modelPreference,errorMessage="On-device vision is disabled.")
         val caps=deviceCapabilities()

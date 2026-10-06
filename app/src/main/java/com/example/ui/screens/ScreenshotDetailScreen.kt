@@ -224,7 +224,7 @@ fun ScreenshotDetailScreen(
             // MainActivity is edge-to-edge. Keep the detail viewer and its scrollable
             // content inside the safe drawing region instead of drawing under the
             // status/navigation bars.
-            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .windowInsetsPadding(WindowInsets.systemBars)
             .verticalScroll(detailScrollState)
             .pointerInput(screenshotId) {
                 var totalDrag = 0f

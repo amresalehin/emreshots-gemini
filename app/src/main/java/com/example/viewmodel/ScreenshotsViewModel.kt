@@ -199,7 +199,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _gridColumns = MutableStateFlow(2)
+    private val _gridColumns = MutableStateFlow(3)
     val gridColumns: StateFlow<Int> = _gridColumns.asStateFlow()
     val isLowEndDevice = com.amresalehin.emreshots.service.perf.PerformanceManager.isLowEndDevice(application)
     val isLowRamDevice = com.amresalehin.emreshots.service.perf.PerformanceManager.isLowRamDevice(application)
@@ -281,7 +281,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     // Gallery Organization & View Options
     val sortOption = MutableStateFlow(MediaSortOption.NEWEST)
     val groupByOption = MutableStateFlow(MediaGroupBy.NONE)
-    val viewMode = MutableStateFlow(GalleryViewMode.GRID)
+    val viewMode = MutableStateFlow(GalleryViewMode.MASONRY)
 
     fun setSortOption(option: MediaSortOption) { sortOption.value = option }
     fun setGroupByOption(option: MediaGroupBy) { groupByOption.value = option }

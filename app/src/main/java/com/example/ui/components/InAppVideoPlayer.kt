@@ -11,8 +11,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -76,7 +76,9 @@ import java.util.Locale
 fun InAppVideoPlayer(
     screenshot: ScreenshotItem,
     modifier: Modifier = Modifier,
-    onExternalPlayerRequested: (() -> Unit)? = null
+    onExternalPlayerRequested: (() -> Unit)? = null,
+    onSwipePrevious: (() -> Unit)? = null,
+    onSwipeNext: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     var isFullscreen by remember { mutableStateOf(false) }
@@ -108,7 +110,9 @@ fun InAppVideoPlayer(
             initialDurationMs = screenshot.durationMs,
             onToggleFullscreen = { isFullscreen = !isFullscreen },
             isFullscreen = false,
-            onExternalPlayer = onExternalPlayerRequested
+            onExternalPlayer = onExternalPlayerRequested,
+            onSwipePrevious = onSwipePrevious,
+            onSwipeNext = onSwipeNext
         )
     }
 
@@ -130,7 +134,9 @@ fun InAppVideoPlayer(
                     initialDurationMs = screenshot.durationMs,
                     onToggleFullscreen = { isFullscreen = false },
                     isFullscreen = true,
-                    onExternalPlayer = onExternalPlayerRequested
+                    onExternalPlayer = onExternalPlayerRequested,
+                    onSwipePrevious = onSwipePrevious,
+                    onSwipeNext = onSwipeNext
                 )
             }
         }
@@ -143,7 +149,9 @@ private fun VideoPlayerSurface(
     initialDurationMs: Long,
     onToggleFullscreen: () -> Unit,
     isFullscreen: Boolean,
-    onExternalPlayer: (() -> Unit)? = null
+    onExternalPlayer: (() -> Unit)? = null,
+    onSwipePrevious: (() -> Unit)? = null,
+    onSwipeNext: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     var videoViewRef by remember { mutableStateOf<VideoView?>(null) }
@@ -196,11 +204,41 @@ private fun VideoPlayerSurface(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) {
-                showControls = !showControls
+            .pointerInput(videoUri) {
+                detectTapGestures(
+                    onTap = { showControls = !showControls },
+                    onDoubleTap = { position ->
+                        videoViewRef?.let { vv ->
+                            val target = if (position.x < size.width / 2f) {
+                                (vv.currentPosition - 10_000).coerceAtLeast(0)
+                            } else {
+                                val maxPosition = if (durationMs > 0) durationMs else vv.duration
+                                (vv.currentPosition + 10_000).coerceAtMost(maxPosition)
+                            }
+                            vv.seekTo(target)
+                            currentPositionMs = target
+                            isCompleted = false
+                            showControls = true
+                        }
+                    }
+                )
+            }
+            .pointerInput(videoUri) {
+                var totalDrag = 0f
+                detectHorizontalDragGestures(
+                    onHorizontalDrag = { _, dragAmount ->
+                        if (scaleForGesture(isFullscreen)) {
+                            totalDrag += dragAmount
+                        }
+                    },
+                    onDragEnd = {
+                        if (kotlin.math.abs(totalDrag) >= 140f) {
+                            if (totalDrag < 0) onSwipeNext?.invoke() else onSwipePrevious?.invoke()
+                        }
+                        totalDrag = 0f
+                    },
+                    onDragCancel = { totalDrag = 0f }
+                )
             },
         contentAlignment = Alignment.Center
     ) {

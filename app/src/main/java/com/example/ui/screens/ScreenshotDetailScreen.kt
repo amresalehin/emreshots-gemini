@@ -12,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,6 +32,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -197,7 +200,7 @@ fun ScreenshotDetailScreen(
     val imageFile = File(screenshot.filePath)
 
     val configuration = LocalConfiguration.current
-    val galleryHeight = configuration.screenHeightDp.dp
+    val galleryHeight = (configuration.screenHeightDp.dp - 48.dp).coerceAtLeast(320.dp)
 
     DisposableEffect(Unit) {
         val window = (context as? android.app.Activity)?.window
@@ -224,6 +227,8 @@ fun ScreenshotDetailScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF6F7F9))
+            .statusBarsPadding()
+            .navigationBarsPadding()
     ) {
         Column(
             modifier = Modifier
@@ -268,7 +273,7 @@ fun ScreenshotDetailScreen(
                     onTap = { showGalleryControls = !showGalleryControls }
                 )
             } else if (imageFile.exists() || !screenshot.uriString.isNullOrBlank()) {
-                GestureImage(
+                ZoomableDetailImage(
                     model = ImageRequest.Builder(context)
                         .data(if (imageFile.exists()) imageFile else screenshot.uriString)
                         .crossfade(true)
@@ -282,7 +287,7 @@ fun ScreenshotDetailScreen(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                        .padding(horizontal = 14.dp, vertical = 12.dp)
                         .border(
                             1.dp,
                             MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
@@ -945,17 +950,54 @@ fun DetailRow(label: String, value: String) {
 
 
 @Composable
-private fun GestureImage(
+private fun ZoomableDetailImage(
     model: ImageRequest,
     contentDescription: String?,
     onTap: () -> Unit
 ) {
+    var scale by remember { mutableStateOf(1f) }
+    var offsetX by remember { mutableStateOf(0f) }
+    var offsetY by remember { mutableStateOf(0f) }
+
+    fun reset() {
+        scale = 1f
+        offsetX = 0f
+        offsetY = 0f
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .clipToBounds()
             .background(Color(0xFFF1F2F4))
             .pointerInput(model.data) {
-                detectTapGestures(onTap = { onTap() })
+                detectTapGestures(
+                    onTap = { onTap() },
+                    onDoubleTap = { tap ->
+                        if (scale > 1.1f) {
+                            reset()
+                        } else {
+                            scale = 2.5f
+                            offsetX = (size.width / 2f - tap.x) * 1.5f
+                            offsetY = (size.height / 2f - tap.y) * 1.5f
+                        }
+                    }
+                )
+            }
+            .pointerInput(model.data) {
+                detectTransformGestures { _, pan, zoom, _ ->
+                    val newScale = (scale * zoom).coerceIn(1f, 6f)
+                    scale = newScale
+                    if (newScale > 1f) {
+                        val maxX = size.width * (newScale - 1f) / 2f
+                        val maxY = size.height * (newScale - 1f) / 2f
+                        offsetX = (offsetX + pan.x * newScale).coerceIn(-maxX, maxX)
+                        offsetY = (offsetY + pan.y * newScale).coerceIn(-maxY, maxY)
+                    } else {
+                        offsetX = 0f
+                        offsetY = 0f
+                    }
+                }
             },
         contentAlignment = Alignment.Center
     ) {
@@ -963,7 +1005,14 @@ private fun GestureImage(
             model = model,
             contentDescription = contentDescription,
             contentScale = ContentScale.Fit,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    translationX = offsetX
+                    translationY = offsetY
+                }
         )
     }
 }

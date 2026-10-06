@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,6 +32,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.border
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,6 +51,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
@@ -80,7 +84,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -95,6 +101,7 @@ import com.amresalehin.emreshots.ui.components.OcrAiSheet
 import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 import kotlinx.coroutines.launch
 import java.io.File
+import androidx.core.view.WindowCompat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -156,8 +163,10 @@ fun ScreenshotDetailScreen(
     val isExtractingOcr by viewModel.isExtractingOcr.collectAsStateWithLifecycle()
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
-    var showGalleryControls by remember { mutableStateOf(false) }
+    var showGalleryControls by remember { mutableStateOf(true) }
     val detailScrollState = rememberScrollState()
+    val view = LocalView.current
+    val density = LocalDensity.current
     var showAddTagDialog by remember { mutableStateOf(false) }
     var newTagInput by remember { mutableStateOf("") }
 
@@ -192,12 +201,23 @@ fun ScreenshotDetailScreen(
     val imageFile = File(screenshot.filePath)
 
     val configuration = LocalConfiguration.current
-    val galleryHeight = (configuration.screenHeightDp.dp * 0.80f).coerceAtLeast(520.dp)
+    val galleryHeight = (configuration.screenHeightDp.dp * 0.76f).coerceAtLeast(440.dp)
+
+    LaunchedEffect(Unit) {
+        val window = (view.context as? android.app.Activity)?.window
+        window?.let {
+            val controller = WindowCompat.getInsetsController(it, it.decorView)
+            controller.isAppearanceLightStatusBars = false
+            controller.isAppearanceLightNavigationBars = false
+            it.statusBarColor = android.graphics.Color.BLACK
+            it.navigationBarColor = android.graphics.Color.BLACK
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
+            .background(Color.Black)
             .verticalScroll(detailScrollState)
             .navigationBarsPadding()
             .pointerInput(screenshotId) {
@@ -250,104 +270,127 @@ fun ScreenshotDetailScreen(
             }
 
             if (showGalleryControls) {
-                Box(
+                Row(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            androidx.compose.ui.graphics.Brush.verticalGradient(
-                                listOf(
-                                    Color.Black.copy(alpha = 0.55f),
-                                    Color.Transparent,
-                                    Color.Black.copy(alpha = 0.72f)
-                                )
-                            )
-                        )
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .statusBarsPadding()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    IconButton(
+                        onClick = onNavigateBack,
+                        modifier = Modifier.size(48.dp).testTag("btn_detail_back")
                     ) {
-                        IconButton(
-                            onClick = onNavigateBack,
-                            modifier = Modifier
-                                .size(44.dp)
-                                .background(Color.Black.copy(alpha = 0.42f), CircleShape)
-                                .testTag("btn_detail_back")
-                        ) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
-                        }
-
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            IconButton(
-                                onClick = { viewModel.toggleFavorite(screenshot) },
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .background(Color.Black.copy(alpha = 0.42f), CircleShape)
-                                    .testTag("btn_detail_fav")
-                            ) {
-                                Icon(
-                                    imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                    contentDescription = "Favorite",
-                                    tint = if (screenshot.isFavorite) Color(0xFFFF5C7A) else Color.White
-                                )
-                            }
-                            IconButton(
-                                onClick = {
-                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
-                                        putExtra(Intent.EXTRA_SUBJECT, screenshot.title)
-                                        putExtra(
-                                            Intent.EXTRA_TEXT,
-                                            "${screenshot.title}\\n\\n${screenshot.description}\\nTags: ${screenshot.tags.joinToString(", ")}"
-                                        )
-                                    }
-                                    context.startActivity(Intent.createChooser(shareIntent, "Share details"))
-                                },
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .background(Color.Black.copy(alpha = 0.42f), CircleShape)
-                            ) {
-                                Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
-                            }
-                            IconButton(
-                                onClick = { showDeleteConfirm = true },
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .background(Color.Black.copy(alpha = 0.42f), CircleShape)
-                                    .testTag("btn_detail_delete")
-                            ) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFFF6B6B))
-                            }
-                        }
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
 
                     Column(
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(horizontal = 20.dp, vertical = 22.dp)
+                        modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
+                        horizontalAlignment = Alignment.Start
                     ) {
                         Text(
                             text = screenshot.title.ifBlank { "Untitled" },
                             color = Color.White,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 2
+                            style = MaterialTheme.typography.titleSmall,
+                            maxLines = 1,
+                            fontWeight = FontWeight.Medium
                         )
                         Text(
-                            text = "${currentIndex + 1} / ${allScreenshots.size}  •  Swipe up for details",
-                            color = Color.White.copy(alpha = 0.78f),
-                            style = MaterialTheme.typography.labelMedium
+                            text = "${currentIndex + 1} / ${allScreenshots.size}",
+                            color = Color.White.copy(alpha = 0.72f),
+                            style = MaterialTheme.typography.labelSmall
                         )
+                    }
+
+                    IconButton(
+                        onClick = { viewModel.toggleFavorite(screenshot) },
+                        modifier = Modifier.size(48.dp).testTag("btn_detail_fav")
+                    ) {
+                        Icon(
+                            imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = "Favorite",
+                            tint = if (screenshot.isFavorite) Color(0xFFFF5C7A) else Color.White
+                        )
+                    }
+
+                    IconButton(
+                        onClick = {
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_SUBJECT, screenshot.title)
+                                putExtra(
+                                    Intent.EXTRA_TEXT,
+                                    "${screenshot.title}\\n\\n${screenshot.description}\\nTags: ${screenshot.tags.joinToString(", ")}"
+                                )
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, "Share"))
+                        },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
+                    }
+
+                    IconButton(
+                        onClick = {
+                            coroutineScope.launch {
+                                detailScrollState.animateScrollTo(with(density) { galleryHeight.roundToPx() })
+                            }
+                        },
+                        modifier = Modifier.size(48.dp).testTag("btn_detail_info")
+                    ) {
+                        Icon(Icons.Default.Info, contentDescription = "Details", tint = Color.White)
+                    }
+                }
+
+                if (allScreenshots.size > 1) {
+                    LazyRow(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        itemsIndexed(
+                            items = allScreenshots,
+                            key = { _, item -> item.id }
+                        ) { index, item ->
+                            val itemFile = File(item.filePath)
+                            Box(
+                                modifier = Modifier
+                                    .size(width = 58.dp, height = 46.dp)
+                                    .clip(RoundedCornerShape(5.dp))
+                                    .background(Color.White.copy(alpha = 0.10f))
+                                    .clickable { onNavigateToScreenshot(item.id) }
+                            ) {
+                                if (itemFile.exists() || !item.uriString.isNullOrBlank()) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(context)
+                                            .data(if (itemFile.exists()) itemFile else item.uriString)
+                                            .build(),
+                                        contentDescription = item.title,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                                if (index == currentIndex) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(Color.White.copy(alpha = 0.10f))
+                                            .border(2.dp, Color.White, RoundedCornerShape(5.dp))
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(2.dp))
+        Spacer(modifier = Modifier.height(1.dp))
 
             // Permission Banner if Location or Media Permissions are not yet fully granted
             if (!hasMediaLocationPermission) {
@@ -926,7 +969,7 @@ private fun GestureImage(
         AsyncImage(
             model = model,
             contentDescription = contentDescription,
-            contentScale = ContentScale.Crop,
+            contentScale = ContentScale.Fit,
             modifier = Modifier.fillMaxSize()
         )
     }

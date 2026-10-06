@@ -183,6 +183,10 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     private val _onDeviceVisionModel = MutableStateFlow("auto")
     private val _ocrAiProviderId = MutableStateFlow("")
     val ocrAiProviderId: StateFlow<String> = _ocrAiProviderId.asStateFlow()
+    private val _ocrEnrichmentProviderId = MutableStateFlow("")
+    val ocrEnrichmentProviderId: StateFlow<String> = _ocrEnrichmentProviderId.asStateFlow()
+    private val _visionCaptionTagProviderId = MutableStateFlow("")
+    val visionCaptionTagProviderId: StateFlow<String> = _visionCaptionTagProviderId.asStateFlow()
     val onDeviceVisionModel: StateFlow<String> = _onDeviceVisionModel.asStateFlow()
 
     private val _isExtractingOcr = MutableStateFlow(false)
@@ -244,6 +248,15 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     fun setOcrAiProviderId(value: String) {
         _ocrAiProviderId.value = value
         viewModelScope.launch { appPreferences.setOcrAiProviderId(value) }
+    }
+    fun setOcrEnrichmentProviderId(value: String) {
+        _ocrEnrichmentProviderId.value = value
+        _ocrAiProviderId.value = value
+        viewModelScope.launch { appPreferences.setOcrEnrichmentProviderId(value); appPreferences.setOcrAiProviderId(value) }
+    }
+    fun setVisionCaptionTagProviderId(value: String) {
+        _visionCaptionTagProviderId.value = value
+        viewModelScope.launch { appPreferences.setVisionCaptionTagProviderId(value) }
     }
 
     fun getOnDeviceVisionRecommendation(callback: (com.amresalehin.emreshots.service.ai.OnDeviceModelRecommendation) -> Unit) {
@@ -431,6 +444,8 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch { appPreferences.autoSyncDeviceMedia.collect { _autoSyncDeviceMedia.value = it } }
         viewModelScope.launch { appPreferences.aiQualityPreset.collect { _aiQualityPreset.value = it } }
         viewModelScope.launch { appPreferences.autoWriteExif.collect { _autoWriteExifSetting.value = it } }
+        viewModelScope.launch { appPreferences.ocrEnrichmentProviderId.collect { _ocrEnrichmentProviderId.value = it; _ocrAiProviderId.value = it } }
+        viewModelScope.launch { appPreferences.visionCaptionTagProviderId.collect { _visionCaptionTagProviderId.value = it } }
         viewModelScope.launch { appPreferences.gridColumns.collect { _gridColumns.value = it.coerceIn(2, 5) } }
         viewModelScope.launch(Dispatchers.IO) {
             seedInitialData(database, getApplication())

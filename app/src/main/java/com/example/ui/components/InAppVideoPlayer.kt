@@ -52,7 +52,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -189,7 +188,6 @@ private fun VideoPlayerSurface(
             },
             modifier = Modifier
                 .fillMaxSize()
-                .onSizeChanged { }
                 .graphicsLayer {
                     if (videoAspectRatio > 0f && size.height > 0f) {
                         val viewRatio = size.width / size.height

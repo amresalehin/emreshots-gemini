@@ -80,7 +80,7 @@ class AppPreferences(private val context: Context) {
             "arabic", "ara" -> "Arabic"
             "bengali", "bangla", "ben" -> "Bengali"
             "portuguese", "por" -> "Portuguese"
-            "russian", "rus" -> "Russian"
+            "indonesian", "ind" -> "Indonesian"
             "urdu", "urd" -> "Urdu"
             else -> null
         }

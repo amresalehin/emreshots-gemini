@@ -194,6 +194,7 @@ build_perl_for_abi() {
             -Doptimize='-Os' \
             -Dldflags='-Wl,-z,max-page-size=16384' \
             -Dnoextensions='POSIX' \
+            -Duseposix=false \
             -Dlibs='-lm -ldl -lc' \
             -Dlddlflags='-shared -Wl,-z,max-page-size=16384 -lm -ldl -lc'
 

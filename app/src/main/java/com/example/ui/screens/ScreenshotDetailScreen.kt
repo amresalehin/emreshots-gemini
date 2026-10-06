@@ -39,7 +39,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CameraAlt
@@ -49,11 +48,8 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.OpenInBrowser
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -164,7 +160,6 @@ fun ScreenshotDetailScreen(
     val ocrAiProviderId by viewModel.ocrAiProviderId.collectAsStateWithLifecycle()
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
-    var showGalleryControls by remember { mutableStateOf(true) }
     val detailScrollState = rememberScrollState()
     var showAddTagDialog by remember { mutableStateOf(false) }
     var newTagInput by remember { mutableStateOf("") }
@@ -270,7 +265,7 @@ fun ScreenshotDetailScreen(
                 InAppVideoPlayer(
                     screenshot = screenshot,
                     modifier = Modifier.fillMaxSize(),
-                    onTap = { showGalleryControls = !showGalleryControls }
+                    onTap = { }
                 )
             } else if (imageFile.exists() || !screenshot.uriString.isNullOrBlank()) {
                 ZoomableDetailImage(
@@ -279,95 +274,11 @@ fun ScreenshotDetailScreen(
                         .crossfade(true)
                         .build(),
                     contentDescription = screenshot.title,
-                    onTap = { showGalleryControls = !showGalleryControls }
+                    onTap = { }
                 )
             }
 
-            if (showGalleryControls) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 12.dp)
-                        .border(
-                            1.dp,
-                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
-                            RoundedCornerShape(18.dp)
-                        ),
-                    shape = RoundedCornerShape(18.dp),
-                    color = Color.White.copy(alpha = 0.96f),
-                    tonalElevation = 2.dp,
-                    shadowElevation = 3.dp
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 4.dp, vertical = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(
-                            onClick = onNavigateBack,
-                            modifier = Modifier.size(44.dp).testTag("btn_detail_back")
-                        ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
 
-                        Column(
-                            modifier = Modifier.weight(1f).padding(horizontal = 6.dp),
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = screenshot.title.ifBlank { "Untitled" },
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = MaterialTheme.typography.titleSmall,
-                                maxLines = 1,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = "${currentIndex + 1} of ${allScreenshots.size}",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                        }
-
-                        IconButton(
-                            onClick = { viewModel.toggleFavorite(screenshot) },
-                            modifier = Modifier.size(44.dp).testTag("btn_detail_fav")
-                        ) {
-                            Icon(
-                                imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                contentDescription = "Favorite",
-                                tint = if (screenshot.isFavorite) Color(0xFFE54868) else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-
-                        IconButton(
-                            onClick = {
-                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                    type = "text/plain"
-                                    putExtra(Intent.EXTRA_SUBJECT, screenshot.title)
-                                    putExtra(
-                                        Intent.EXTRA_TEXT,
-                                        "${screenshot.title}\\n\\n${screenshot.description}\\nTags: ${screenshot.tags.joinToString(", ")}"
-                                    )
-                                }
-                                context.startActivity(Intent.createChooser(shareIntent, "Share"))
-                            },
-                            modifier = Modifier.size(44.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Share,
-                                contentDescription = "Share",
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-                }
-
-            }
         }
 
         Spacer(modifier = Modifier.height(1.dp))

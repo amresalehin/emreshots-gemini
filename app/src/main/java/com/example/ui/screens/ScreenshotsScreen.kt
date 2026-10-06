@@ -117,7 +117,6 @@ import com.amresalehin.emreshots.data.model.MediaSortOption
 import com.amresalehin.emreshots.service.media.DeviceMediaScanner
 import com.amresalehin.emreshots.ui.components.GalleryScrollBar
 import com.amresalehin.emreshots.ui.components.ScreenshotCard
-import com.amresalehin.emreshots.ui.components.ScreenshotFeedCard
 import com.amresalehin.emreshots.ui.components.ScreenshotListItem
 import com.amresalehin.emreshots.ui.components.ScreenshotMasonryCard
 import com.amresalehin.emreshots.viewmodel.ScreenshotFilter
@@ -150,6 +149,7 @@ fun ScreenshotsScreen(
     val autoSyncDeviceMedia by viewModel.autoSyncDeviceMedia.collectAsStateWithLifecycle()
     val isExtractingOcr by viewModel.isExtractingOcr.collectAsStateWithLifecycle()
     val ocrStatusText by viewModel.ocrStatusText.collectAsStateWithLifecycle()
+    val ocrEnabled by viewModel.ocrEnabled.collectAsStateWithLifecycle()
     val showFileNames by viewModel.showFileNames.collectAsStateWithLifecycle()
     val showTags by viewModel.showTags.collectAsStateWithLifecycle()
     val aiOcrModelOptions by viewModel.aiOcrModelOptions.collectAsStateWithLifecycle()
@@ -159,6 +159,7 @@ fun ScreenshotsScreen(
     var hidePermissionBanner by remember { mutableStateOf(false) }
     var showViewMenu by remember { mutableStateOf(false) }
     var showSortMenu by remember { mutableStateOf(false) }
+    var showGroupByMenu by remember { mutableStateOf(false) }
     var showFolderMenu by remember { mutableStateOf(false) }
     var selectedMediaType by remember { mutableStateOf<String?>(null) }
     var selectedFolder by remember { mutableStateOf<String?>(null) }
@@ -322,13 +323,17 @@ fun ScreenshotsScreen(
                         }
                         DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
                             
-                            androidx.compose.material3.HorizontalDivider()
                             DropdownMenuItem(
-                                text = { Text("AI OCR enrichment") },
-                                leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
-                                onClick = { showMoreMenu = false; showAiOcrDialog = true },
-                                modifier = Modifier.testTag("btn_ai_ocr_enrichment")
+                                text = { Text("Sort by · ${sortOption.displayName}") },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null) },
+                                onClick = { showMoreMenu = false; showSortMenu = true }
                             )
+                            DropdownMenuItem(
+                                text = { Text("Group by · ${groupByOption.displayName}") },
+                                leadingIcon = { Icon(Icons.Default.Collections, contentDescription = null) },
+                                onClick = { showMoreMenu = false; showGroupByMenu = true }
+                            )
+                            androidx.compose.material3.HorizontalDivider()
                             DropdownMenuItem(
                                 text = { Text("Batch rename visible") },
                                 leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
@@ -360,7 +365,7 @@ fun ScreenshotsScreen(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                ScreenshotFilter.entries.forEach { filter ->
+                ScreenshotFilter.entries.filter { it != ScreenshotFilter.ALL }.forEach { filter ->
                     val isSelected = selectedFilter == filter
                     FilterChip(
                         selected = isSelected,
@@ -510,8 +515,9 @@ fun ScreenshotsScreen(
                                     if (previousDistance > 12f && currentDistance > 12f) {
                                         scale *= currentDistance / previousDistance
                                         if (!changed && scale > 1.14f) {
-                                            viewModel.setViewMode(GalleryViewMode.FEED)
-                                            pinchNotification = "Feed view"
+                                            viewModel.setViewMode(GalleryViewMode.GRID)
+                                            viewModel.setGridColumns(2)
+                                            pinchNotification = "2-column grid"
                                             changed = true
                                         } else if (!changed && scale < 0.86f) {
                                             viewModel.setViewMode(GalleryViewMode.MASONRY)
@@ -649,7 +655,6 @@ fun ScreenshotsScreen(
                     } else {
                         val effectiveCols = when (viewMode) {
                             GalleryViewMode.GRID -> gridColumns
-                            GalleryViewMode.FEED -> 1
                             GalleryViewMode.LIST -> 1
                             GalleryViewMode.MASONRY -> 2
                         }
@@ -706,13 +711,6 @@ fun ScreenshotsScreen(
                                             screenshot = item,
                                             onClick = { onNavigateToDetail(item.id) },
                                             onToggleFavorite = { viewModel.toggleFavorite(item) }
-                                        )
-                                        GalleryViewMode.FEED -> ScreenshotFeedCard(
-                                            screenshot = item,
-                                            onClick = { onNavigateToDetail(item.id) },
-                                            onToggleFavorite = { viewModel.toggleFavorite(item) },
-                                            showFileName = false,
-                                             showTags = false
                                         )
                                         GalleryViewMode.LIST -> ScreenshotListItem(
                                             screenshot = item,
@@ -819,8 +817,11 @@ fun ScreenshotsScreen(
                         Column {
                             Text("OCR", fontWeight = FontWeight.SemiBold)
                             Text(
-                                if (ocrPendingCount > 0) "$ocrPendingCount images waiting"
-                                else "All images have OCR text",
+                                when {
+                                    !ocrEnabled -> "OCR is disabled in Settings"
+                                    ocrPendingCount > 0 -> "$ocrPendingCount images waiting"
+                                    else -> "All images have OCR text"
+                                },
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -828,7 +829,7 @@ fun ScreenshotsScreen(
                     },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     trailingIcon = { if (ocrPendingCount > 0) Text("$ocrPendingCount") },
-                    enabled = !isExtractingOcr && ocrPendingCount > 0,
+                    enabled = ocrEnabled && !isExtractingOcr && ocrPendingCount > 0,
                     onClick = {
                         showProcessingMenu = false
                         viewModel.batchExtractOcr(allScreenshots, onlyMissing = true)

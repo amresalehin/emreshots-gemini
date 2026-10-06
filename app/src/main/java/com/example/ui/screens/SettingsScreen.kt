@@ -240,30 +240,6 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
                 }
             }
             item {
-                SectionTitle("ACCESS & BACKUP", "Protect your library and keep permissions clear")
-                SettingsCard {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { PermissionChip("Photos", hasMediaPermissions); PermissionChip("Metadata", hasAllMetadataPermissions) }
-                    OutlinedButton(
-                        onClick = {
-                            val permissions = when {
-                                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.ACCESS_MEDIA_LOCATION)
-                                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.ACCESS_MEDIA_LOCATION)
-                                else -> arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                            }; mediaPermissionLauncher.launch(permissions)
-                        },
-                        enabled = !hasAllMetadataPermissions, modifier = Modifier.fillMaxWidth()
-                    ) { Text(if (hasMediaPermissions) "Grant metadata access" else "Grant media access") }
-                    HorizontalDivider()
-                    Text("Backups include library metadata, collections, providers without plaintext API keys, and settings. Media files are not copied.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (lastBackupInfo != null) Text(lastBackupInfo!!, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { backupExportLauncher.launch("emreshots-backup.json") }, modifier = Modifier.weight(1f)) { Text("Export") }
-                        OutlinedButton(onClick = { viewModel.shareBackup(context) }, modifier = Modifier.weight(1f)) { Text("Share") }
-                        Button(onClick = { backupRestoreLauncher.launch(arrayOf("application/json", "text/plain")) }, modifier = Modifier.weight(1f)) { Text("Restore") }
-                    }
-                }
-            }
-            item {
                 Surface(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
                     Row(modifier = Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text("EmreShots", fontWeight = FontWeight.Bold)

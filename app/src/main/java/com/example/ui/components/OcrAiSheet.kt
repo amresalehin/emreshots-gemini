@@ -296,7 +296,7 @@ fun OcrAiSheet(
                 }
             }
 
-            if (aiOcrModelOptions.isNotEmpty()) {
+            if (aiOcrModelOptions.isNotEmpty() || OnDeviceVisionCatalog.all().isNotEmpty()) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
                     shape = RoundedCornerShape(12.dp),
@@ -353,7 +353,6 @@ fun OcrAiSheet(
                                 }
                             }
                         }
-                        }
                     }
                 }
             }
@@ -379,12 +378,12 @@ fun OcrAiSheet(
                         strokeWidth = 2.dp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Enriching OCR with Cloud Text AI...", fontSize = 14.sp)
+                    Text("Enriching with selected AI model...", fontSize = 14.sp)
                 } else {
                     Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (writeDirectlyToMetadata) "Cloud Text AI + Write Metadata" else "Enrich with Cloud Text AI",
+                        text = if (writeDirectlyToMetadata) "Selected AI + Write Metadata" else "Enrich with selected AI",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )

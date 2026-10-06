@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +42,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 @Composable
 fun GalleryScrollBar(
@@ -52,6 +54,7 @@ fun GalleryScrollBar(
     if (totalItemsCount <= 4) return // Don't show scroll bar if very few items
 
     val density = LocalDensity.current
+    val coroutineScope = rememberCoroutineScope()
 
     var isDragging by remember { mutableStateOf(false) }
     var dragProgress by remember { mutableFloatStateOf(0f) }
@@ -169,6 +172,13 @@ fun GalleryScrollBar(
                                     dragProgress = (
                                         dragProgress + dragAmount / availableTrackPx.coerceAtLeast(1f)
                                     ).coerceIn(0f, 1f)
+                                    val targetItem = ((totalItemsCount - 1) * dragProgress)
+                                        .roundToInt()
+                                        .coerceIn(0, totalItemsCount - 1)
+                                    coroutineScope.launch {
+                                        gridState?.scrollToItem(targetItem)
+                                        staggeredGridState?.scrollToItem(targetItem)
+                                    }
                                 }
                             )
                         }

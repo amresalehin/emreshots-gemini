@@ -57,6 +57,12 @@ import java.util.Locale
 import java.util.UUID
 import java.util.regex.Pattern
 
+data class AiOcrModelOption(
+    val providerId: String,
+    val providerName: String,
+    val modelName: String
+)
+
 data class IndexingState(
     val isIndexing: Boolean = false,
     val current: Int = 0,
@@ -176,6 +182,22 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     val onDeviceVisionMode: StateFlow<String> = _onDeviceVisionMode.asStateFlow()
     private val _onDeviceVisionModel = MutableStateFlow("auto")
     val onDeviceVisionModel: StateFlow<String> = _onDeviceVisionModel.asStateFlow()
+
+    private val _isExtractingOcr = MutableStateFlow(false)
+    val isExtractingOcr: StateFlow<Boolean> = _isExtractingOcr.asStateFlow()
+    private val _ocrStatusText = MutableStateFlow<String?>(null)
+    val ocrStatusText: StateFlow<String?> = _ocrStatusText.asStateFlow()
+    private val _showFileNames = MutableStateFlow(true)
+    val showFileNames: StateFlow<Boolean> = _showFileNames.asStateFlow()
+    private val _showTags = MutableStateFlow(true)
+    val showTags: StateFlow<Boolean> = _showTags.asStateFlow()
+
+    val aiOcrModelOptions: StateFlow<List<AiOcrModelOption>> = providers
+        .map { list ->
+            list.filter { it.apiKey.isNotBlank() && it.selectedModel.isNotBlank() }
+                .map { AiOcrModelOption(it.id, it.name, it.selectedModel) }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _gridColumns = MutableStateFlow(2)
     val gridColumns: StateFlow<Int> = _gridColumns.asStateFlow()
@@ -392,6 +414,12 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             appPreferences.onDeviceVisionModel.collect { _onDeviceVisionModel.value = it }
         }
+        viewModelScope.launch {
+            appPreferences.showFileNames.collect { _showFileNames.value = it }
+        }
+        viewModelScope.launch {
+            appPreferences.showTags.collect { _showTags.value = it }
+        }
 
         viewModelScope.launch { appPreferences.ocrEnabled.collect { _ocrEnabled.value = it } }
         viewModelScope.launch { appPreferences.linksDetectionEnabled.collect { _linksDetectionEnabled.value = it } }
@@ -450,15 +478,18 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     fun syncDeviceMedia(onComplete: ((Int) -> Unit)? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             checkPermissions()
-            if (!_hasMediaPermissions.value) { _snackbarMessage.value = "Please grant photos and videos permissions to auto-sync."; onComplete?.invoke(0); return@launch }
-            _analysisStatusText.value = "Reconciling device media..."
-            val result = mediaSyncManager.synchronize()
-            _snackbarMessage.value = "Sync complete: ${result.added} added, ${result.updated} updated, ${result.removed} removed."
-            onComplete?.invoke(result.added)
+            if (!_hasMediaPermissions.value) {
+                _snackbarMessage.value = "Please grant photos and videos permissions to auto-sync."
+                onComplete?.invoke(0)
+                return@launch
+            }
+            _analysisStatusText.value = "Syncing gallery…"
+            runCatching { mediaSyncManager.synchronize() }
+                .onSuccess { result -> onComplete?.invoke(result.added) }
+                .onFailure { _snackbarMessage.value = "Gallery sync failed: " + (it.message ?: "Unknown error") }
             _analysisStatusText.value = null
         }
     }
-
     fun setSearchQuery(query: String) { _searchQuery.value = query }
 
     fun scanDuplicates() {
@@ -526,6 +557,16 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     fun clearSnackbar() {
         _snackbarMessage.value = null
+    }
+
+    fun setShowFileNames(value: Boolean) {
+        _showFileNames.value = value
+        viewModelScope.launch { appPreferences.setShowFileNames(value) }
+    }
+
+    fun setShowTags(value: Boolean) {
+        _showTags.value = value
+        viewModelScope.launch { appPreferences.setShowTags(value) }
     }
 
     fun showMessage(msg: String) {
@@ -986,78 +1027,117 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                 onComplete?.invoke(AiAnalysisResult(isSuccess = false, errorMessage = "No AI provider configured."))
                 return@launch
             }
-
             _isAnalyzing.value = true
-            _analysisStatusText.value = "Processing OCR text with AI..."
-
-            val metadataContext = buildString {
-                appendLine("Title: " + screenshot.title)
-                appendLine("Description: " + screenshot.description)
-                appendLine("Tags: " + screenshot.tags.joinToString(", "))
-                appendLine("Links: " + screenshot.links.joinToString(", "))
-                appendLine("Media type: " + screenshot.mediaType)
-            }
-            val result = aiService.sendOcrToAi(
-                ocrText = ocrText,
-                provider = provider,
-                geminiApiKey = provider.apiKey,
-                metadataContext = metadataContext
-            )
-
-            if (result.isSuccess) {
-                val matchedCol = collections.value.find {
-                    it.name.equals(result.suggestedCollection, ignoreCase = true)
-                }
-                val newColIds = if (matchedCol != null && !screenshot.collectionIds.contains(matchedCol.id)) {
-                    screenshot.collectionIds + matchedCol.id
-                } else {
-                    screenshot.collectionIds
-                }
-
-                var updated = screenshot.copy(
-                    title = if (result.title.isNotBlank()) result.title else screenshot.title,
-                    description = if (result.description.isNotBlank()) result.description else screenshot.description,
-                    ocrText = ocrText,
-                    tags = (screenshot.tags + result.tags).distinct(),
-                    links = (screenshot.links + result.detectedLinks).distinct(),
-                    collectionIds = newColIds,
-                    aiProcessed = true,
-                    aiModelUsed = result.modelUsed
-                )
-
-                if (writeToMetadata) {
-                    val aiExifResult = exifManager.applyAiMetadataToExifSafe(
-                        context = getApplication(),
-                        screenshot = updated,
-                        title = updated.title,
-                        description = "OCR Summary: ${updated.description}",
-                        tags = updated.tags,
-                        modelName = result.modelUsed
-                    )
-                    if (aiExifResult.isSuccess) {
-                        val (savedFile, exif) = aiExifResult.getOrThrow()
-                        updated = updated.copy(filePath = savedFile.absolutePath)
-                        val current = _exifDataState.value.toMutableMap()
-                        current[screenshot.id] = exif
-                        _exifDataState.value = current
-                    }
-                }
-
-                screenshotRepository.update(updated)
-                _snackbarMessage.value = if (writeToMetadata)
-                    "OCR analyzed & written to EXIF metadata!"
-                else
-                    "OCR analyzed successfully with AI!"
-            } else {
-                _snackbarMessage.value = "Failed to analyze OCR: ${result.errorMessage ?: "Unknown error"}"
-            }
-
+            _analysisStatusText.value = "Processing OCR text with " + provider.selectedModel + "…"
+            val result = enrichOcrWithProvider(screenshot, ocrText, provider, writeToMetadata)
             _isAnalyzing.value = false
             _analysisStatusText.value = null
+            _snackbarMessage.value = if (result.isSuccess) {
+                if (writeToMetadata) "OCR analyzed & written to EXIF metadata!" else "OCR enriched successfully with AI!"
+            } else {
+                "Failed to analyze OCR: " + (result.errorMessage ?: "Unknown error")
+            }
             onComplete?.invoke(result)
         }
     }
 
+    fun batchAiOcrEnrichment(
+        screenshots: List<ScreenshotItem>,
+        providerId: String,
+        onlyUnenriched: Boolean = true
+    ) {
+        if (_isAnalyzing.value) return
+        val provider = providers.value.firstOrNull { it.id == providerId && it.apiKey.isNotBlank() }
+        if (provider == null) {
+            _snackbarMessage.value = "Choose a configured AI OCR model first."
+            return
+        }
+        val targets = screenshots.filter {
+            !it.isVideo && it.ocrText.orEmpty().isNotBlank() &&
+                (!onlyUnenriched || !it.aiProcessed)
+        }
+        if (targets.isEmpty()) {
+            _snackbarMessage.value = "No OCR text is waiting for AI enrichment."
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            _isAnalyzing.value = true
+            var completed = 0
+            var failed = 0
+            try {
+                targets.forEachIndexed { index, item ->
+                    if (!isActive) return@forEachIndexed
+                    _analysisStatusText.value = "AI OCR enrichment (" + (index + 1) + "/" + targets.size + ") · " + provider.selectedModel
+                    val result = enrichOcrWithProvider(item, item.ocrText.orEmpty(), provider, false)
+                    if (result.isSuccess) completed++ else failed++
+                }
+            } finally {
+                _isAnalyzing.value = false
+                _analysisStatusText.value = null
+            }
+            _snackbarMessage.value = "AI OCR enrichment complete: " + completed + " processed" +
+                if (failed > 0) ", " + failed + " failed." else "."
+        }
+    }
+
+    private suspend fun enrichOcrWithProvider(
+        screenshot: ScreenshotItem,
+        ocrText: String,
+        provider: CustomCloudProvider,
+        writeToMetadata: Boolean
+    ): AiAnalysisResult {
+        val metadataContext = buildString {
+            appendLine("Title: " + screenshot.title)
+            appendLine("Description: " + screenshot.description)
+            appendLine("Tags: " + screenshot.tags.joinToString(", "))
+            appendLine("Links: " + screenshot.links.joinToString(", "))
+            appendLine("Media type: " + screenshot.mediaType)
+        }
+        val result = aiService.sendOcrToAi(
+            ocrText = ocrText,
+            provider = provider,
+            geminiApiKey = provider.apiKey,
+            metadataContext = metadataContext,
+        )
+        if (!result.isSuccess) return result
+        val matchedCol = collections.value.find {
+            it.name.equals(result.suggestedCollection, ignoreCase = true)
+        }
+        val newColIds = if (matchedCol != null && !screenshot.collectionIds.contains(matchedCol.id)) {
+            screenshot.collectionIds + matchedCol.id
+        } else {
+            screenshot.collectionIds
+        }
+        var updated = screenshot.copy(
+            title = if (result.title.isNotBlank()) result.title else screenshot.title,
+            description = if (result.description.isNotBlank()) result.description else screenshot.description,
+            ocrText = ocrText,
+            tags = (screenshot.tags + result.tags).distinct(),
+            links = (screenshot.links + result.detectedLinks).distinct(),
+            collectionIds = newColIds,
+            aiProcessed = true,
+            aiModelUsed = result.modelUsed,
+        )
+        if (writeToMetadata) {
+            val aiExifResult = exifManager.applyAiMetadataToExifSafe(
+                context = getApplication(),
+                screenshot = updated,
+                title = updated.title,
+                description = "OCR Summary: " + updated.description,
+                tags = updated.tags,
+                modelName = result.modelUsed,
+            )
+            if (aiExifResult.isSuccess) {
+                val (savedFile, exif) = aiExifResult.getOrThrow()
+                updated = updated.copy(filePath = savedFile.absolutePath)
+                val current = _exifDataState.value.toMutableMap()
+                current[screenshot.id] = exif
+                _exifDataState.value = current
+            }
+        }
+        screenshotRepository.update(updated)
+        return result
+    }
     fun writeOcrAndAiToMetadata(
         screenshot: ScreenshotItem,
         ocrText: String,

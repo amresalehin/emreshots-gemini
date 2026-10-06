@@ -34,6 +34,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -55,7 +59,8 @@ fun ProcessingScreen(
     val remaining = if (state.total > 0) (state.total - state.current).coerceAtLeast(0) else screenshots.count { !it.aiProcessed }
     val failed = state.failureCount
     val completed = state.successCount
-    val progress = if (state.total > 0) state.progress else if (screenshots.isEmpty()) 0f else screenshots.count { it.aiProcessed }.toFloat() / screenshots.size
+    val progress = if (state.total > 0) state.progress else if (screenshots.isEmpty()) 0f else screenshots.count { it.aiProcessed }.toFloat() / screenshots.size.toFloat()
+    var showRetryInfo by remember { mutableStateOf(false) }
 
     if (onNavigateBack != null) BackHandler(onBack = onNavigateBack)
 
@@ -128,7 +133,7 @@ fun ProcessingScreen(
                             Text("Stop")
                         }
                     }
-                    OutlinedButton(onClick = { viewModel.showMessage("Retry failed items from the previous run when they are still present.") }, enabled = failed > 0 && !state.isIndexing, modifier = Modifier.weight(1f)) {
+                    OutlinedButton(onClick = { showRetryInfo = true }, enabled = failed > 0 && !state.isIndexing, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Default.Refresh, contentDescription = null)
                         Text("Retry failed")
                     }
@@ -154,5 +159,23 @@ fun ProcessingScreen(
             }
             item { Spacer(modifier = Modifier.height(16.dp)) }
         }
+    }
+
+    if (showRetryInfo) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showRetryInfo = false },
+            title = { Text("Retry failed") },
+            text = { Text("Retrying failed items uses the screenshots that remain unprocessed.") },
+            confirmButton = {
+                Button(onClick = {
+                    showRetryInfo = false
+                    val pendingItems = screenshots.filter { !it.aiProcessed }
+                    viewModel.batchAnalyzeScreenshots(pendingItems)
+                }) { Text("Retry pending") }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showRetryInfo = false }) { Text("Close") }
+            }
+        )
     }
 }

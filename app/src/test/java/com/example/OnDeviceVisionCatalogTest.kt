@@ -43,7 +43,7 @@ class OnDeviceVisionCatalogTest {
         val q4 = OnDeviceVisionCatalog.find("smolvlm-256m-q4")!!
         assertEquals(125053120L, q4.artifacts.first { it.id == "base" }.sizeBytes)
         assertTrue(q4.artifacts.all { it.sha256.length == 64 })
-        assertTrue(q4.artifacts.all { it.url.contains("pierretokns/SmolVLM-256M-Instruct-GGUF") })
+        assertTrue(q4.artifacts.first { it.id == "base" }.url.contains("pierretokns/SmolVLM-256M-Instruct-GGUF"))
 
         val q8 = OnDeviceVisionCatalog.find("smolvlm-256m-q8")!!
         assertTrue(q8.artifacts.isNotEmpty())

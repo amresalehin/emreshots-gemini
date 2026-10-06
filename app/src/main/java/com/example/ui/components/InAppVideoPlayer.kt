@@ -175,10 +175,11 @@ private fun VideoPlayerSurface(
         }
     }
 
-    // Auto-hide controls after 3 seconds of inactivity when playing
-    LaunchedEffect(showControls, isPlaying) {
-        if (showControls && isPlaying) {
-            delay(3500)
+    // Keep the player clean: controls are transient whether the video is playing or paused.
+    // A tap on the video always brings them back for another interaction.
+    LaunchedEffect(showControls, isPlaying, isPrepared) {
+        if (showControls && isPrepared) {
+            delay(if (isPlaying) 3000 else 2200)
             showControls = false
         }
     }
@@ -252,7 +253,7 @@ private fun VideoPlayerSurface(
 
         // Overlay Controls
         AnimatedVisibility(
-            visible = showControls || !isPlaying,
+            visible = showControls,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.fillMaxSize()

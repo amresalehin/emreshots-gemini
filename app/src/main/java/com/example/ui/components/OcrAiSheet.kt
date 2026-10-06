@@ -39,6 +39,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SheetState
@@ -69,6 +70,9 @@ fun OcrAiSheet(
     screenshot: ScreenshotItem,
     isExtractingOcr: Boolean,
     isAiProcessing: Boolean,
+    aiOcrModelOptions: List<AiOcrModelOption> = emptyList(),
+    selectedOcrProviderId: String = "",
+    onSelectOcrProvider: (String) -> Unit = {},
     onExtractOcr: () -> Unit,
     onSendOcrToAi: (String, Boolean) -> Unit,
     onWriteToMetadata: (String, String, String, List<String>) -> Unit,
@@ -280,6 +284,41 @@ fun OcrAiSheet(
                         ),
                         modifier = Modifier.testTag("switch_write_metadata")
                     )
+                }
+            }
+
+            if (aiOcrModelOptions.isNotEmpty()) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text("OCR enrichment model", fontWeight = FontWeight.Bold)
+                        Text(
+                            "Independent from the image-vision model. Only extracted OCR text and metadata are sent.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        aiOcrModelOptions.forEach { option ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().clickable { onSelectOcrProvider(option.providerId) },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = selectedOcrProviderId == option.providerId,
+                                    onClick = { onSelectOcrProvider(option.providerId) }
+                                )
+                                Column {
+                                    Text(option.modelName, fontWeight = FontWeight.SemiBold)
+                                    Text(option.providerName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
                 }
             }
 

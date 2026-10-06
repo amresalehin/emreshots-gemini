@@ -11,6 +11,8 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -84,6 +86,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -111,7 +116,8 @@ import java.util.Locale
 fun ScreenshotDetailScreen(
     screenshotId: String,
     viewModel: ScreenshotsViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToScreenshot: (String) -> Unit
 ) {
     val context = LocalContext.current
     val allScreenshots by viewModel.allScreenshots.collectAsStateWithLifecycle()
@@ -124,6 +130,9 @@ fun ScreenshotDetailScreen(
     val pendingIntentSender by viewModel.pendingWriteIntentSender.collectAsStateWithLifecycle()
 
     val screenshot = allScreenshots.find { it.id == screenshotId }
+    val currentIndex = allScreenshots.indexOfFirst { it.id == screenshotId }
+    val previousScreenshotId = allScreenshots.getOrNull(currentIndex - 1)?.id
+    val nextScreenshotId = allScreenshots.getOrNull(currentIndex + 1)?.id
     val exifData = exifDataMap[screenshotId] ?: ExifData()
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -293,16 +302,15 @@ fun ScreenshotDetailScreen(
                         }
                     )
                 } else if (imageFile.exists() || !screenshot.uriString.isNullOrBlank()) {
-                    AsyncImage(
+                    GestureImage(
                         model = ImageRequest.Builder(context)
                             .data(if (imageFile.exists()) imageFile else screenshot.uriString)
                             .crossfade(true)
                             .build(),
                         contentDescription = screenshot.title,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clickable { showFullscreenImage = true }
+                        onSwipePrevious = previousScreenshotId?.let { id -> { onNavigateToScreenshot(id) } },
+                        onSwipeNext = nextScreenshotId?.let { id -> { onNavigateToScreenshot(id) } },
+                        onOpenFullscreen = { showFullscreenImage = true }
                     )
                 }
             }
@@ -1081,5 +1089,99 @@ fun DetailRow(label: String, value: String) {
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurface
         )
+    }
+}
+
+
+@Composable
+private fun GestureImage(
+    model: ImageRequest,
+    contentDescription: String?,
+    onSwipePrevious: (() -> Unit)?,
+    onSwipeNext: (() -> Unit)?,
+    onOpenFullscreen: () -> Unit
+) {
+    var scale by remember { mutableStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+    var swipeDistance by remember { mutableStateOf(0f) }
+    var swipeTriggered by remember { mutableStateOf(false) }
+
+    LaunchedEffect(model.data) {
+        scale = 1f
+        offset = Offset.Zero
+        swipeDistance = 0f
+        swipeTriggered = false
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .pointerInput(model.data) {
+                detectTransformGestures { _, pan, zoom, _ ->
+                    val oldScale = scale
+                    val newScale = (scale * zoom).coerceIn(1f, 4f)
+
+                    if (oldScale <= 1.02f && newScale <= 1.02f) {
+                        swipeDistance += pan.x
+                        if (!swipeTriggered && kotlin.math.abs(swipeDistance) >= 120f) {
+                            swipeTriggered = true
+                            if (swipeDistance < 0) onSwipeNext?.invoke() else onSwipePrevious?.invoke()
+                        }
+                        offset = Offset.Zero
+                    } else {
+                        scale = newScale
+                        offset = if (scale > 1f) {
+                            Offset(
+                                x = (offset.x + pan.x).coerceIn(-900f, 900f),
+                                y = (offset.y + pan.y).coerceIn(-900f, 900f)
+                            )
+                        } else {
+                            Offset.Zero
+                        }
+                    }
+                }
+            }
+            .pointerInput(model.data) {
+                detectTapGestures(
+                    onDoubleTap = {
+                        scale = if (scale > 1.05f) 1f else 2.5f
+                        if (scale == 1f) offset = Offset.Zero
+                    },
+                    onTap = { if (scale <= 1.05f) onOpenFullscreen() }
+                )
+            }
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+                translationX = offset.x
+                translationY = offset.y
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        AsyncImage(
+            model = model,
+            contentDescription = contentDescription,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        if (scale > 1.05f) {
+            Surface(
+                color = Color.Black.copy(alpha = 0.62f),
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 14.dp)
+            ) {
+                Text(
+                    text = "Pinch to zoom • Drag to explore • Double-tap to reset",
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
+                )
+            }
+        }
     }
 }

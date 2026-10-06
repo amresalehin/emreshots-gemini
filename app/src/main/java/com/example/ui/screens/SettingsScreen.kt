@@ -192,7 +192,7 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
                                 CompactToggleRow(Icons.Default.AutoAwesome, "Show tags", showTags) { viewModel.setShowTags(it) }
                                 SettingsDivider()
                                 SettingsChoiceRow(
-                                    icon = Icons.Default.Settings,
+                                    icon = Icons.Default.AutoAwesome,
                                     title = "Grid density",
                                     subtitle = "Columns in the gallery",
                                     options = listOf("2", "3", "4", "5"),

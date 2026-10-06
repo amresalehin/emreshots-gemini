@@ -4,12 +4,9 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
@@ -44,8 +41,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 @Composable
 fun GalleryScrollBar(
@@ -56,8 +53,8 @@ fun GalleryScrollBar(
 ) {
     if (totalItemsCount <= 4) return // Don't show scroll bar if very few items
 
-    val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
+    val coroutineScope = rememberCoroutineScope()
 
     var isDragging by remember { mutableStateOf(false) }
     var dragProgress by remember { mutableFloatStateOf(0f) }
@@ -113,45 +110,9 @@ fun GalleryScrollBar(
 
         val thumbOffsetY = (effectiveFraction * availableTrackPx).roundToInt()
 
-        // Interaction surface for tapping/dragging
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .pointerInput(totalItemsCount, trackHeightPx) {
-                    detectTapGestures { offset ->
-                        val fraction = (offset.y / trackHeightPx).coerceIn(0f, 1f)
-                        val targetItem = ((totalItemsCount - 1) * fraction).roundToInt().coerceIn(0, totalItemsCount - 1)
-                        coroutineScope.launch {
-                            gridState?.scrollToItem(targetItem)
-                            staggeredGridState?.scrollToItem(targetItem)
-                        }
-                    }
-                }
-                .pointerInput(totalItemsCount, trackHeightPx) {
-                    detectVerticalDragGestures(
-                        onDragStart = { offset ->
-                            isDragging = true
-                            dragProgress = (offset.y / trackHeightPx).coerceIn(0f, 1f)
-                            val targetItem = ((totalItemsCount - 1) * dragProgress).roundToInt().coerceIn(0, totalItemsCount - 1)
-                            coroutineScope.launch {
-                                gridState?.scrollToItem(targetItem)
-                                staggeredGridState?.scrollToItem(targetItem)
-                            }
-                        },
-                        onDragEnd = { isDragging = false },
-                        onDragCancel = { isDragging = false },
-                        onVerticalDrag = { change, _ ->
-                            change.consume()
-                            dragProgress = (change.position.y / trackHeightPx).coerceIn(0f, 1f)
-                            val targetItem = ((totalItemsCount - 1) * dragProgress).roundToInt().coerceIn(0, totalItemsCount - 1)
-                            coroutineScope.launch {
-                                gridState?.scrollToItem(targetItem)
-                                staggeredGridState?.scrollToItem(targetItem)
-                            }
-                        }
-                    )
-                }
-        ) {
+        // Only the thumb is interactive. The track never intercepts taps,
+        // preventing accidental jumps while browsing the gallery.
+        Box(modifier = Modifier.fillMaxSize()) {
             // Subtle track line
             Box(
                 modifier = Modifier
@@ -192,19 +153,48 @@ fun GalleryScrollBar(
                     }
                 }
 
-                // Thumb handle pill
+                // Small, dedicated drag target; surrounding gallery remains touch-transparent.
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(end = 3.dp)
-                        .size(width = thumbWidth, height = thumbHeightDp)
-                        .alpha(thumbAlpha)
-                        .clip(CircleShape)
-                        .background(
-                            if (isActive) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
-                )
+                        .padding(end = 2.dp)
+                        .size(width = 20.dp, height = thumbHeightDp)
+                        .pointerInput(totalItemsCount, availableTrackPx) {
+                            detectVerticalDragGestures(
+                                onDragStart = {
+                                    isDragging = true
+                                    dragProgress = effectiveFraction
+                                },
+                                onDragEnd = { isDragging = false },
+                                onDragCancel = { isDragging = false },
+                                onVerticalDrag = { change, dragAmount ->
+                                    change.consume()
+                                    dragProgress = (
+                                        dragProgress + dragAmount / availableTrackPx.coerceAtLeast(1f)
+                                    ).coerceIn(0f, 1f)
+                                    val targetItem = ((totalItemsCount - 1) * dragProgress)
+                                        .roundToInt()
+                                        .coerceIn(0, totalItemsCount - 1)
+                                    coroutineScope.launch {
+                                        gridState?.scrollToItem(targetItem)
+                                        staggeredGridState?.scrollToItem(targetItem)
+                                    }
+                                }
+                            )
+                        }
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .size(width = thumbWidth, height = thumbHeightDp)
+                            .alpha(thumbAlpha)
+                            .clip(CircleShape)
+                            .background(
+                                if (isActive) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                    )
+                }
             }
         }
     }

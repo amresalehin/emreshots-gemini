@@ -120,7 +120,10 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val activeProvider: StateFlow<CustomCloudProvider?> = providerRepository.activeProvider
-        .map { provider -> provider?.copy(apiKey = secureApiKeyStore.get(provider.id) ?: "") }
+        .map { provider ->
+            provider?.let { p -> p.copy(apiKey = secureApiKeyStore.get(p.id) ?: "") }
+                ?.takeIf { it.apiKey.isNotBlank() }
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     private val _searchQuery = MutableStateFlow("")
@@ -228,7 +231,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch { appPreferences.setAutoWriteExif(enabled) }
     }
     fun setGridColumns(cols: Int) {
-        val normalized = cols.coerceIn(2, 4)
+        val normalized = cols.coerceIn(2, 5)
         _gridColumns.value = normalized
         viewModelScope.launch { appPreferences.setGridColumns(normalized) }
     }
@@ -396,19 +399,11 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch { appPreferences.autoSyncDeviceMedia.collect { _autoSyncDeviceMedia.value = it } }
         viewModelScope.launch { appPreferences.aiQualityPreset.collect { _aiQualityPreset.value = it } }
         viewModelScope.launch { appPreferences.autoWriteExif.collect { _autoWriteExifSetting.value = it } }
-        viewModelScope.launch { appPreferences.gridColumns.collect { _gridColumns.value = it.coerceIn(2, 4) } }
+        viewModelScope.launch { appPreferences.gridColumns.collect { _gridColumns.value = it.coerceIn(2, 5) } }
         viewModelScope.launch(Dispatchers.IO) {
             seedInitialData(database, getApplication())
             migrateProviderApiKeysToKeystore()
-            ensureDefaultProviderIfNeeded()
-            // Ensure that if providers exist but none is currently marked active, activate the first one
-            val active = providerRepository.getActiveProviderSync()
-            if (active == null) {
-                val all = providerRepository.getAllProvidersSync()
-                if (all.isNotEmpty()) {
-                    providerRepository.setActiveProvider(all.first().id)
-                }
-            }
+            ensureConfiguredProviderActiveIfNeeded()
         }
         checkPermissions()
     }
@@ -422,18 +417,16 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    private suspend fun ensureDefaultProviderIfNeeded() {
-        val existing = providerRepository.getAllProvidersSync()
-        if (existing.isEmpty()) {
-            val defaultProvider = CustomCloudProvider(
-                id = "default-gemini",
-                name = "Google Gemini",
-                baseUrl = "https://generativelanguage.googleapis.com",
-                selectedModel = "gemini-2.5-flash",
-                isActive = true,
-                isDefaultGemini = true
-            )
-            providerRepository.saveProvider(defaultProvider, makeActive = true)
+    private suspend fun ensureConfiguredProviderActiveIfNeeded() {
+        val active = providerRepository.getActiveProviderSync()
+        val activeKey = active?.let { secureApiKeyStore.get(it.id).orEmpty() }
+        if (active != null && activeKey.orEmpty().isNotBlank()) return
+
+        val configured = providerRepository.getAllProvidersSync().firstOrNull {
+            secureApiKeyStore.get(it.id).orEmpty().isNotBlank()
+        }
+        if (configured != null) {
+            providerRepository.setActiveProvider(configured.id)
         }
     }
 
@@ -939,6 +932,47 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    /**
+     * Runs local OCR only. This path never invokes cloud AI, local vision, tagging,
+     * link detection, EXIF writing, or any other indexing feature.
+     */
+    fun batchExtractOcr(items: List<ScreenshotItem>, onlyMissing: Boolean = true) {
+        if (isExtractingOcr.value) return
+        val targets = items.filter { !it.isVideo && (!onlyMissing || it.ocrText.isNullOrBlank()) }
+        if (targets.isEmpty()) {
+            _snackbarMessage.value = if (onlyMissing) "No media is waiting for local OCR." else "No image media is available for local OCR."
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            isExtractingOcr.value = true
+            var completed = 0
+            var failed = 0
+            try {
+                targets.forEachIndexed { index, item ->
+                    if (!isActive) return@forEachIndexed
+                    ocrStatusText.value = "Local OCR (" + (index + 1) + "/" + targets.size + "): " + item.title.ifBlank { "Image " + (index + 1) }
+                    val file = resolveImageFile(item)
+                    val result = if (file != null) {
+                        localOcrService.recognize(file)
+                    } else {
+                        Result.failure(IllegalArgumentException("Image is not accessible."))
+                    }
+                    if (result.isSuccess) {
+                        screenshotRepository.update(item.copy(ocrText = result.getOrNull().orEmpty()))
+                        completed++
+                    } else {
+                        failed++
+                    }
+                }
+            } finally {
+                isExtractingOcr.value = false
+                ocrStatusText.value = null
+            }
+            _snackbarMessage.value = "Local OCR complete: " + completed + " processed" + (if (failed > 0) ", " + failed + " failed" else "") + ". No AI features were triggered."
+        }
+    }
+
     fun sendOcrToAi(
         screenshot: ScreenshotItem,
         ocrText: String,
@@ -1339,15 +1373,18 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch(Dispatchers.IO) {
             val isGemini = provider.baseUrl.contains("generativelanguage.googleapis.com") ||
                     provider.name.contains("Gemini", ignoreCase = true)
+            val existingKey = secureApiKeyStore.get(provider.id).orEmpty()
+            val effectiveKey = provider.apiKey.ifBlank { existingKey }
             val updated = provider.copy(
                 isDefaultGemini = isGemini || provider.isDefaultGemini
             )
             if (provider.apiKey.isNotBlank()) {
                 secureApiKeyStore.put(provider.id, provider.apiKey)
             }
-            providerRepository.saveProvider(updated.copy(apiKey = ""), makeActive)
-            val action = if (makeActive) "saved & activated" else "saved"
-            _snackbarMessage.value = "AI Provider '${updated.name}' $action!"
+            val shouldActivate = makeActive && effectiveKey.isNotBlank()
+            providerRepository.saveProvider(updated.copy(apiKey = ""), shouldActivate)
+            val action = if (shouldActivate) "saved & activated" else "saved"
+            _snackbarMessage.value = "AI Provider '" + updated.name + "' " + action + "!"
         }
     }
 
@@ -1361,9 +1398,14 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     fun setActiveProvider(providerId: String) {
         viewModelScope.launch(Dispatchers.IO) {
+            val provider = providerRepository.getAllProvidersSync().find { it.id == providerId }
+            val apiKey = provider?.let { secureApiKeyStore.get(it.id).orEmpty() }.orEmpty()
+            if (provider == null || apiKey.isBlank()) {
+                _snackbarMessage.value = "Provider is not configured. Add an API key before activating it."
+                return@launch
+            }
             providerRepository.setActiveProvider(providerId)
-            val p = providers.value.find { it.id == providerId }
-            _snackbarMessage.value = "Active AI Provider set to: ${p?.name}"
+            _snackbarMessage.value = "Active AI Provider set to: " + provider.name
         }
     }
 
@@ -1543,7 +1585,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                 screenshotRepository.insertAll(data.screenshots)
             }
 
-            // Restore providers
+            // Restore providers without ever activating an unconfigured provider.
             if (data.providers.isNotEmpty()) {
                 data.providers.forEach { provider ->
                     if (provider.apiKey.isNotBlank()) {
@@ -1551,13 +1593,8 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                     }
                 }
                 providerRepository.insertAll(data.providers.map { it.copy(apiKey = "") })
-                val active = providerRepository.getActiveProviderSync()
-                if (active == null) {
-                    providerRepository.setActiveProvider(data.providers.first().id)
-                }
-            } else {
-                ensureDefaultProviderIfNeeded()
             }
+            ensureConfiguredProviderActiveIfNeeded()
 
             // Restore settings
             var settingsRestored = 0

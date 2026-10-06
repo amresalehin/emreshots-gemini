@@ -134,12 +134,12 @@ fun AiStudioScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = activeProvider?.name ?: "Google Gemini (Official)",
+                        text = activeProvider?.name ?: "No cloud provider configured",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Model: ${activeProvider?.selectedModel ?: "gemini-2.5-flash"}",
+                        text = activeProvider?.selectedModel?.let { "Model: " + it } ?: "No cloud model selected",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Medium
@@ -273,7 +273,7 @@ fun AiStudioScreen(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 StatCard("Indexed Media", "$processedCount / ${allScreenshots.size}", Modifier.weight(1f))
-                StatCard("Active Engine", activeProvider?.selectedModel?.substringBefore(':') ?: "Gemini", Modifier.weight(1f))
+                StatCard("Active Engine", activeProvider?.selectedModel?.substringBefore(':') ?: "Local / none", Modifier.weight(1f))
             }
         }
     }

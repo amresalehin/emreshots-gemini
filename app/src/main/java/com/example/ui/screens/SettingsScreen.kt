@@ -53,9 +53,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,8 +72,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.amresalehin.emreshots.data.model.CustomCloudProvider
+import com.amresalehin.emreshots.service.ai.OnDeviceVisionCatalog
+import com.amresalehin.emreshots.service.ai.OnDeviceVisionService
 import com.amresalehin.emreshots.service.backup.RestoreMode
 import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,7 +94,8 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
     val isScanningDuplicates by viewModel.isScanningDuplicates.collectAsStateWithLifecycle()
     val aiQualityPreset by viewModel.aiQualityPreset.collectAsStateWithLifecycle()
     val autoWriteExifSetting by viewModel.autoWriteExifSetting.collectAsStateWithLifecycle()
-    val gridColumns by viewModel.gridColumns.collectAsStateWithLifecycle()
+    val isExtractingOcr by viewModel.isExtractingOcr.collectAsStateWithLifecycle()
+    val ocrStatusText by viewModel.ocrStatusText.collectAsStateWithLifecycle()
     val hasMediaPermissions by viewModel.hasMediaPermissions.collectAsStateWithLifecycle()
     val hasAllMetadataPermissions by viewModel.hasAllMetadataPermissions.collectAsStateWithLifecycle()
     val lastBackupInfo by viewModel.lastBackupInfo.collectAsStateWithLifecycle()
@@ -110,6 +116,8 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
     val total = allScreenshots.size
     val processed = allScreenshots.count { it.aiProcessed }
     val pending = (total - processed).coerceAtLeast(0)
+    val ocrEligible = allScreenshots.count { !it.isVideo }
+    val ocrPending = allScreenshots.count { !it.isVideo && it.ocrText.isNullOrBlank() }
     val failed = indexingState.failureCount
     val progress: Float = if (indexingState.total > 0) indexingState.progress else if (total == 0) 0f else processed.toFloat() / total.toFloat()
 
@@ -147,6 +155,41 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
                 }
             }
             item {
+                SectionTitle("LOCAL OCR", "Extract text independently without running AI, vision, tagging, links, or EXIF")
+                SettingsCard {
+                    Text(
+                        text = ocrPending.toString() + " images have no OCR text yet · " + ocrEligible + " images are OCR-capable",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = { viewModel.batchExtractOcr(allScreenshots, onlyMissing = true) },
+                            enabled = !isExtractingOcr && ocrPending > 0,
+                            modifier = Modifier.weight(1f).testTag("btn_local_ocr_pending")
+                        ) {
+                            if (isExtractingOcr) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            else Icon(Icons.Default.TextFields, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("OCR pending")
+                        }
+                        OutlinedButton(
+                            onClick = { viewModel.batchExtractOcr(allScreenshots, onlyMissing = false) },
+                            enabled = !isExtractingOcr && ocrEligible > 0,
+                            modifier = Modifier.weight(1f).testTag("btn_local_ocr_all")
+                        ) {
+                            Icon(Icons.Default.TextFields, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("OCR all")
+                        }
+                    }
+                    if (ocrStatusText != null) {
+                        Text(ocrStatusText!!, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+            item {
                 SectionTitle("AI & ANALYSIS", "Choose how EmreShots understands your screenshots")
                 SettingsCard {
                     if (activeProvider != null) {
@@ -167,7 +210,13 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
                     Spacer(Modifier.height(10.dp))
                     Text("On-device vision", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
                     SegmentedChoice(listOf("Automatic", "Force local", "Disabled"), onDeviceVisionMode) { viewModel.setOnDeviceVisionMode(it) }
-                    Text("Selected model: ${onDeviceVisionModel.ifBlank { "Automatic" }}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Selected model: " + onDeviceVisionModel.ifBlank { "Automatic" }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(8.dp))
+                    LocalVisionModelsCard(
+                        selectedModelId = onDeviceVisionModel,
+                        onSelect = { viewModel.setOnDeviceVisionModel(it) },
+                        showMessage = viewModel::showMessage
+                    )
                     Spacer(Modifier.height(6.dp))
                     CompactToggleRow(Icons.Default.TextFields, "OCR text extraction", ocrEnabled) { viewModel.setOcrEnabled(it) }
                     CompactToggleRow(Icons.Default.Language, "URL & link detection", linksDetectionEnabled) { viewModel.setLinksDetectionEnabled(it) }
@@ -184,9 +233,7 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
                         OutlinedButton(onClick = { viewModel.trimMemory() }, modifier = Modifier.weight(1f).testTag("btn_trim_memory")) { Icon(Icons.Default.CleaningServices, contentDescription = null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text("Trim RAM") }
                         OutlinedButton(onClick = { viewModel.clearThumbnailCache() }, modifier = Modifier.weight(1f).testTag("btn_clear_cache")) { Text("Cache") }
                     }
-                    HorizontalDivider()
-                    Text("Gallery layout", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-                    SegmentedChoice(listOf("2", "3", "4").map { "${it}×" }, "${gridColumns}×") { viewModel.setGridColumns(it.removeSuffix("×").toInt()) }
+                    Text("Gallery layout is controlled from View & Organize in the gallery. This keeps grid, masonry, columns, sorting, and grouping in one place.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             item {
@@ -297,6 +344,111 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
 
 @Composable private fun StatBlock(label: String, value: Int) { Column { Text(value.toString(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold); Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
 
+@Composable
+private fun LocalVisionModelsCard(
+    selectedModelId: String,
+    onSelect: (String) -> Unit,
+    showMessage: (String) -> Unit
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val service = remember(context) { OnDeviceVisionService(context) }
+    var installedIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var storageBytes by remember { mutableStateOf(0L) }
+    var recommendedId by remember { mutableStateOf<String?>(null) }
+    var busyId by remember { mutableStateOf<String?>(null) }
+    var downloadProgress by remember { mutableStateOf(0f) }
+
+    suspend fun refresh() {
+        installedIds = service.installedModels().map { it.model.id }.toSet()
+        storageBytes = service.storageUsageBytes()
+        recommendedId = runCatching { service.recommendation().recommended?.id }.getOrNull()
+    }
+
+    LaunchedEffect(Unit) { refresh() }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Local vision models", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+        Text("Download a verified on-device vision model. Nothing is downloaded until you choose it.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Local model storage: " + (storageBytes / 1024 / 1024) + " MB", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        OnDeviceVisionCatalog.all().forEach { model ->
+            val installed = model.id in installedIds
+            val recommended = model.id == recommendedId
+            val canDownload = model.artifacts.isNotEmpty() && model.artifacts.none { it.sha256 == "UNVERIFIED" }
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (model.id == selectedModelId) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                )
+            ) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(model.displayName, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                model.family + " · " + model.storageMb + " MB · RAM ≥ " + model.minRamMb + " MB" + if (recommended) " · Recommended" else "",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (recommended) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (installed) {
+                            TextButton(onClick = { onSelect(model.id) }, enabled = busyId == null) {
+                                Text(if (model.id == selectedModelId) "Selected" else "Use")
+                            }
+                        }
+                    }
+                    if (busyId == model.id) {
+                        LinearProgressIndicator(progress = { downloadProgress }, modifier = Modifier.fillMaxWidth())
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (installed) {
+                            OutlinedButton(
+                                onClick = {
+                                    scope.launch {
+                                        busyId = model.id
+                                        runCatching { service.delete(model) }
+                                            .onSuccess {
+                                                if (selectedModelId == model.id) onSelect("auto")
+                                                showMessage("Removed " + model.displayName)
+                                                refresh()
+                                            }
+                                            .onFailure { showMessage("Could not remove " + model.displayName + ": " + (it.message ?: "unknown error")) }
+                                        busyId = null
+                                    }
+                                },
+                                enabled = busyId == null,
+                                modifier = Modifier.weight(1f)
+                            ) { Text("Remove") }
+                        } else {
+                            Button(
+                                onClick = {
+                                    scope.launch {
+                                        busyId = model.id
+                                        downloadProgress = 0f
+                                        runCatching {
+                                            service.download(model) { done, total ->
+                                                if (total > 0) downloadProgress = (done.toFloat() / total.toFloat()).coerceIn(0f, 1f)
+                                            }
+                                        }.onSuccess {
+                                            showMessage("Installed " + model.displayName)
+                                            refresh()
+                                        }.onFailure {
+                                            showMessage("Model download failed: " + (it.message ?: "unknown error"))
+                                        }
+                                        busyId = null
+                                    }
+                                },
+                                enabled = busyId == null && canDownload,
+                                modifier = Modifier.weight(1f)
+                            ) { Text(if (canDownload) "Download" else "Unavailable") }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 @Composable private fun QuickActionButton(icon: ImageVector, label: String, enabled: Boolean = true, modifier: Modifier = Modifier, onClick: () -> Unit) {
     OutlinedButton(onClick = onClick, enabled = enabled, modifier = modifier.height(52.dp), contentPadding = PaddingValues(horizontal = 6.dp)) { Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text(label, fontSize = 11.sp) }
 }

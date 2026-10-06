@@ -438,7 +438,7 @@ fun ScreenshotDetailScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Button(
-                        onClick = { viewModel.analyzeLocalVision(screenshot, autoWriteExif = false) },
+                        onClick = { viewModel.analyzeScreenshot(screenshot, autoWriteExif = false) },
                         enabled = !isAnalyzing,
                         shape = RoundedCornerShape(16.dp),
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 11.dp),
@@ -455,7 +455,7 @@ fun ScreenshotDetailScreen(
                             Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
                         }
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(if (isAnalyzing) "Analyzing" else "Analyze", fontSize = 12.sp)
+                        Text(if (isAnalyzing) "Analyzing" else if (screenshot.aiProcessed) "Reanalyze" else "Analyze", fontSize = 12.sp)
                     }
 
                     OutlinedButton(

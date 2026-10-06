@@ -111,7 +111,12 @@ class MainActivity : ComponentActivity() {
                             ScreenshotDetailScreen(
                                 screenshotId = screenshotId,
                                 viewModel = viewModel,
-                                onNavigateBack = { navController.popBackStack() }
+                                onNavigateBack = { navController.popBackStack() },
+                                onNavigateToScreenshot = { targetId ->
+                                    navController.navigate(Screen.ScreenshotDetail.createRoute(targetId)) {
+                                        launchSingleTop = true
+                                    }
+                                }
                             )
                         }
                     }

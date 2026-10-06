@@ -42,7 +42,7 @@
   - Ensure sensitive screenshot content can be processed locally without requiring a cloud API key.
   - Add tests for device-tier model selection and no-compatible-model behavior; add runtime/download/privacy tests as concrete adapters are integrated.
 
-- [ ] **Add local OCR + cloud text-only AI**
+- [x] **Add local OCR + cloud text-only AI**
   - Implement on-device OCR for extracting screenshot text without uploading the image.
   - Add a cloud text-only AI path that sends extracted OCR text/metadata rather than the screenshot image itself.
   - Make the OCR and cloud-text stages independently configurable so users can choose fully local, local OCR + cloud text AI, or existing cloud image analysis.

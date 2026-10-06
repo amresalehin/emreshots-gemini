@@ -299,7 +299,9 @@ fun ScreenshotDetailScreen(
                             } catch (_: Exception) {
                                 viewModel.showMessage("No external video player found")
                             }
-                        }
+                        },
+                        onSwipePrevious = previousScreenshotId?.let { id -> { onNavigateToScreenshot(id) } },
+                        onSwipeNext = nextScreenshotId?.let { id -> { onNavigateToScreenshot(id) } }
                     )
                 } else if (imageFile.exists() || !screenshot.uriString.isNullOrBlank()) {
                     GestureImage(

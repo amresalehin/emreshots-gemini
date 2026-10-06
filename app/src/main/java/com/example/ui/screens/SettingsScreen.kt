@@ -149,7 +149,6 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
                 SectionTitle("QUICK ACTIONS", "Global controls for your screenshot library")
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     QuickActionButton(Icons.Default.AutoAwesome, "Process", enabled = !isAnalyzing && pending > 0, modifier = Modifier.weight(1f)) { viewModel.batchAnalyzeScreenshots(allScreenshots.filter { !it.aiProcessed }, autoWriteExifSetting) }
-                    QuickActionButton(Icons.Default.Sync, "Sync", modifier = Modifier.weight(1f)) { viewModel.syncDeviceMedia() }
                     QuickActionButton(Icons.Default.ContentCopy, "Duplicates", enabled = !isScanningDuplicates, modifier = Modifier.weight(1f)) { viewModel.scanDuplicates() }
                     QuickActionButton(Icons.Default.Replay, "Re-index", enabled = !isAnalyzing && total > 0, modifier = Modifier.weight(1f)) { showReprocessConfirm = true }
                 }
@@ -222,18 +221,6 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
                     CompactToggleRow(Icons.Default.Language, "URL & link detection", linksDetectionEnabled) { viewModel.setLinksDetectionEnabled(it) }
                     CompactToggleRow(Icons.Default.AutoAwesome, "Smart keyword tagging", smartTagsEnabled) { viewModel.setSmartTagsEnabled(it) }
                     CompactToggleRow(Icons.Default.CameraAlt, "Write metadata to EXIF", autoWriteExifSetting) { viewModel.setAutoWriteExifSetting(it) }
-                }
-            }
-            item {
-                SectionTitle("LIBRARY", "Keep your collection fresh and easy to scan")
-                SettingsCard {
-                    CompactToggleRow(Icons.Default.Sync, "Background media sync", autoSyncDeviceMedia) { viewModel.setAutoSyncDeviceMedia(it) }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { viewModel.syncDeviceMedia() }, modifier = Modifier.weight(1f)) { Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text("Sync now") }
-                        OutlinedButton(onClick = { viewModel.trimMemory() }, modifier = Modifier.weight(1f).testTag("btn_trim_memory")) { Icon(Icons.Default.CleaningServices, contentDescription = null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text("Trim RAM") }
-                        OutlinedButton(onClick = { viewModel.clearThumbnailCache() }, modifier = Modifier.weight(1f).testTag("btn_clear_cache")) { Text("Cache") }
-                    }
-                    Text("Gallery layout is controlled from View & Organize in the gallery. This keeps grid, masonry, columns, sorting, and grouping in one place.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             item {

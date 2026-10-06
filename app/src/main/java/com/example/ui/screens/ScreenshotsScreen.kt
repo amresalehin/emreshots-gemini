@@ -61,7 +61,6 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PermMedia
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material3.AlertDialog
@@ -95,7 +94,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -908,33 +906,16 @@ fun ScreenshotsScreen(
         )
     }
 
-    if (showOrganizeSheet) {
-        ViewOrganizeBottomSheet(
-            sheetState = organizeSheetState,
-            currentViewMode = viewMode,
-            currentGridCols = gridColumns,
-            currentSort = sortOption,
-            currentGroupBy = groupByOption,
-            onSelectViewMode = { mode, cols ->
-                viewModel.setViewMode(mode)
-                if (mode == GalleryViewMode.GRID || mode == GalleryViewMode.MASONRY) {
-                    viewModel.setGridColumns(cols)
-                }
+    if (showAiOcrDialog) {
+        val eligibleCount = allScreenshots.count { !it.isVideo && it.ocrText.orEmpty().isNotBlank() && !it.aiProcessed }
+        AiOcrEnrichmentDialog(
+            options = aiOcrModelOptions,
+            eligibleCount = eligibleCount,
+            onDismiss = { showAiOcrDialog = false },
+            onStart = { providerId ->
+                showAiOcrDialog = false
+                viewModel.batchAiOcrEnrichment(allScreenshots, providerId)
             },
-            onSelectSort = { viewModel.setSortOption(it) },
-            onSelectGroupBy = { viewModel.setGroupByOption(it) },
-            onReset = {
-                viewModel.setViewMode(GalleryViewMode.GRID)
-                viewModel.setGridColumns(2)
-                viewModel.setSortOption(MediaSortOption.NEWEST)
-                viewModel.setGroupByOption(MediaGroupBy.NONE)
-            },
-            onDismiss = {
-                coroutineScope.launch {
-                    organizeSheetState.hide()
-                    showOrganizeSheet = false
-                }
-            }
         )
     }
 }

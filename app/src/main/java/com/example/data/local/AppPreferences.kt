@@ -28,6 +28,7 @@ class AppPreferences(private val context: Context) {
         val visionCaptionTagProviderId = stringPreferencesKey("vision_caption_tag_provider_id")
         val showFileNames = booleanPreferencesKey("gallery_show_file_names")
         val showTags = booleanPreferencesKey("gallery_show_tags")
+        val ocrLanguages = stringPreferencesKey("ocr_languages")
     }
 
     val ocrEnabled: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.ocrEnabled] ?: true }
@@ -45,6 +46,7 @@ class AppPreferences(private val context: Context) {
     val visionCaptionTagProviderId: Flow<String> = context.appPreferencesDataStore.data.map { it[Keys.visionCaptionTagProviderId] ?: "" }
     val showFileNames: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.showFileNames] ?: true }
     val showTags: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.showTags] ?: true }
+    val ocrLanguages: Flow<List<String>> = context.appPreferencesDataStore.data.map { prefs -> prefs[Keys.ocrLanguages]?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() }?.ifEmpty { listOf("Latin") } ?: listOf("Latin") }
 
     suspend fun setOcrEnabled(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.ocrEnabled] = value }
     suspend fun setLinksDetectionEnabled(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.linksDetectionEnabled] = value }
@@ -55,6 +57,7 @@ class AppPreferences(private val context: Context) {
     suspend fun setGridColumns(value: Int) = context.appPreferencesDataStore.edit { it[Keys.gridColumns] = value.coerceIn(2, 5) }
     suspend fun setShowFileNames(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.showFileNames] = value }
     suspend fun setShowTags(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.showTags] = value }
+    suspend fun setOcrLanguages(value: List<String>) = context.appPreferencesDataStore.edit { it[Keys.ocrLanguages] = value.distinct().joinToString(",") }
     suspend fun setOnDeviceVisionMode(value: String) = context.appPreferencesDataStore.edit { it[Keys.onDeviceVisionMode] = value }
     suspend fun setOnDeviceVisionModel(value: String) = context.appPreferencesDataStore.edit { it[Keys.onDeviceVisionModel] = value }
     suspend fun setOcrAiProviderId(value: String) = context.appPreferencesDataStore.edit { it[Keys.ocrAiProviderId] = value }

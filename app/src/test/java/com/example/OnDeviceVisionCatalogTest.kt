@@ -5,7 +5,6 @@ import com.amresalehin.emreshots.service.ai.DevicePerformanceTier
 import com.amresalehin.emreshots.service.ai.OnDeviceVisionCatalog
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class OnDeviceVisionCatalogTest {

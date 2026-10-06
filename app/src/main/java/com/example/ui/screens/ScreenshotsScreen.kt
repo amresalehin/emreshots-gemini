@@ -132,7 +132,6 @@ fun ScreenshotsScreen(
     onNavigateToSettings: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
     val allScreenshots by viewModel.allScreenshots.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val selectedFilter by viewModel.selectedFilter.collectAsStateWithLifecycle()
@@ -234,18 +233,6 @@ fun ScreenshotsScreen(
                     }
                 },
                 actions = {
-                    // Search Action
-                    IconButton(
-                        onClick = { isSearchExpanded = !isSearchExpanded },
-                        modifier = Modifier.testTag("btn_toggle_search")
-                    ) {
-                        Icon(
-                            imageVector = if (isSearchExpanded) Icons.Default.Close else Icons.Default.Search,
-                            contentDescription = "Search",
-                            tint = if (isSearchExpanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-
                     // Gallery search
                     IconButton(
                         onClick = { isSearchExpanded = !isSearchExpanded },

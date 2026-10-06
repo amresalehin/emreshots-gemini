@@ -1,15 +1,13 @@
 package com.amresalehin.emreshots.ui.screens
 
-import com.amresalehin.emreshots.ui.components.OnDeviceVisionModelSettings
 import android.Manifest
 import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -21,23 +19,20 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.CloudQueue
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.AlertDialog
@@ -52,6 +47,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -81,17 +77,13 @@ import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(
-    viewModel: ScreenshotsViewModel,
-    onNavigateBack: (() -> Unit)? = null
-) {
+fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)? = null, onOpenProcessing: (() -> Unit)? = null) {
     val allScreenshots by viewModel.allScreenshots.collectAsStateWithLifecycle()
     val providers by viewModel.providers.collectAsStateWithLifecycle()
     val activeProvider by viewModel.activeProvider.collectAsStateWithLifecycle()
     val isAnalyzing by viewModel.isAnalyzing.collectAsStateWithLifecycle()
     val statusText by viewModel.analysisStatusText.collectAsStateWithLifecycle()
     val indexingState by viewModel.indexingState.collectAsStateWithLifecycle()
-
     val ocrEnabled by viewModel.ocrEnabled.collectAsStateWithLifecycle()
     val linksDetectionEnabled by viewModel.linksDetectionEnabled.collectAsStateWithLifecycle()
     val smartTagsEnabled by viewModel.smartTagsEnabled.collectAsStateWithLifecycle()
@@ -109,637 +101,165 @@ fun SettingsScreen(
 
     var showEditDialog by remember { mutableStateOf(false) }
     var editingProvider by remember { mutableStateOf<CustomCloudProvider?>(null) }
-    var testingProviderId by remember { mutableStateOf<String?>(null) }
     var showRestoreModeDialog by remember { mutableStateOf(false) }
     var pendingRestoreUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var showReprocessConfirm by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
-    val backupExportLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json")
-    ) { uri ->
-        if (uri != null) viewModel.exportBackupToUri(context, uri)
-    }
+    val backupExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri -> if (uri != null) viewModel.exportBackupToUri(context, uri) }
+    val backupRestoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) { pendingRestoreUri = uri; showRestoreModeDialog = true } }
+    val mediaPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result -> viewModel.onPermissionsResult(result.values.any { it }) }
 
-    val backupRestoreLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) {
-            pendingRestoreUri = uri
-            showRestoreModeDialog = true
-        }
-    }
+    val total = allScreenshots.size
+    val processed = allScreenshots.count { it.aiProcessed }
+    val pending = (total - processed).coerceAtLeast(0)
+    val failed = indexingState.failureCount
+    val progress = when { indexingState.total > 0 -> indexingState.progress else if (total == 0) 0f else processed.toFloat() / total.toFloat() }
 
-    val mediaPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { result ->
-        viewModel.onPermissionsResult(result.values.any { it })
-    }
+    if (onNavigateBack != null) BackHandler(onBack = onNavigateBack)
 
-    val untaggedCount = allScreenshots.count { !it.aiProcessed }
-
-    if (onNavigateBack != null) {
-        BackHandler(onBack = onNavigateBack)
-    }
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = {
-                Text(
-                    text = "Settings",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            },
-            navigationIcon = {
-                if (onNavigateBack != null) {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                }
-            },
-            windowInsets = TopAppBarDefaults.windowInsets,
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.surface
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Settings", fontWeight = FontWeight.Bold) },
+                navigationIcon = { if (onNavigateBack != null) IconButton(onClick = onNavigateBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
-        )
-
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 6.dp),
+        }
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(innerPadding).navigationBarsPadding(),
+            contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
-            // SECTION 1: AI INTELLIGENCE
-            MinimalSectionTitle("AI & INTELLIGENCE ENGINE")
-
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-
-                    // Active Model Header Row
+            item {
+                LibraryIntelligenceCard(
+                    total = total, processed = processed, pending = pending, failed = failed, progress = progress,
+                    providerName = activeProvider?.name, quality = aiQualityPreset, isProcessing = isAnalyzing || indexingState.isIndexing,
+                    onPrimary = { if (isAnalyzing || indexingState.isIndexing) viewModel.cancelIndexing() else if (pending > 0) viewModel.batchAnalyzeScreenshots(allScreenshots.filter { !it.aiProcessed }, autoWriteExifSetting) else showReprocessConfirm = true },
+                    onOpenProcessing = onOpenProcessing
+                )
+            }
+            item {
+                SectionTitle("QUICK ACTIONS", "Global controls for your screenshot library")
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    QuickActionButton(Icons.Default.AutoAwesome, "Process", enabled = !isAnalyzing && pending > 0, modifier = Modifier.weight(1f)) { viewModel.batchAnalyzeScreenshots(allScreenshots.filter { !it.aiProcessed }, autoWriteExifSetting) }
+                    QuickActionButton(Icons.Default.Sync, "Sync", modifier = Modifier.weight(1f)) { viewModel.syncDeviceMedia() }
+                    QuickActionButton(Icons.Default.ContentCopy, "Duplicates", enabled = !isScanningDuplicates, modifier = Modifier.weight(1f)) { viewModel.scanDuplicates() }
+                    QuickActionButton(Icons.Default.Refresh, "Re-index", enabled = !isAnalyzing && total > 0, modifier = Modifier.weight(1f)) { showReprocessConfirm = true }
+                }
+            }
+            item {
+                SectionTitle("AI & ANALYSIS", "Choose how EmreShots understands your screenshots")
+                SettingsCard {
                     if (activeProvider != null) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    modifier = Modifier.size(34.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            imageVector = Icons.Default.Psychology,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Column {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = activeProvider!!.name,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Surface(
-                                            shape = RoundedCornerShape(4.dp),
-                                            color = Color(0xFF10B981).copy(alpha = 0.15f)
-                                        ) {
-                                            Text(
-                                                text = "Active",
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color(0xFF10B981),
-                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
-                                            )
-                                        }
-                                    }
-                                    Text(
-                                        text = "${activeProvider!!.selectedModel} • ${activeProvider!!.baseUrl.substringAfter("://").take(24)}",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1
-                                    )
-                                }
-                            }
-
-                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                OutlinedButton(
-                                    onClick = {
-                                        editingProvider = activeProvider
-                                        showEditDialog = true
-                                    },
-                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.height(28.dp)
-                                ) {
-                                    Text("Edit", fontSize = 11.sp)
-                                }
-                                Button(
-                                    onClick = {
-                                        editingProvider = null
-                                        showEditDialog = true
-                                    },
-                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.height(28.dp).testTag("btn_add_provider_settings")
-                                ) {
-                                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(12.dp))
-                                    Spacer(modifier = Modifier.width(2.dp))
-                                    Text("New", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-
-                        if (providers.size > 1) {
-                            Text("Switch Configured Engine:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                providers.forEach { p ->
-                                    val isCurrent = p.id == activeProvider?.id
-                                    Surface(
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = if (isCurrent) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .clickable { viewModel.setActiveProvider(p.id) }
-                                    ) {
-                                        Text(
-                                            text = p.name,
-                                            fontSize = 11.sp,
-                                            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                                            color = if (isCurrent) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                        )
-                                    }
-                                }
+                        SettingsHeaderRow(Icons.Default.Psychology, "Cloud AI", activeProvider!!.name, "Active") {
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                OutlinedButton(onClick = { editingProvider = activeProvider; showEditDialog = true }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) { Text("Edit", fontSize = 11.sp) }
+                                Button(onClick = { editingProvider = null; showEditDialog = true }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp), modifier = Modifier.testTag("btn_add_provider_settings")) { Text("Add", fontSize = 11.sp) }
                             }
                         }
                     } else {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
-                                    modifier = Modifier.size(34.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            imageVector = Icons.Default.Psychology,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Column {
-                                    Text(
-                                        text = "No AI Provider Configured",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = "Add your custom OpenAI, Gemini, Groq, or Ollama API endpoint",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-
-                            Button(
-                                onClick = {
-                                    editingProvider = null
-                                    showEditDialog = true
-                                },
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("btn_add_provider_settings")
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Set Up AI Provider", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            }
+                        SettingsHeaderRow(Icons.Default.Psychology, "Cloud AI", "No provider configured") {
+                            Button(onClick = { editingProvider = null; showEditDialog = true }, modifier = Modifier.testTag("btn_add_provider_settings")) { Text("Set up", fontSize = 11.sp) }
                         }
                     }
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-
-                    // Speed Preset Segmented Control
-                    Column {
-                        Text(
-                            text = "Analysis Speed & Quality",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            listOf("Fast", "Balanced", "Deep").forEach { preset ->
-                                val isSelected = aiQualityPreset == preset
-                                Surface(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .clickable { viewModel.setAiQualityPreset(preset) },
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-                                    shape = RoundedCornerShape(10.dp)
-                                ) {
-                                    Text(
-                                        text = preset,
-                                        fontSize = 12.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                                        textAlign = TextAlign.Center,
-                                        modifier = Modifier.padding(vertical = 7.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-
-                    Text(text = "On-device vision", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf("Automatic", "Force local", "Disabled").forEach { mode ->
-                            val selected = onDeviceVisionMode.equals(mode, ignoreCase = true)
-                            Surface(modifier = Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).clickable { viewModel.setOnDeviceVisionMode(mode) },
-                                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(10.dp)) {
-                                Text(text = mode, fontSize = 11.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                                    textAlign = TextAlign.Center, modifier = Modifier.padding(vertical = 7.dp))
-                            }
-                        }
-                    }
-                    Text("Automatic may use cloud fallback; Force local never uploads the screenshot image.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    OnDeviceVisionModelSettings(selectedModelId = onDeviceVisionModel, onSelect = { viewModel.setOnDeviceVisionModel(it) }, showMessage = { viewModel.showMessage(it) })
-
-                    // Minimal Toggle Items
-                    MinimalToggleRow(
-                        icon = Icons.Default.TextFields,
-                        title = "OCR Text Extraction",
-                        checked = ocrEnabled,
-                        onCheckedChange = { viewModel.setOcrEnabled(it) }
-                    )
-
-                    MinimalToggleRow(
-                        icon = Icons.Default.Language,
-                        title = "URL & Link Detection",
-                        checked = linksDetectionEnabled,
-                        onCheckedChange = { viewModel.setLinksDetectionEnabled(it) }
-                    )
-
-                    MinimalToggleRow(
-                        icon = Icons.Default.AutoAwesome,
-                        title = "Smart Keyword Tagging",
-                        checked = smartTagsEnabled,
-                        onCheckedChange = { viewModel.setSmartTagsEnabled(it) }
-                    )
-
-                    MinimalToggleRow(
-                        icon = Icons.Default.CameraAlt,
-                        title = "Write Directly to EXIF",
-                        checked = autoWriteExifSetting,
-                        onCheckedChange = { viewModel.setAutoWriteExifSetting(it) }
-                    )
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-
-                    // Batch Actions
-                    if (isAnalyzing) {
-                        LinearProgressIndicator(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(3.dp)
-                                .clip(RoundedCornerShape(2.dp)),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = if (indexingState.total > 0) {
-                                "${indexingState.current}/${indexingState.total} • ${indexingState.currentModel.ifBlank { "AI" }} • ${indexingState.successCount} passed, ${indexingState.failureCount} failed"
-                            } else {
-                                statusText ?: "Analyzing library..."
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        OutlinedButton(
-                            onClick = { viewModel.cancelIndexing() },
-                            enabled = indexingState.isIndexing,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Cancel indexing")
-                        }
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = {
-                                val untagged = allScreenshots.filter { !it.aiProcessed }
-                                viewModel.batchAnalyzeScreenshots(untagged, autoWriteExifSetting)
-                            },
-                            enabled = !isAnalyzing && untaggedCount > 0,
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("btn_settings_index_untagged")
-                        ) {
-                            if (isAnalyzing) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(12.dp),
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(15.dp))
-                            }
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Index ($untaggedCount)", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-
-                        OutlinedButton(
-                            onClick = {
-                                viewModel.batchAnalyzeScreenshots(allScreenshots, autoWriteExifSetting)
-                            },
-                            enabled = !isAnalyzing && allScreenshots.isNotEmpty(),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("btn_settings_index_all")
-                        ) {
-                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(15.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Re-index All", fontSize = 11.sp)
-                        }
-                    }
+                    HorizontalDivider()
+                    Text("Quality", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                    SegmentedChoice(listOf("Fast", "Balanced", "Deep"), aiQualityPreset) { viewModel.setAiQualityPreset(it) }
+                    Spacer(Modifier.height(10.dp))
+                    Text("On-device vision", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                    SegmentedChoice(listOf("Automatic", "Force local", "Disabled"), onDeviceVisionMode) { viewModel.setOnDeviceVisionMode(it) }
+                    Text("Selected model: ${onDeviceVisionModel.ifBlank { "Automatic" }}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(6.dp))
+                    CompactToggleRow(Icons.Default.TextFields, "OCR text extraction", ocrEnabled) { viewModel.setOcrEnabled(it) }
+                    CompactToggleRow(Icons.Default.Language, "URL & link detection", linksDetectionEnabled) { viewModel.setLinksDetectionEnabled(it) }
+                    CompactToggleRow(Icons.Default.AutoAwesome, "Smart keyword tagging", smartTagsEnabled) { viewModel.setSmartTagsEnabled(it) }
+                    CompactToggleRow(Icons.Default.CameraAlt, "Write metadata to EXIF", autoWriteExifSetting) { viewModel.setAutoWriteExifSetting(it) }
                 }
             }
-
-            // SECTION 2: GALLERY & STORAGE
-            MinimalSectionTitle("GALLERY & STORAGE")
-
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    MinimalToggleRow(
-                        icon = Icons.Default.Sync,
-                        title = "Background media sync (every 15 min)",
-                        checked = autoSyncDeviceMedia,
-                        onCheckedChange = { viewModel.setAutoSyncDeviceMedia(it) }
-                    )
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-
-                    // Compact Actions Row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = { viewModel.syncDeviceMedia() },
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Sync", fontSize = 11.sp)
-                        }
-
-                        OutlinedButton(
-                            onClick = { viewModel.trimMemory() },
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                            modifier = Modifier.weight(1f).testTag("btn_trim_memory")
-                        ) {
-                            Icon(Icons.Default.CleaningServices, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Trim RAM", fontSize = 11.sp)
-                        }
-
-                        OutlinedButton(
-                            onClick = { viewModel.clearThumbnailCache() },
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                            modifier = Modifier.weight(1f).testTag("btn_clear_cache")
-                        ) {
-                            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Clear Cache", fontSize = 11.sp)
-                        }
+            item {
+                SectionTitle("LIBRARY", "Keep your collection fresh and easy to scan")
+                SettingsCard {
+                    CompactToggleRow(Icons.Default.Sync, "Background media sync", autoSyncDeviceMedia) { viewModel.setAutoSyncDeviceMedia(it) }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { viewModel.syncDeviceMedia() }, modifier = Modifier.weight(1f)) { Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text("Sync now") }
+                        OutlinedButton(onClick = { viewModel.trimMemory() }, modifier = Modifier.weight(1f).testTag("btn_trim_memory")) { Icon(Icons.Default.CleaningServices, contentDescription = null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text("Trim RAM") }
+                        OutlinedButton(onClick = { viewModel.clearThumbnailCache() }, modifier = Modifier.weight(1f).testTag("btn_clear_cache")) { Text("Cache") }
                     }
+                    HorizontalDivider()
+                    Text("Gallery layout", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                    SegmentedChoice(listOf("2", "3", "4").map { "${it}×" }, "${gridColumns}×") { viewModel.setGridColumns(it.removeSuffix("×").toInt()) }
                 }
             }
-
-
-            // SECTION 3: DUPLICATES
-            MinimalSectionTitle("DUPLICATES")
-
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Detect exact file duplicates and visually similar screenshots without deleting device media.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Button(
-                        onClick = { viewModel.scanDuplicates() },
-                        enabled = !isScanningDuplicates && allScreenshots.isNotEmpty(),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        if (isScanningDuplicates) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                        else Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(if (isScanningDuplicates) "Scanning…" else "Scan for Duplicates")
+            item {
+                SectionTitle("DUPLICATES", "${duplicateGroups.sumOf { it.items.size - 1 }} duplicate items found")
+                SettingsCard {
+                    Button(onClick = { viewModel.scanDuplicates() }, enabled = !isScanningDuplicates && total > 0, modifier = Modifier.fillMaxWidth()) {
+                        if (isScanningDuplicates) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp) else Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp)); Text(if (isScanningDuplicates) "Scanning…" else "Scan for duplicates")
                     }
                     if (duplicateGroups.isNotEmpty()) {
-                        Text("${duplicateGroups.sumOf { it.items.size - 1 }} duplicate items in ${duplicateGroups.size} groups", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                        duplicateGroups.take(8).forEachIndexed { index, group ->
-                            val keeper = group.items.first()
-                            val duplicates = group.items.drop(1)
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text("${group.kind.name.lowercase().replaceFirstChar { it.uppercase() }} group ${index + 1}: ${group.items.size} items", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
-                                duplicates.forEach { duplicate ->
-                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                        Text(duplicate.title.ifBlank { duplicate.filePath.substringAfterLast("/") }, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                                        TextButton(onClick = { viewModel.removeDuplicateFromLibrary(duplicate.id) }) { Text("Remove library copy") }
-                                    }
-                                }
-                                Text("Keeping: ${keeper.title.ifBlank { keeper.filePath.substringAfterLast("/") }}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
+                        Spacer(Modifier.height(8.dp))
+                        Text("Latest results", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                        duplicateGroups.take(3).forEach { group ->
+                            Text("• ${group.kind.name.lowercase().replaceFirstChar { it.uppercase() }} · ${group.items.size} items", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        if (duplicateGroups.size > 8) Text("Showing the first 8 groups.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
-
-            // SECTION 4: GALLERY DISPLAY
-
-            MinimalSectionTitle("GALLERY DISPLAY")
-
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Grid columns", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(2, 3, 4).forEach { columns ->
-                            val selected = gridColumns == columns
-                            Surface(
-                                modifier = Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).clickable { viewModel.setGridColumns(columns) },
-                                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Text(
-                                    text = "${columns}×",
-                                    textAlign = TextAlign.Center,
-                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.padding(vertical = 8.dp)
-                                )
-                            }
-                        }
-                    }
-                    Text("Applies to the gallery grid view.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-
-            // SECTION 5: ACCESS & BACKUP
-            MinimalSectionTitle("ACCESS & BACKUP")
-
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Media access", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PermissionStatusChip("Photos & videos", hasMediaPermissions)
-                        PermissionStatusChip("Metadata", hasAllMetadataPermissions)
-                    }
+            item {
+                SectionTitle("ACCESS & BACKUP", "Protect your library and keep permissions clear")
+                SettingsCard {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { PermissionChip("Photos", hasMediaPermissions); PermissionChip("Metadata", hasAllMetadataPermissions) }
                     OutlinedButton(
                         onClick = {
                             val permissions = when {
-                                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> arrayOf(
-                                    Manifest.permission.READ_MEDIA_IMAGES,
-                                    Manifest.permission.READ_MEDIA_VIDEO,
-                                    Manifest.permission.ACCESS_MEDIA_LOCATION
-                                )
-                                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> arrayOf(
-                                    Manifest.permission.READ_EXTERNAL_STORAGE,
-                                    Manifest.permission.ACCESS_MEDIA_LOCATION
-                                )
-                                else -> arrayOf(
-                                    Manifest.permission.READ_EXTERNAL_STORAGE,
-                                    Manifest.permission.WRITE_EXTERNAL_STORAGE
-                                )
-                            }
-                            mediaPermissionLauncher.launch(permissions)
+                                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.ACCESS_MEDIA_LOCATION)
+                                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.ACCESS_MEDIA_LOCATION)
+                                else -> arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                            }; mediaPermissionLauncher.launch(permissions)
                         },
-                        enabled = !hasAllMetadataPermissions,
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text(if (hasMediaPermissions) "Grant Metadata Access" else "Grant Media Access") }
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-
-                    Text(
-                        "Backups include library metadata, collections, providers without plaintext API keys, and app settings. Media files themselves are not copied.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    if (lastBackupInfo != null) {
-                        Text(lastBackupInfo!!, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                    }
+                        enabled = !hasAllMetadataPermissions, modifier = Modifier.fillMaxWidth()
+                    ) { Text(if (hasMediaPermissions) "Grant metadata access" else "Grant media access") }
+                    HorizontalDivider()
+                    Text("Backups include library metadata, collections, providers without plaintext API keys, and settings. Media files are not copied.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (lastBackupInfo != null) Text(lastBackupInfo!!, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = { backupExportLauncher.launch("emreshots-backup.json") }, modifier = Modifier.weight(1f)) { Text("Export") }
                         OutlinedButton(onClick = { viewModel.shareBackup(context) }, modifier = Modifier.weight(1f)) { Text("Share") }
+                        Button(onClick = { backupRestoreLauncher.launch(arrayOf("application/json", "text/plain")) }, modifier = Modifier.weight(1f)) { Text("Restore") }
                     }
-                    Button(
-                        onClick = { backupRestoreLauncher.launch(arrayOf("application/json", "text/plain")) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("Restore Backup") }
                 }
             }
-
-            // Minimal Footer
-            Text(
-                text = "EmreShots 1.0 • Room DB + EXIF Tools",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp)
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
+            item {
+                Surface(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+                    Row(modifier = Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("EmreShots", fontWeight = FontWeight.Bold)
+                        Text("1.0 • Screenshot Intelligence", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
         }
     }
 
+    if (showReprocessConfirm) {
+        AlertDialog(
+            onDismissRequest = { showReprocessConfirm = false },
+            title = { Text("Reprocess entire library?") },
+            text = { Text("This will run AI analysis again for all $total media items and may take time or use cloud AI quota.") },
+            confirmButton = { Button(onClick = { showReprocessConfirm = false; viewModel.batchAnalyzeScreenshots(allScreenshots, autoWriteExifSetting) }, enabled = total > 0) { Text("Reprocess all") } },
+            dismissButton = { TextButton(onClick = { showReprocessConfirm = false }) { Text("Cancel") } }
+        )
+    }
 
     if (showRestoreModeDialog && pendingRestoreUri != null) {
         AlertDialog(
-            onDismissRequest = {
-                showRestoreModeDialog = false
-                pendingRestoreUri = null
-            },
+            onDismissRequest = { showRestoreModeDialog = false; pendingRestoreUri = null },
             title = { Text("Restore backup") },
-            text = { Text("Choose how this backup should affect the current library. Merge keeps existing records; Replace clears current library records first.") },
-            confirmButton = {
-                Button(onClick = {
-                    val uri = pendingRestoreUri
-                    showRestoreModeDialog = false
-                    pendingRestoreUri = null
-                    if (uri != null) viewModel.restoreFromUri(uri, RestoreMode.MERGE)
-                }) { Text("Merge") }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = {
-                    val uri = pendingRestoreUri
-                    showRestoreModeDialog = false
-                    pendingRestoreUri = null
-                    if (uri != null) viewModel.restoreFromUri(uri, RestoreMode.REPLACE)
-                }) { Text("Replace") }
-            }
+            text = { Text("Choose how this backup should affect the current library.") },
+            confirmButton = { Button(onClick = { val uri = pendingRestoreUri; showRestoreModeDialog = false; pendingRestoreUri = null; if (uri != null) viewModel.restoreFromUri(uri, RestoreMode.MERGE) }) { Text("Merge") } },
+            dismissButton = { OutlinedButton(onClick = { val uri = pendingRestoreUri; showRestoreModeDialog = false; pendingRestoreUri = null; if (uri != null) viewModel.restoreFromUri(uri, RestoreMode.REPLACE) }) { Text("Replace") } }
         )
     }
 
@@ -747,91 +267,53 @@ fun SettingsScreen(
         ProviderEditDialog(
             initial = editingProvider,
             onDismiss = { showEditDialog = false },
-            onSave = { saved ->
-                viewModel.saveProvider(saved)
-                showEditDialog = false
-            },
-            onFetchModels = { prov, onResult ->
-                viewModel.fetchProviderModels(prov, onResult)
-            },
-            onTest = { prov, onResult ->
-                viewModel.testProviderConnection(prov, onResult)
-            }
+            onSave = { saved -> viewModel.saveProvider(saved); showEditDialog = false },
+            onFetchModels = { prov, onResult -> viewModel.fetchProviderModels(prov, onResult) },
+            onTest = { prov, onResult -> viewModel.testProviderConnection(prov, onResult) }
         )
     }
 }
 
-@Composable
-private fun PermissionStatusChip(label: String, granted: Boolean) {
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = if (granted) Color(0xFF10B981).copy(alpha = 0.12f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
-    ) {
-        Text(
-            text = if (granted) "${label}: Granted" else "${label}: Needed",
-            style = MaterialTheme.typography.labelSmall,
-            color = if (granted) Color(0xFF10B981) else MaterialTheme.colorScheme.onErrorContainer,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
-        )
-    }
-}
-
-@Composable
-private fun MinimalSectionTitle(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.primary,
-        letterSpacing = 0.5.sp,
-        modifier = Modifier.padding(start = 4.dp, top = 4.dp)
-    )
-}
-
-@Composable
-private fun MinimalToggleRow(
-    icon: ImageVector,
-    title: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Surface(
-        onClick = { onCheckedChange(!checked) },
-        color = Color.Transparent,
-        shape = RoundedCornerShape(8.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+@Composable private fun LibraryIntelligenceCard(total: Int, processed: Int, pending: Int, failed: Int, progress: Float, providerName: String?, quality: String, isProcessing: Boolean, onPrimary: () -> Unit, onOpenProcessing: (() -> Unit)?) {
+    Card(shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), modifier = Modifier.size(40.dp)) {
+                    BoxCenter { Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
+                }
+                Spacer(Modifier.width(10.dp))
+                Column { Text("LIBRARY INTELLIGENCE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold); Text("$total screenshots", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold) }
             }
-
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                modifier = Modifier.size(width = 44.dp, height = 28.dp)
-            )
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                StatBlock("READY", processed); StatBlock("REMAINING", pending); if (failed > 0) StatBlock("FAILED", failed)
+            }
+            LinearProgressIndicator(progress = { progress.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().height(7.dp).clip(CircleShape), color = MaterialTheme.colorScheme.primary, trackColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.65f))
+            Text("${(progress * 100).toInt()}% analyzed", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            Text("${providerName ?: "No cloud provider"} · $quality · On-device ${if (isProcessing) "processing active" else "ready"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onPrimary, modifier = Modifier.weight(1f).testTag("btn_library_primary")) { Text(if (isProcessing) "Cancel Processing" else if (pending > 0) "Process $pending" else "Reprocess Library") }
+                if (onOpenProcessing != null) OutlinedButton(onClick = onOpenProcessing, modifier = Modifier.weight(1f)) { Text("View progress") }
+            }
         }
     }
 }
+
+@Composable private fun StatBlock(label: String, value: Int) { Column { Text(value.toString(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold); Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
+
+@Composable private fun QuickActionButton(icon: ImageVector, label: String, enabled: Boolean = true, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    OutlinedButton(onClick = onClick, enabled = enabled, modifier = modifier.height(52.dp), contentPadding = PaddingValues(horizontal = 6.dp)) { Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text(label, fontSize = 11.sp) }
+}
+
+@Composable private fun SectionTitle(title: String, subtitle: String) { Column(modifier = Modifier.padding(horizontal = 2.dp)) { Text(title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, letterSpacing = 0.7.sp); Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
+
+@Composable private fun SettingsCard(content: @Composable Column.() -> Unit) { Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp), modifier = Modifier.fillMaxWidth(), content = { Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content) }) }
+
+@Composable private fun SettingsHeaderRow(icon: ImageVector, title: String, subtitle: String, badge: String? = null, trailing: @Composable () -> Unit) { Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(40.dp)) { BoxCenter { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary) } }; Spacer(Modifier.width(12.dp)); Column(modifier = Modifier.weight(1f)) { Row(verticalAlignment = Alignment.CenterVertically) { Text(title, fontWeight = FontWeight.SemiBold); if (badge != null) { Spacer(Modifier.width(6.dp)); Text(badge, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) } }; Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1) }; trailing() } }
+
+@Composable private fun SegmentedChoice(options: List<String>, selected: String, onSelected: (String) -> Unit) { Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) { options.forEach { option -> val active = selected.equals(option, true); Surface(onClick = { onSelected(option) }, color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant, contentColor = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f)) { Text(option, textAlign = TextAlign.Center, fontSize = 12.sp, fontWeight = if (active) FontWeight.Bold else FontWeight.Medium, modifier = Modifier.padding(vertical = 9.dp)) } } } }
+
+@Composable private fun CompactToggleRow(icon: ImageVector, title: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) { Row(modifier = Modifier.fillMaxWidth().clickable { onCheckedChange(!checked) }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) { Icon(icon, contentDescription = null, tint = if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(12.dp)); Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f)); Switch(checked = checked, onCheckedChange = onCheckedChange) } }
+
+@Composable private fun PermissionChip(label: String, granted: Boolean) { Surface(shape = RoundedCornerShape(10.dp), color = if (granted) Color(0xFF10B981).copy(alpha = 0.12f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.55f)) { Text(if (granted) "$label · Granted" else "$label · Needed", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = if (granted) Color(0xFF10B981) else MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) } }
+
+@Composable private fun BoxCenter(content: @Composable () -> Unit) { androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { content() } }

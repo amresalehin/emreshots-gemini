@@ -25,10 +25,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.border
 import androidx.compose.foundation.rememberScrollState
@@ -221,8 +221,11 @@ fun ScreenshotDetailScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF6F7F9))
+            // MainActivity is edge-to-edge. Keep the detail viewer and its scrollable
+            // content inside the safe drawing region instead of drawing under the
+            // status/navigation bars.
+            .windowInsetsPadding(WindowInsets.safeDrawing)
             .verticalScroll(detailScrollState)
-            .navigationBarsPadding()
             .pointerInput(screenshotId) {
                 var totalDrag = 0f
                 var triggered = false
@@ -277,7 +280,6 @@ fun ScreenshotDetailScreen(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .statusBarsPadding()
                         .padding(horizontal = 14.dp, vertical = 10.dp)
                         .border(
                             1.dp,

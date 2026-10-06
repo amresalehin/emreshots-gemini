@@ -195,7 +195,7 @@ fun ScreenshotDetailScreen(
     val imageFile = File(screenshot.filePath)
 
     val configuration = LocalConfiguration.current
-    val galleryHeight = (configuration.screenHeightDp.dp - 48.dp).coerceAtLeast(320.dp)
+    val galleryHeight = (configuration.screenHeightDp.dp * 0.58f).coerceIn(300.dp, 560.dp)
 
     DisposableEffect(Unit) {
         val window = (context as? android.app.Activity)?.window
@@ -255,11 +255,20 @@ fun ScreenshotDetailScreen(
                 )
             }
     ) {
-            Box(
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 12.dp)
                     .height(galleryHeight)
-                    .background(Color(0xFFF1F2F4))
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f),
+                        RoundedCornerShape(22.dp)
+                    )
+                    .clip(RoundedCornerShape(22.dp)),
+                shape = RoundedCornerShape(22.dp),
+                color = Color(0xFFF1F2F4),
+                tonalElevation = 0.dp
             ) {
             if (screenshot.isVideo) {
                 InAppVideoPlayer(

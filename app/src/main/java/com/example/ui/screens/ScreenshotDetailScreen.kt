@@ -331,15 +331,6 @@ fun ScreenshotDetailScreen(
                         Icon(Icons.Default.Share, contentDescription = "Share", tint = MaterialTheme.colorScheme.onSurface)
                     }
 
-                    IconButton(
-                        onClick = {
-                            coroutineScope.launch {
-                                detailScrollState.animateScrollTo(with(density) { galleryHeight.roundToPx() })
-                            }
-                        },
-                        modifier = Modifier.size(48.dp).testTag("btn_detail_info")
-                    ) {
-                        Icon(Icons.Default.Info, contentDescription = "Details", tint = Color.White)
                     }
                 }
 

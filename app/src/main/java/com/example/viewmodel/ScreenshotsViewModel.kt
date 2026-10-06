@@ -35,6 +35,7 @@ import com.amresalehin.emreshots.service.media.MediaSyncManager
 import com.amresalehin.emreshots.service.media.DuplicateDetectionService
 import com.amresalehin.emreshots.service.media.DuplicateGroup
 import com.amresalehin.emreshots.service.media.BackgroundSyncScheduler
+import com.amresalehin.emreshots.service.ocr.LocalOcrService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -88,6 +89,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     val exifManager = ExifMetadataManager()
     val aiService = CloudAiService()
+    private val localOcrService = LocalOcrService(application)
     val mediaScanner = com.amresalehin.emreshots.service.media.DeviceMediaScanner(application)
 
     private val _hasMediaPermissions = MutableStateFlow(com.amresalehin.emreshots.service.media.DeviceMediaScanner.hasPermissions(application))
@@ -863,24 +865,15 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     fun extractOcr(screenshot: ScreenshotItem, onComplete: ((String?) -> Unit)? = null) {
         viewModelScope.launch(Dispatchers.IO) {
-            val provider = activeProvider.value
-            if (provider == null) {
-                _snackbarMessage.value = "No AI provider configured. Please set up your endpoint in Settings."
-                withContext(Dispatchers.Main) {
-                    onComplete?.invoke(null)
-                }
-                return@launch
-            }
-
             isExtractingOcr.value = true
-            ocrStatusText.value = "Extracting text from image..."
+            ocrStatusText.value = "Extracting text locally on this device…"
 
             val file = resolveImageFile(screenshot)
-            val result = aiService.extractOcrText(
-                imageFile = file,
-                provider = provider,
-                geminiApiKey = provider.apiKey
-            )
+            val result = if (file != null) {
+                localOcrService.recognize(file)
+            } else {
+                Result.failure(IllegalArgumentException("Screenshot image is not accessible."))
+            }
 
             isExtractingOcr.value = false
             ocrStatusText.value = null
@@ -889,15 +882,11 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                 val ocr = result.getOrNull().orEmpty()
                 val updated = screenshot.copy(ocrText = ocr)
                 screenshotRepository.update(updated)
-                _snackbarMessage.value = "Text extracted successfully (${ocr.length} chars)!"
-                withContext(Dispatchers.Main) {
-                    onComplete?.invoke(ocr)
-                }
+                _snackbarMessage.value = "Local OCR complete (" + ocr.length + " chars). The image was not uploaded."
+                withContext(Dispatchers.Main) { onComplete?.invoke(ocr) }
             } else {
-                _snackbarMessage.value = "OCR failed: ${result.exceptionOrNull()?.message}"
-                withContext(Dispatchers.Main) {
-                    onComplete?.invoke(null)
-                }
+                _snackbarMessage.value = "Local OCR failed: " + (result.exceptionOrNull()?.message ?: "Unknown error")
+                withContext(Dispatchers.Main) { onComplete?.invoke(null) }
             }
         }
     }

@@ -206,9 +206,6 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     val lastBackupInfo: StateFlow<String?> = appPreferences.lastBackupInfo.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    val isExtractingOcr = MutableStateFlow(false)
-    val ocrStatusText = MutableStateFlow<String?>(null)
-
     fun setOcrEnabled(enabled: Boolean) {
         _ocrEnabled.value = enabled
         viewModelScope.launch { appPreferences.setOcrEnabled(enabled) }

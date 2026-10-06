@@ -227,9 +227,7 @@ private fun VideoPlayerSurface(
                 var totalDrag = 0f
                 detectHorizontalDragGestures(
                     onHorizontalDrag = { _, dragAmount ->
-                        if (scaleForGesture(isFullscreen)) {
-                            totalDrag += dragAmount
-                        }
+                        totalDrag += dragAmount
                     },
                     onDragEnd = {
                         if (kotlin.math.abs(totalDrag) >= 140f) {

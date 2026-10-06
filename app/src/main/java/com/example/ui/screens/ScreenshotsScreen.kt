@@ -4,12 +4,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -25,7 +23,6 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -43,8 +40,6 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -103,9 +98,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -154,7 +154,10 @@ fun ScreenshotsScreen(
 
     var isSearchExpanded by remember { mutableStateOf(false) }
     var hidePermissionBanner by remember { mutableStateOf(false) }
+    var showViewMenu by remember { mutableStateOf(false) }
+    var showSortMenu by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
+    val searchFocusRequester = remember { FocusRequester() }
     var showAiOcrDialog by remember { mutableStateOf(false) }
     var showBatchRenameDialog by remember { mutableStateOf(false) }
     var renameTemplate by remember { mutableStateOf("Screenshot_{date}_{index}") }
@@ -163,6 +166,10 @@ fun ScreenshotsScreen(
         if (autoSyncDeviceMedia && hasMediaPermissions) {
             viewModel.syncDeviceMedia()
         }
+    }
+
+    LaunchedEffect(isSearchExpanded) {
+        if (isSearchExpanded) searchFocusRequester.requestFocus()
     }
 
     LaunchedEffect(pinchNotification) {
@@ -208,142 +215,172 @@ fun ScreenshotsScreen(
             .nestedScroll(scrollBehavior.nestedScrollConnection)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Clean, Decluttered Top App Bar with integrated status bar support
+            // Professional gallery header: search, view, sort, and compact overflow.
             TopAppBar(
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "EmreShots",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                    if (isSearchExpanded) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { viewModel.setSearchQuery(it) },
+                            placeholder = { Text("Search screenshots…", fontSize = 14.sp) },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                            trailingIcon = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (searchQuery.isNotEmpty()) {
+                                        IconButton(onClick = { viewModel.setSearchQuery("") }, modifier = Modifier.size(36.dp)) {
+                                            Icon(Icons.Default.Clear, contentDescription = "Clear search", modifier = Modifier.size(18.dp))
+                                        }
+                                    }
+                                    IconButton(onClick = { isSearchExpanded = false }, modifier = Modifier.size(36.dp)) {
+                                        Icon(Icons.Default.Close, contentDescription = "Close search", modifier = Modifier.size(18.dp))
+                                    }
+                                }
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(24.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                unfocusedBorderColor = Color.Transparent
+                            ),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(onSearch = { }),
+                            modifier = Modifier.fillMaxWidth().focusRequester(searchFocusRequester).testTag("input_gallery_search")
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
-                        ) {
-                            Text(
-                                text = "${allScreenshots.size}",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                            )
+                    } else {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("EmreShots", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                            ) {
+                                Text(
+                                    "${allScreenshots.size}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                            }
                         }
                     }
                 },
                 actions = {
-                    // Gallery search
-                    IconButton(
-                        onClick = { isSearchExpanded = !isSearchExpanded },
-                        modifier = Modifier.testTag("btn_toggle_search")
-                    ) {
-                        Icon(
-                            imageVector = if (isSearchExpanded) Icons.Default.Close else Icons.Default.Search,
-                            contentDescription = "Search",
-                            tint = if (isSearchExpanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-
-                    IconButton(
-                        onClick = onNavigateToSettings,
-                        modifier = Modifier.testTag("btn_top_settings")
-                    ) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.onSurface)
+                    if (!isSearchExpanded) {
+                        IconButton(onClick = { isSearchExpanded = true }, modifier = Modifier.testTag("btn_toggle_search")) {
+                            Icon(Icons.Default.Search, contentDescription = "Search")
+                        }
                     }
 
                     Box {
-                        IconButton(
-                            onClick = { showMoreMenu = true },
-                            modifier = Modifier.testTag("btn_more_menu")
-                        ) {
+                        IconButton(onClick = { showViewMenu = true }, modifier = Modifier.testTag("btn_view_menu")) {
                             BadgedBox(
-                                badge = {
-                                    if (isCustomOrganized || !showFileNames || !showTags) {
-                                        Badge(modifier = Modifier.size(6.dp), containerColor = MaterialTheme.colorScheme.primary)
-                                    }
-                                }
+                                badge = { if (viewMode != GalleryViewMode.GRID || gridColumns != 2) Badge(modifier = Modifier.size(6.dp), containerColor = MaterialTheme.colorScheme.primary) }
                             ) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "Gallery options", tint = MaterialTheme.colorScheme.onSurface)
-                            }
-                        }
-
-                        DropdownMenu(
-                            expanded = showMoreMenu,
-                            onDismissRequest = { showMoreMenu = false },
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .width(330.dp)
-                                    .heightIn(max = 560.dp)
-                                    .verticalScroll(rememberScrollState())
-                                    .padding(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text("Gallery", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
-
-                                GalleryMenuToggle("Show file names", showFileNames) { viewModel.setShowFileNames(it) }
-                                GalleryMenuToggle("Show tags", showTags) { viewModel.setShowTags(it) }
-
-                                Text("Layout", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
-                                GalleryMenuChoiceRow(
-                                    options = listOf("Grid", "Masonry", "Feed", "List"),
-                                    selected = when (viewMode) {
-                                        GalleryViewMode.GRID -> "Grid"
-                                        GalleryViewMode.MASONRY -> "Masonry"
-                                        GalleryViewMode.FEED -> "Feed"
-                                        GalleryViewMode.LIST -> "List"
+                                Icon(
+                                    when (viewMode) {
+                                        GalleryViewMode.GRID -> Icons.Default.GridView
+                                        GalleryViewMode.MASONRY -> Icons.Default.Dashboard
+                                        GalleryViewMode.FEED -> Icons.Default.ViewAgenda
+                                        GalleryViewMode.LIST -> Icons.AutoMirrored.Filled.FormatListBulleted
                                     },
-                                    onSelected = {
-                                        viewModel.setViewMode(when (it) {
-                                            "Masonry" -> GalleryViewMode.MASONRY
-                                            "Feed" -> GalleryViewMode.FEED
-                                            "List" -> GalleryViewMode.LIST
-                                            else -> GalleryViewMode.GRID
-                                        })
-                                    },
-                                )
-
-                                Text("Columns", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
-                                GalleryMenuChoiceRow(
-                                    options = listOf("2×", "3×", "4×", "5×"),
-                                    selected = gridColumns.toString() + "×",
-                                    onSelected = { viewModel.setGridColumns(it.removeSuffix("×").toInt()) },
-                                )
-
-                                Text("Sort", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
-                                GalleryMenuChoiceRow(
-                                    options = MediaSortOption.entries.map { it.displayName },
-                                    selected = sortOption.displayName,
-                                    onSelected = { name -> MediaSortOption.entries.firstOrNull { it.displayName == name }?.let(viewModel::setSortOption) },
-                                    twoRows = true,
-                                )
-
-                                Text("Group", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
-                                GalleryMenuChoiceRow(
-                                    options = MediaGroupBy.entries.map { it.displayName },
-                                    selected = groupByOption.displayName,
-                                    onSelected = { name -> MediaGroupBy.entries.firstOrNull { it.displayName == name }?.let(viewModel::setGroupByOption) },
-                                    twoRows = true,
-                                )
-
-                                androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                                DropdownMenuItem(
-                                    text = { Text("AI OCR enrichment") },
-                                    leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
-                                    onClick = { showMoreMenu = false; showAiOcrDialog = true },
-                                    modifier = Modifier.testTag("btn_ai_ocr_enrichment"),
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Batch rename visible") },
-                                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
-                                    onClick = { showMoreMenu = false; showBatchRenameDialog = true },
-                                    modifier = Modifier.testTag("btn_batch_rename"),
+                                    contentDescription = "View options"
                                 )
                             }
                         }
-                    }                },
+                        DropdownMenu(expanded = showViewMenu, onDismissRequest = { showViewMenu = false }) {
+                            listOf(
+                                GalleryViewMode.GRID to "Grid",
+                                GalleryViewMode.MASONRY to "Masonry",
+                                GalleryViewMode.FEED to "Feed",
+                                GalleryViewMode.LIST to "List"
+                            ).forEach { (mode, label) ->
+                                DropdownMenuItem(
+                                    text = { Text(label) },
+                                    trailingIcon = { if (viewMode == mode) Text("✓") },
+                                    onClick = { viewModel.setViewMode(mode); showViewMenu = false }
+                                )
+                            }
+                            androidx.compose.material3.HorizontalDivider()
+                            listOf(2, 3, 4, 5).forEach { columns ->
+                                DropdownMenuItem(
+                                    text = { Text("$columns columns") },
+                                    trailingIcon = { if (gridColumns == columns) Text("✓") },
+                                    onClick = { viewModel.setGridColumns(columns); showViewMenu = false }
+                                )
+                            }
+                        }
+                    }
+
+                    Box {
+                        IconButton(onClick = { showSortMenu = true }, modifier = Modifier.testTag("btn_sort_menu")) {
+                            BadgedBox(
+                                badge = { if (sortOption != MediaSortOption.NEWEST || groupByOption != MediaGroupBy.NONE) Badge(modifier = Modifier.size(6.dp), containerColor = MaterialTheme.colorScheme.primary) }
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Sort and group")
+                            }
+                        }
+                        DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
+                            MediaSortOption.entries.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text("Sort: ${option.displayName}") },
+                                    trailingIcon = { if (sortOption == option) Text("✓") },
+                                    onClick = { viewModel.setSortOption(option); showSortMenu = false }
+                                )
+                            }
+                            androidx.compose.material3.HorizontalDivider()
+                            MediaGroupBy.entries.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text("Group: ${option.displayName}") },
+                                    trailingIcon = { if (groupByOption == option) Text("✓") },
+                                    onClick = { viewModel.setGroupByOption(option); showSortMenu = false }
+                                )
+                            }
+                        }
+                    }
+
+                    Box {
+                        IconButton(onClick = { showMoreMenu = true }, modifier = Modifier.testTag("btn_more_menu")) {
+                            BadgedBox(
+                                badge = { if (!showFileNames || !showTags) Badge(modifier = Modifier.size(6.dp), containerColor = MaterialTheme.colorScheme.primary) }
+                            ) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                            }
+                        }
+                        DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Show file names") },
+                                trailingIcon = { Switch(checked = showFileNames, onCheckedChange = viewModel::setShowFileNames) },
+                                onClick = { viewModel.setShowFileNames(!showFileNames) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Show tags") },
+                                trailingIcon = { Switch(checked = showTags, onCheckedChange = viewModel::setShowTags) },
+                                onClick = { viewModel.setShowTags(!showTags) }
+                            )
+                            androidx.compose.material3.HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text("AI OCR enrichment") },
+                                leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
+                                onClick = { showMoreMenu = false; showAiOcrDialog = true },
+                                modifier = Modifier.testTag("btn_ai_ocr_enrichment")
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Batch rename visible") },
+                                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                                onClick = { showMoreMenu = false; showBatchRenameDialog = true },
+                                modifier = Modifier.testTag("btn_batch_rename")
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Settings") },
+                                leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                                onClick = { showMoreMenu = false; onNavigateToSettings() }
+                            )
+                        }
+                    }
+                },
                 scrollBehavior = scrollBehavior,
                 windowInsets = TopAppBarDefaults.windowInsets,
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -351,42 +388,6 @@ fun ScreenshotsScreen(
                     scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
                 )
             )
-
-            // Animated Expandable Clean Search Bar
-            AnimatedVisibility(
-                visible = isSearchExpanded,
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
-            ) {
-                Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { viewModel.setSearchQuery(it) },
-                        placeholder = { Text("Search text, or use tag:, ocr:, type:, before:, after:…", fontSize = 13.sp) },
-                        leadingIcon = {
-                            Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                        },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { viewModel.setSearchQuery("") }) {
-                                    Icon(Icons.Default.Clear, contentDescription = "Clear", modifier = Modifier.size(18.dp))
-                                }
-                            }
-                        },
-                        shape = RoundedCornerShape(24.dp),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                            focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                            unfocusedBorderColor = Color.Transparent
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("input_gallery_search")
-                    )
-                }
-            }
 
             // Sleek, Unified Filter Pills Row
             Row(
@@ -652,9 +653,9 @@ fun ScreenshotsScreen(
                         LazyVerticalStaggeredGrid(
                             columns = StaggeredGridCells.Fixed(gridColumns),
                             state = staggeredGridState,
-                            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 88.dp + navBarBottom),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalItemSpacing = 8.dp,
+                            contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 88.dp + navBarBottom),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalItemSpacing = 4.dp,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .testTag("grid_screenshots")
@@ -717,9 +718,9 @@ fun ScreenshotsScreen(
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(effectiveCols),
                             state = gridState,
-                            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 88.dp + navBarBottom),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 88.dp + navBarBottom),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
                             modifier = Modifier
                                 .fillMaxSize()
                                 .testTag("grid_screenshots")

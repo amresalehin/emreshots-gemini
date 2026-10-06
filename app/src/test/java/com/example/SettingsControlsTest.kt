@@ -52,5 +52,7 @@ class SettingsControlsTest {
         assertEquals(2, viewModel.gridColumns.value)
         viewModel.setGridColumns(3)
         assertEquals(3, viewModel.gridColumns.value)
+        viewModel.setGridColumns(5)
+        assertEquals(5, viewModel.gridColumns.value)
     }
 }

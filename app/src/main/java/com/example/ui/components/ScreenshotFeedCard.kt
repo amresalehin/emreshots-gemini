@@ -69,6 +69,8 @@ fun ScreenshotFeedCard(
     screenshot: ScreenshotItem,
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit,
+    showFileName: Boolean = true,
+    showTags: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -218,13 +220,15 @@ fun ScreenshotFeedCard(
 
             // Metadata text & tags
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = screenshot.title.ifBlank { "Untitled" },
+                if (showFileName) {
+                    Text(
+                        text = screenshot.title.ifBlank { "Untitled" },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
 
                 Text(
                     text = dateStr,
@@ -243,7 +247,7 @@ fun ScreenshotFeedCard(
                     )
                 }
 
-                if (screenshot.tags.isNotEmpty()) {
+                if (showTags && screenshot.tags.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(10.dp))
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),

@@ -52,12 +52,13 @@ jobs:
           SOURCE_DATE_EPOCH: "1735689600"
         run: |
           set -euo pipefail
-          bash native/build.sh all
+          bash native/build.sh arm64-v8a
+          bash native/build.sh assets
 
       - name: Install native runtime into Android project
         run: |
           set -euo pipefail
-          for abi in arm64-v8a armeabi-v7a x86_64 x86; do
+          for abi in arm64-v8a; do
             mkdir -p "app/src/main/jniLibs/$abi"
             cp "native/out/$abi/libperl.so" "app/src/main/jniLibs/$abi/"
             cp native/out/$abi/jniLibs/lib*.so "app/src/main/jniLibs/$abi/"

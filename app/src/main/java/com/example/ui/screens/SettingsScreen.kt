@@ -103,9 +103,13 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
     val lastBackupInfo by viewModel.lastBackupInfo.collectAsStateWithLifecycle()
     val onDeviceVisionMode by viewModel.onDeviceVisionMode.collectAsStateWithLifecycle()
     val onDeviceVisionModel by viewModel.onDeviceVisionModel.collectAsStateWithLifecycle()
+    val providers by viewModel.providers.collectAsStateWithLifecycle()
+    val ocrEnrichmentProviderId by viewModel.ocrEnrichmentProviderId.collectAsStateWithLifecycle()
+    val visionCaptionTagProviderId by viewModel.visionCaptionTagProviderId.collectAsStateWithLifecycle()
 
     var showEditDialog by remember { mutableStateOf(false) }
     var editingProvider by remember { mutableStateOf<CustomCloudProvider?>(null) }
+    var providerDialogFunction by remember { mutableStateOf<String?>(null) }
     var showRestoreModeDialog by remember { mutableStateOf(false) }
     var pendingRestoreUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var showReprocessConfirm by remember { mutableStateOf(false) }
@@ -199,6 +203,36 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
                         selectedModelId = onDeviceVisionModel,
                         onSelect = { viewModel.setOnDeviceVisionModel(it) },
                         showMessage = viewModel::showMessage
+                    )
+                }
+            }
+
+            item {
+                SettingsSection("Function-specific AI models", "Each job can use its own offline VLM or cloud endpoint. API keys stay encrypted on-device.") {
+                    FunctionModelPicker(
+                        title = "OCR enrichment",
+                        subtitle = "Turn extracted OCR into title, description, tags and links.",
+                        selected = ocrEnrichmentProviderId,
+                        providers = providers,
+                        onSelect = viewModel::setOcrEnrichmentProviderId,
+                        onAddCustom = {
+                            providerDialogFunction = "ocr"
+                            editingProvider = null
+                            showEditDialog = true
+                        }
+                    )
+                    SettingsDivider()
+                    FunctionModelPicker(
+                        title = "VLM captioning & tagging",
+                        subtitle = "Choose the model used for image understanding, captions and smart tags.",
+                        selected = visionCaptionTagProviderId,
+                        providers = providers,
+                        onSelect = viewModel::setVisionCaptionTagProviderId,
+                        onAddCustom = {
+                            providerDialogFunction = "vision"
+                            editingProvider = null
+                            showEditDialog = true
+                        }
                     )
                 }
             }
@@ -349,7 +383,15 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
         ProviderEditDialog(
             initial = editingProvider,
             onDismiss = { showEditDialog = false },
-            onSave = { saved -> viewModel.saveProvider(saved); showEditDialog = false },
+            onSave = { saved ->
+                viewModel.saveProvider(saved)
+                when (providerDialogFunction) {
+                    "ocr" -> viewModel.setOcrEnrichmentProviderId("cloud:" + saved.id)
+                    "vision" -> viewModel.setVisionCaptionTagProviderId("cloud:" + saved.id)
+                }
+                providerDialogFunction = null
+                showEditDialog = false
+            },
             onFetchModels = { prov, onResult -> viewModel.fetchProviderModels(prov, onResult) },
             onTest = { prov, onResult -> viewModel.testProviderConnection(prov, onResult) }
         )
@@ -594,6 +636,67 @@ private fun LocalVisionModelsCard(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FunctionModelPicker(
+    title: String,
+    subtitle: String,
+    selected: String,
+    providers: List<CustomCloudProvider>,
+    onSelect: (String) -> Unit,
+    onAddCustom: () -> Unit
+) {
+    val context = LocalContext.current
+    val service = remember(context) { OnDeviceVisionService(context) }
+    var installedIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+
+    LaunchedEffect(Unit) {
+        installedIds = runCatching { service.installedModels().map { it.model.id }.toSet() }.getOrDefault(emptySet())
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Text(title, fontWeight = FontWeight.SemiBold)
+        Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Offline", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+        OnDeviceVisionCatalog.all().forEach { model ->
+            val id = "local:" + model.id
+            val installed = model.id in installedIds
+            Row(
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(enabled = installed) { onSelect(id) }.padding(vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(selected = selected == id, onClick = { if (installed) onSelect(id) }, enabled = installed)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(model.displayName, fontWeight = FontWeight.Medium)
+                    Text(
+                        if (installed) model.parameterCount + " · " + model.quantization + " · " + model.storageMb + " MB · Ready"
+                        else model.parameterCount + " · " + model.quantization + " · " + model.storageMb + " MB · Download in Local vision models",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+        Text("Cloud / custom", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+        providers.forEach { provider ->
+            val id = "cloud:" + provider.id
+            val configured = provider.apiKey.isNotBlank()
+            Row(
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(enabled = configured) { onSelect(id) }.padding(vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(selected = selected == id, onClick = { if (configured) onSelect(id) }, enabled = configured)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(provider.name, fontWeight = FontWeight.Medium)
+                    Text(provider.selectedModel + " · " + provider.baseUrl, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                }
+            }
+        }
+        OutlinedButton(onClick = onAddCustom, modifier = Modifier.fillMaxWidth()) {
+            Text("Add custom URL & API key")
         }
     }
 }

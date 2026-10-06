@@ -48,7 +48,12 @@ class AppPreferences(private val context: Context) {
     val visionCaptionTagProviderId: Flow<String> = context.appPreferencesDataStore.data.map { it[Keys.visionCaptionTagProviderId] ?: "" }
     val showFileNames: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.showFileNames] ?: true }
     val showTags: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.showTags] ?: true }
-    val ocrLanguages: Flow<List<String>> = context.appPreferencesDataStore.data.map { prefs -> prefs[Keys.ocrLanguages]?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() }?.ifEmpty { listOf("Latin") } ?: listOf("Latin") }
+    val ocrLanguages: Flow<List<String>> = context.appPreferencesDataStore.data.map { prefs ->
+        prefs[Keys.ocrLanguages]?.split(",")?.mapNotNull(::normalizeOcrLanguage)?.distinct()?.ifEmpty { listOf("English") } ?: listOf("English")
+    }
+    val localGgufFolders: Flow<List<String>> = context.appPreferencesDataStore.data.map { prefs ->
+        prefs[Keys.localGgufFolders]?.split("\n")?.map { it.trim() }?.filter { it.isNotBlank() }?.distinct() ?: emptyList()
+    }
 
     suspend fun setOcrEnabled(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.ocrEnabled] = value }
     suspend fun setLinksDetectionEnabled(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.linksDetectionEnabled] = value }
@@ -59,7 +64,27 @@ class AppPreferences(private val context: Context) {
     suspend fun setGridColumns(value: Int) = context.appPreferencesDataStore.edit { it[Keys.gridColumns] = value.coerceIn(2, 5) }
     suspend fun setShowFileNames(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.showFileNames] = value }
     suspend fun setShowTags(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.showTags] = value }
-    suspend fun setOcrLanguages(value: List<String>) = context.appPreferencesDataStore.edit { it[Keys.ocrLanguages] = value.distinct().joinToString(",") }
+    suspend fun setOcrLanguages(value: List<String>) = context.appPreferencesDataStore.edit {
+        it[Keys.ocrLanguages] = value.mapNotNull(::normalizeOcrLanguage).distinct().ifEmpty { listOf("English") }.joinToString(",")
+    }
+    suspend fun setLocalGgufFolders(value: List<String>) = context.appPreferencesDataStore.edit {
+        it[Keys.localGgufFolders] = value.distinct().joinToString("\n")
+    }
+    companion object {
+        fun normalizeOcrLanguage(value: String): String? = when (value.trim().lowercase(Locale.US)) {
+            "latin", "english", "eng" -> "English"
+            "chinese", "mandarin", "simplified chinese", "chi_sim" -> "Chinese"
+            "hindi", "devanagari", "hin" -> "Hindi"
+            "spanish", "spa" -> "Spanish"
+            "french", "fra" -> "French"
+            "arabic", "ara" -> "Arabic"
+            "bengali", "bangla", "ben" -> "Bengali"
+            "portuguese", "por" -> "Portuguese"
+            "russian", "rus" -> "Russian"
+            "urdu", "urd" -> "Urdu"
+            else -> null
+        }
+    }
     suspend fun setOnDeviceVisionMode(value: String) = context.appPreferencesDataStore.edit { it[Keys.onDeviceVisionMode] = value }
     suspend fun setOnDeviceVisionModel(value: String) = context.appPreferencesDataStore.edit { it[Keys.onDeviceVisionModel] = value }
     suspend fun setOcrAiProviderId(value: String) = context.appPreferencesDataStore.edit { it[Keys.ocrAiProviderId] = value }

@@ -75,7 +75,7 @@ fun ScreenshotMasonryCard(
     // Compute dynamic, organic masonry aspect ratio
     val dynamicAspectRatio = remember(screenshot.id, screenshot.width, screenshot.height) {
         if (screenshot.width > 0 && screenshot.height > 0) {
-            (screenshot.width.toFloat() / screenshot.height.toFloat()).coerceIn(0.6f, 1.4f)
+            (screenshot.width.toFloat() / screenshot.height.toFloat()).coerceIn(0.25f, 4f)
         } else {
             val variants = floatArrayOf(0.72f, 0.88f, 1.15f, 1.35f, 0.95f)
             variants[abs(screenshot.id.hashCode()) % variants.size]
@@ -144,7 +144,7 @@ fun ScreenshotMasonryCard(
                 Image(
                     bitmap = videoThumbnailBitmap!!.asImageBitmap(),
                     contentDescription = screenshot.title,
-                    contentScale = ContentScale.Crop,
+                    contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxSize()
                 )
             } else {

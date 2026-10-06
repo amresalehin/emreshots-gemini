@@ -33,7 +33,7 @@ class AppPreferences(private val context: Context) {
     val autoSyncDeviceMedia: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.autoSyncDeviceMedia] ?: true }
     val aiQualityPreset: Flow<String> = context.appPreferencesDataStore.data.map { it[Keys.aiQualityPreset] ?: "Balanced" }
     val autoWriteExif: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.autoWriteExif] ?: false }
-    val gridColumns: Flow<Int> = context.appPreferencesDataStore.data.map { it[Keys.gridColumns] ?: 2 }
+    val gridColumns: Flow<Int> = context.appPreferencesDataStore.data.map { it[Keys.gridColumns] ?: 3 }
     val lastBackupInfo: Flow<String?> = context.appPreferencesDataStore.data.map { it[Keys.lastBackupInfo] }
     val onDeviceVisionMode: Flow<String> = context.appPreferencesDataStore.data.map { it[Keys.onDeviceVisionMode] ?: "Automatic" }
     val onDeviceVisionModel: Flow<String> = context.appPreferencesDataStore.data.map { it[Keys.onDeviceVisionModel] ?: "auto" }

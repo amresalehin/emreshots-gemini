@@ -1003,6 +1003,9 @@ class CloudAiService(
         }
     }
 
+    /**
+     * Text-only enrichment: sends OCR text plus textual metadata; never attaches the source image.
+     */
     suspend fun sendOcrToAi(
         ocrText: String,
         provider: CustomCloudProvider,

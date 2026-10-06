@@ -493,60 +493,45 @@ fun ScreenshotsScreen(
                     )
                 }
             }
-
-            // Gallery Grid / Feed / List with Section Grouping & Pinch-to-Change-View
+            // Gallery overview: pinch in for detail-rich feed, pinch out for three-column masonry.
             PullToRefreshBox(
                 isRefreshing = isExtractingOcr || isAnalyzing || statusText != null,
                 onRefresh = {
-                    if (hasMediaPermissions) {
-                        viewModel.syncDeviceMedia()
-                    } else {
-                        permissionLauncher.launch(DeviceMediaScanner.getRequiredPermissions())
-                    }
+                    if (hasMediaPermissions) viewModel.syncDeviceMedia()
+                    else permissionLauncher.launch(DeviceMediaScanner.getRequiredPermissions())
                 },
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    
-                                                GalleryViewMode.MASONRY -> {
-                                                    if (gridColumns > 2) {
-                                                        viewModel.setGridColumns(gridColumns - 1)
-                                                        pinchNotification = "Masonry (" + (gridColumns - 1) + " columns)"
-                                                    } else {
-                                                        viewModel.setViewMode(GalleryViewMode.FEED)
-                                                        pinchNotification = "Feed View"
-                                                    }
-                                                }
-                                                GalleryViewMode.LIST -> {
-                                                    viewModel.setViewMode(GalleryViewMode.MASONRY)
-                                                    viewModel.setGridColumns(2)
-                                                    pinchNotification = "Masonry View"
-                                                }
-                                                GalleryViewMode.FEED -> Unit
-                                            }
-                                            event.changes.forEach { it.consume() }
-                                            zoomFactor = 1f
-                                        } else if (zoomFactor < 0.72f) {
-                                            when (viewMode) {
-                                                GalleryViewMode.GRID, GalleryViewMode.MASONRY -> {
-                                                    if (gridColumns < 5) {
-                                                        viewModel.setGridColumns(gridColumns + 1)
-                                                        pinchNotification = (if (viewMode == GalleryViewMode.GRID) "Grid" else "Masonry") +
-                                                            " (" + (gridColumns + 1) + " columns)"
-                                                    }
-                                                }
-                                                GalleryViewMode.FEED, GalleryViewMode.LIST -> {
-                                                    viewModel.setViewMode(GalleryViewMode.MASONRY)
-                                                    viewModel.setGridColumns(3)
-                                                    pinchNotification = "Masonry (3 columns)"
-                                                }
-                                            }
-                                            event.changes.forEach { it.consume() }
-                                            zoomFactor = 1f
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false)
+                            var scale = 1f
+                            var changed = false
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                if (event.changes.size >= 2) {
+                                    val a = event.changes[0]
+                                    val b = event.changes[1]
+                                    val previousDistance = hypot(a.previousPosition.x - b.previousPosition.x, a.previousPosition.y - b.previousPosition.y)
+                                    val currentDistance = hypot(a.position.x - b.position.x, a.position.y - b.position.y)
+                                    if (previousDistance > 12f && currentDistance > 12f) {
+                                        scale *= currentDistance / previousDistance
+                                        if (!changed && scale > 1.14f) {
+                                            viewModel.setViewMode(GalleryViewMode.FEED)
+                                            pinchNotification = "Feed view"
+                                            changed = true
+                                        } else if (!changed && scale < 0.86f) {
+                                            viewModel.setViewMode(GalleryViewMode.MASONRY)
+                                            viewModel.setGridColumns(3)
+                                            pinchNotification = "3-column masonry"
+                                            changed = true
                                         }
+                                        event.changes.forEach { it.consume() }
                                     }
                                 }
-                            } while (event.changes.any { it.pressed })
+                                if (event.changes.none { it.pressed }) break
+                            }
                         }
                     }
             ) {

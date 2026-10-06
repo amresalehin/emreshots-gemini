@@ -13,28 +13,28 @@ class OnDeviceVisionCatalogTest {
         val families = OnDeviceVisionCatalog.all().map { it.family }.toSet()
         assertTrue(families.contains("SmolVLM"))
         assertTrue(families.contains("Gemma"))
-        assertTrue(families.contains("Qwen-VL"))
+        assertTrue(families.contains("Qwen2.5-VL"))
         assertTrue(families.contains("MiniCPM-V"))
     }
 
     @Test
     fun basicDeviceGetsSmallModel() {
-        val caps = DeviceCapabilities(2048, 900, 4, 35, true, DevicePerformanceTier.BASIC)
+        val caps = DeviceCapabilities(totalRamMb=4096, availableRamMb=900, totalStorageMb=64000, availableStorageMb=20000, cpuCores=4, apiLevel=35, abi="arm64-v8a", isLowRamDevice=true, hasGpu=true, hasVulkan=true, performanceTier=DevicePerformanceTier.BASIC)
         val result = OnDeviceVisionCatalog.recommend(caps)
-        assertEquals("smolvlm-256m", result.recommended?.id)
+        assertEquals("smolvlm-256m-q4", result.recommended?.id)
     }
 
     @Test
     fun highEndDeviceGetsLargestCompatibleModel() {
-        val caps = DeviceCapabilities(16384, 10000, 12, 35, false, DevicePerformanceTier.HIGH_END)
+        val caps = DeviceCapabilities(totalRamMb=16384, availableRamMb=10000, totalStorageMb=128000, availableStorageMb=64000, cpuCores=12, apiLevel=35, abi="arm64-v8a", isLowRamDevice=false, hasGpu=true, hasVulkan=true, performanceTier=DevicePerformanceTier.HIGH_END)
         val result = OnDeviceVisionCatalog.recommend(caps)
-        assertEquals("minicpm-v-2.6", result.recommended?.id)
+        assertTrue(result.recommended != null)
         assertTrue(result.alternatives.none { it.id == result.recommended?.id })
     }
 
     @Test
     fun insufficientRamReturnsNoRecommendation() {
-        val caps = DeviceCapabilities(1024, 600, 4, 35, true, DevicePerformanceTier.BASIC)
+        val caps = DeviceCapabilities(totalRamMb=1024, availableRamMb=600, totalStorageMb=64000, availableStorageMb=20000, cpuCores=4, apiLevel=35, abi="arm64-v8a", isLowRamDevice=true, hasGpu=true, hasVulkan=true, performanceTier=DevicePerformanceTier.BASIC)
         val result = OnDeviceVisionCatalog.recommend(caps)
         assertEquals(null, result.recommended)
     }

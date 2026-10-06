@@ -1006,14 +1006,21 @@ class CloudAiService(
     suspend fun sendOcrToAi(
         ocrText: String,
         provider: CustomCloudProvider,
-        geminiApiKey: String = ""
+        geminiApiKey: String = "",
+        metadataContext: String = ""
     ): AiAnalysisResult = withContext(Dispatchers.IO) {
         val startTime = System.currentTimeMillis()
         val prompt = """
-Analyze this extracted OCR text transcribed from an image or screenshot:
+Analyze this extracted OCR text and the supplied screenshot metadata. The original image is NOT being sent to this request.
 
+OCR text:
 ---
 $ocrText
+---
+
+Existing metadata:
+---
+$metadataContext
 ---
 
 Return ONLY a valid JSON object with the following fields:

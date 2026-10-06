@@ -30,7 +30,7 @@ import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Psychology
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.AlertDialog
@@ -144,7 +144,7 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
                     QuickActionButton(Icons.Default.AutoAwesome, "Process", enabled = !isAnalyzing && pending > 0, modifier = Modifier.weight(1f)) { viewModel.batchAnalyzeScreenshots(allScreenshots.filter { !it.aiProcessed }, autoWriteExifSetting) }
                     QuickActionButton(Icons.Default.Sync, "Sync", modifier = Modifier.weight(1f)) { viewModel.syncDeviceMedia() }
                     QuickActionButton(Icons.Default.ContentCopy, "Duplicates", enabled = !isScanningDuplicates, modifier = Modifier.weight(1f)) { viewModel.scanDuplicates() }
-                    QuickActionButton(Icons.Default.Refresh, "Re-index", enabled = !isAnalyzing && total > 0, modifier = Modifier.weight(1f)) { showReprocessConfirm = true }
+                    QuickActionButton(Icons.Default.Replay, "Re-index", enabled = !isAnalyzing && total > 0, modifier = Modifier.weight(1f)) { showReprocessConfirm = true }
                 }
             }
             item {

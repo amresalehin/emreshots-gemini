@@ -197,6 +197,8 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     val showFileNames: StateFlow<Boolean> = _showFileNames.asStateFlow()
     private val _showTags = MutableStateFlow(true)
     val showTags: StateFlow<Boolean> = _showTags.asStateFlow()
+    private val _ocrLanguages = MutableStateFlow(listOf("Latin"))
+    val ocrLanguages: StateFlow<List<String>> = _ocrLanguages.asStateFlow()
 
     val aiOcrModelOptions: StateFlow<List<AiOcrModelOption>> = providers
         .map { list ->
@@ -215,6 +217,11 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     fun setOcrEnabled(enabled: Boolean) {
         _ocrEnabled.value = enabled
         viewModelScope.launch { appPreferences.setOcrEnabled(enabled) }
+    }
+    fun setOcrLanguages(languages: List<String>) {
+        val normalized = languages.distinct().ifEmpty { listOf("Latin") }
+        _ocrLanguages.value = normalized
+        viewModelScope.launch { appPreferences.setOcrLanguages(normalized) }
     }
     fun setLinksDetectionEnabled(enabled: Boolean) {
         _linksDetectionEnabled.value = enabled
@@ -571,7 +578,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun setFilter(filter: ScreenshotFilter) {
-        _selectedFilter.value = filter
+        _selectedFilter.value = if (_selectedFilter.value == filter) ScreenshotFilter.ALL else filter
     }
 
     fun clearSnackbar() {
@@ -986,7 +993,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
             val file = resolveImageFile(screenshot)
             val result = if (file != null) {
-                localOcrService.recognize(file)
+                localOcrService.recognize(file, ocrLanguages.value)
             } else {
                 Result.failure(IllegalArgumentException("Screenshot image is not accessible."))
             }

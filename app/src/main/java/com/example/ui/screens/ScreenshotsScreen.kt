@@ -152,6 +152,7 @@ fun ScreenshotsScreen(
     val showFileNames by viewModel.showFileNames.collectAsStateWithLifecycle()
     val showTags by viewModel.showTags.collectAsStateWithLifecycle()
     val aiOcrModelOptions by viewModel.aiOcrModelOptions.collectAsStateWithLifecycle()
+    val ocrAiProviderId by viewModel.ocrAiProviderId.collectAsStateWithLifecycle()
 
     var isSearchExpanded by remember { mutableStateOf(false) }
     var hidePermissionBanner by remember { mutableStateOf(false) }
@@ -320,16 +321,7 @@ fun ScreenshotsScreen(
                             }
                         }
                         DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
-                            DropdownMenuItem(
-                                text = { Text("Show file names") },
-                                trailingIcon = { Switch(checked = showFileNames, onCheckedChange = viewModel::setShowFileNames) },
-                                onClick = { viewModel.setShowFileNames(!showFileNames) }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Show tags") },
-                                trailingIcon = { Switch(checked = showTags, onCheckedChange = viewModel::setShowTags) },
-                                onClick = { viewModel.setShowTags(!showTags) }
-                            )
+                            
                             androidx.compose.material3.HorizontalDivider()
                             DropdownMenuItem(
                                 text = { Text("AI OCR enrichment") },
@@ -598,7 +590,7 @@ fun ScreenshotsScreen(
                 } else {
                     if (viewMode == GalleryViewMode.MASONRY) {
                         LazyVerticalStaggeredGrid(
-                            columns = StaggeredGridCells.Fixed(gridColumns),
+                            columns = StaggeredGridCells.Fixed(3),
                             state = staggeredGridState,
                             contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 88.dp + navBarBottom),
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -945,8 +937,10 @@ fun ScreenshotsScreen(
         AiOcrEnrichmentDialog(
             options = aiOcrModelOptions,
             eligibleCount = eligibleCount,
+            selectedProviderId = ocrAiProviderId,
             onDismiss = { showAiOcrDialog = false },
             onStart = { providerId ->
+                viewModel.setOcrAiProviderId(providerId)
                 showAiOcrDialog = false
                 viewModel.batchAiOcrEnrichment(allScreenshots, providerId)
             },
@@ -996,10 +990,11 @@ private fun GalleryMenuChoiceRow(
 private fun AiOcrEnrichmentDialog(
     options: List<com.amresalehin.emreshots.viewmodel.AiOcrModelOption>,
     eligibleCount: Int,
+    selectedProviderId: String,
     onDismiss: () -> Unit,
     onStart: (String) -> Unit,
 ) {
-    var selectedProviderId by remember(options) { mutableStateOf(options.firstOrNull()?.providerId.orEmpty()) }
+    var selectedProviderId by remember(options, selectedProviderId) { mutableStateOf(selectedProviderId.ifBlank { options.firstOrNull()?.providerId.orEmpty() }) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("AI OCR enrichment") },

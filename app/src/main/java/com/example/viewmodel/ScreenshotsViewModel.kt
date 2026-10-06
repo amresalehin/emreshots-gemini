@@ -826,10 +826,34 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             }
         }
 
-        val provider = activeProvider.value ?: return AiAnalysisResult(
-            isSuccess = false,
-            errorMessage = "No AI provider configured. Please set up your endpoint in Settings."
-        )
+        val selection = visionCaptionTagProviderId.value
+        val localId = selection.removePrefix("local:")
+        val cloudId = selection.removePrefix("cloud:")
+
+        if (selection.startsWith("local:")) {
+            if (file == null) return AiAnalysisResult(isSuccess = false, errorMessage = "Local VLM needs access to the image file.")
+            val local = onDeviceVisionService.analyze(
+                request = com.amresalehin.emreshots.service.ai.VisionAnalysisRequest(
+                    imagePath = file.absolutePath,
+                    quality = when (aiQualityPreset.value.lowercase()) {
+                        "fast" -> com.amresalehin.emreshots.service.ai.VisionQualityPreset.FAST
+                        "deep" -> com.amresalehin.emreshots.service.ai.VisionQualityPreset.DEEP
+                        else -> com.amresalehin.emreshots.service.ai.VisionQualityPreset.BALANCED
+                    },
+                    ocrText = if (ocrEnabled.value) screenshot.ocrText else null,
+                    requestedCapabilities = com.amresalehin.emreshots.service.ai.OnDeviceVisionCapability.entries.toSet()
+                ),
+                modePreference = "FORCE_LOCAL",
+                modelPreference = localId
+            )
+            return AiAnalysisResult(title = local.title, description = local.description, tags = local.tags, detectedLinks = local.detectedLinks, ocrText = local.ocrTextUsed, modelUsed = local.modelUsed, processingTimeMs = local.processingTimeMs, isSuccess = local.isSuccess, errorMessage = local.errorMessage)
+        }
+
+        val provider = if (selection.startsWith("cloud:")) {
+            providers.value.firstOrNull { it.id == cloudId && it.apiKey.isNotBlank() }
+        } else {
+            activeProvider.value
+        } ?: return AiAnalysisResult(isSuccess = false, errorMessage = "No AI provider configured for Captioning & Tagging. Choose an offline VLM or add a custom endpoint in Settings.")
 
         val result = aiService.analyzeScreenshot(
             imageFile = file,
@@ -1031,15 +1055,24 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         onComplete: ((AiAnalysisResult) -> Unit)? = null
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val provider = activeProvider.value
-            if (provider == null) {
-                _snackbarMessage.value = "No AI provider configured. Please set up your endpoint in Settings."
-                onComplete?.invoke(AiAnalysisResult(isSuccess = false, errorMessage = "No AI provider configured."))
-                return@launch
-            }
+            val selection = ocrEnrichmentProviderId.value.ifBlank { ocrAiProviderId.value }
             _isAnalyzing.value = true
-            _analysisStatusText.value = "Processing OCR text with " + provider.selectedModel + "…"
-            val result = enrichOcrWithProvider(screenshot, ocrText, provider, writeToMetadata)
+            val result = if (selection.startsWith("local:")) {
+                _analysisStatusText.value = "Enriching OCR with offline VLM…"
+                enrichOcrWithLocalVision(screenshot, ocrText, selection.removePrefix("local:"), writeToMetadata)
+            } else {
+                val cloudId = selection.removePrefix("cloud:")
+                val provider = if (selection.startsWith("cloud:")) providers.value.firstOrNull { it.id == cloudId && it.apiKey.isNotBlank() } else activeProvider.value
+                if (provider == null) {
+                    _isAnalyzing.value = false
+                    _analysisStatusText.value = null
+                    _snackbarMessage.value = "No OCR enrichment provider configured. Choose an offline VLM or add a custom endpoint in Settings."
+                    onComplete?.invoke(AiAnalysisResult(isSuccess = false, errorMessage = "No OCR enrichment provider configured."))
+                    return@launch
+                }
+                _analysisStatusText.value = "Processing OCR text with " + provider.selectedModel + "…"
+                enrichOcrWithProvider(screenshot, ocrText, provider, writeToMetadata)
+            }
             _isAnalyzing.value = false
             _analysisStatusText.value = null
             _snackbarMessage.value = if (result.isSuccess) {
@@ -1088,6 +1121,41 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             _snackbarMessage.value = "AI OCR enrichment complete: " + completed + " processed" +
                 if (failed > 0) ", " + failed + " failed." else "."
         }
+    }
+
+    private suspend fun enrichOcrWithLocalVision(screenshot: ScreenshotItem, ocrText: String, modelId: String, writeToMetadata: Boolean): AiAnalysisResult {
+        val file = resolveImageFile(screenshot) ?: return AiAnalysisResult(isSuccess = false, errorMessage = "Unable to access image for offline VLM enrichment.")
+        val local = onDeviceVisionService.analyze(
+            request = com.amresalehin.emreshots.service.ai.VisionAnalysisRequest(
+                imagePath = file.absolutePath,
+                quality = com.amresalehin.emreshots.service.ai.VisionQualityPreset.BALANCED,
+                ocrText = ocrText,
+                requestedCapabilities = setOf(
+                    com.amresalehin.emreshots.service.ai.OnDeviceVisionCapability.TITLE_GENERATION,
+                    com.amresalehin.emreshots.service.ai.OnDeviceVisionCapability.DESCRIPTION_SUMMARY,
+                    com.amresalehin.emreshots.service.ai.OnDeviceVisionCapability.TAG_SUGGESTIONS,
+                    com.amresalehin.emreshots.service.ai.OnDeviceVisionCapability.LINK_DETECTION,
+                    com.amresalehin.emreshots.service.ai.OnDeviceVisionCapability.OCR_CONTEXT
+                )
+            ),
+            modePreference = "FORCE_LOCAL",
+            modelPreference = modelId
+        )
+        if (!local.isSuccess) return AiAnalysisResult(isSuccess = false, errorMessage = local.errorMessage)
+        val updated = screenshot.copy(
+            title = local.title.ifBlank { screenshot.title },
+            description = local.description.ifBlank { screenshot.description },
+            tags = (screenshot.tags + local.tags).distinct(),
+            links = (screenshot.links + local.detectedLinks).distinct(),
+            ocrText = ocrText,
+            aiProcessed = true,
+            aiModelUsed = local.modelUsed
+        )
+        screenshotRepository.update(updated)
+        if (writeToMetadata) {
+            exifManager.applyAiMetadataToExifSafe(getApplication(), updated, updated.title, updated.description, updated.tags, local.modelUsed)
+        }
+        return AiAnalysisResult(isSuccess = true, title = updated.title, description = updated.description, tags = local.tags, detectedLinks = local.detectedLinks, ocrText = ocrText, modelUsed = local.modelUsed, processingTimeMs = local.processingTimeMs)
     }
 
     private suspend fun enrichOcrWithProvider(

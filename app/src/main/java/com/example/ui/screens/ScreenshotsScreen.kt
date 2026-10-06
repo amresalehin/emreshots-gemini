@@ -44,6 +44,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -508,7 +509,6 @@ fun ScreenshotsScreen(
             // Gallery Grid / Feed / List with Section Grouping & Pinch-to-Change-View
             PullToRefreshBox(
                 isRefreshing = isExtractingOcr || isAnalyzing || statusText != null,
-                enabled = !isExtractingOcr && !isAnalyzing && statusText == null,
                 onRefresh = {
                     if (hasMediaPermissions) {
                         viewModel.syncDeviceMedia()

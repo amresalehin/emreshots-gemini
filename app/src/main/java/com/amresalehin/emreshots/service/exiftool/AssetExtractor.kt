@@ -40,7 +40,7 @@ object AssetExtractor {
         val marker = File(context.filesDir, MARKER_FILE)
         if (!marker.exists()) return false
         val saved = runCatching { marker.readText().trim().toInt() }.getOrNull() ?: return false
-        if (saved != BuildConfig.PERL5_ASSET_VERSION) return false
+        if (saved.toString() != BuildConfig.PERL5_ASSET_VERSION) return false
         // Sanity-check that the expected layout actually landed — guards against a
         // partially-completed previous extraction or a stale marker from an earlier
         // app version with a different bundle layout.

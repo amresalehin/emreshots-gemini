@@ -817,7 +817,6 @@ fun ScreenshotDetailScreen(
                 }
             }
         }
-    }
 
     // EXIF Editor Modal
     if (showExifEditor) {

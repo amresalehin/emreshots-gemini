@@ -8,7 +8,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -45,6 +44,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -295,17 +295,17 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
     }
 }
 
-@Composable private fun StatBlock(label: String, value: Int) { Column { Text(value.toString(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold); Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
+@Composable private fun StatBlock(label: String, value: Int) { androidx.compose.foundation.layout.Column { Text(value.toString(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold); Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
 
 @Composable private fun QuickActionButton(icon: ImageVector, label: String, enabled: Boolean = true, modifier: Modifier = Modifier, onClick: () -> Unit) {
     OutlinedButton(onClick = onClick, enabled = enabled, modifier = modifier.height(52.dp), contentPadding = PaddingValues(horizontal = 6.dp)) { Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text(label, fontSize = 11.sp) }
 }
 
-@Composable private fun SectionTitle(title: String, subtitle: String) { Column(modifier = Modifier.padding(horizontal = 2.dp)) { Text(title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, letterSpacing = 0.7.sp); Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
+@Composable private fun SectionTitle(title: String, subtitle: String) { androidx.compose.foundation.layout.Column(modifier = Modifier.padding(horizontal = 2.dp)) { Text(title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, letterSpacing = 0.7.sp); Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
 
-@Composable private fun SettingsCard(content: @Composable Column.() -> Unit) { Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp), modifier = Modifier.fillMaxWidth(), content = { Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content) }) }
+@Composable private fun SettingsCard(content: @Composable () -> Unit) { Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp), modifier = Modifier.fillMaxWidth(), content = { Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { content() } }) }
 
-@Composable private fun SettingsHeaderRow(icon: ImageVector, title: String, subtitle: String, badge: String? = null, trailing: @Composable () -> Unit) { Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(40.dp)) { BoxCenter { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary) } }; Spacer(Modifier.width(12.dp)); Column(modifier = Modifier.weight(1f)) { Row(verticalAlignment = Alignment.CenterVertically) { Text(title, fontWeight = FontWeight.SemiBold); if (badge != null) { Spacer(Modifier.width(6.dp)); Text(badge, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) } }; Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1) }; trailing() } }
+@Composable private fun SettingsHeaderRow(icon: ImageVector, title: String, subtitle: String, badge: String? = null, trailing: @Composable () -> Unit) { Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(40.dp)) { BoxCenter { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary) } }; Spacer(Modifier.width(12.dp)); androidx.compose.foundation.layout.Column(modifier = Modifier.weight(1f)) { Row(verticalAlignment = Alignment.CenterVertically) { Text(title, fontWeight = FontWeight.SemiBold); if (badge != null) { Spacer(Modifier.width(6.dp)); Text(badge, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) } }; Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1) }; trailing() } }
 
 @Composable private fun SegmentedChoice(options: List<String>, selected: String, onSelected: (String) -> Unit) { Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) { options.forEach { option -> val active = selected.equals(option, true); Surface(onClick = { onSelected(option) }, color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant, contentColor = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f)) { Text(option, textAlign = TextAlign.Center, fontSize = 12.sp, fontWeight = if (active) FontWeight.Bold else FontWeight.Medium, modifier = Modifier.padding(vertical = 9.dp)) } } } }
 

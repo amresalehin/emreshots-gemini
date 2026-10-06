@@ -840,7 +840,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             val result = analyzeScreenshotInternal(
                 screenshot = screenshot,
                 autoWriteExif = autoWriteExif,
-                forcedMode = com.amresalihin.emreshots.service.ai.OnDeviceVisionMode.FORCE_LOCAL
+                forcedMode = OnDeviceVisionMode.FORCE_LOCAL
             )
             _isAnalyzing.value = false
             _analysisStatusText.value = null
@@ -867,7 +867,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             val result = analyzeScreenshotInternal(
                 screenshot = screenshot,
                 autoWriteExif = autoWriteExif,
-                forcedMode = com.amresalihin.emreshots.service.ai.OnDeviceVisionMode.DISABLED
+                forcedMode = OnDeviceVisionMode.DISABLED
             )
             _isAnalyzing.value = false
             _analysisStatusText.value = null

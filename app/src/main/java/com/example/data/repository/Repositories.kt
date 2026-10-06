@@ -54,9 +54,7 @@ class ProviderRepository(private val dao: ProviderDao) {
     suspend fun deleteAll() = dao.deleteAll()
 
     suspend fun saveProvider(provider: CustomCloudProvider, makeActive: Boolean = true) {
-        val currentActive = dao.getActiveProviderSync()
-        val shouldBeActive = makeActive || provider.isActive || currentActive == null || currentActive.id == provider.id
-        if (shouldBeActive) {
+        if (makeActive) {
             dao.clearActiveProviders()
             dao.insert(provider.copy(isActive = true))
         } else {

@@ -124,6 +124,7 @@ import com.amresalehin.emreshots.viewmodel.ScreenshotFilter
 import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.Locale
 import kotlin.math.hypot
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -302,7 +303,6 @@ fun ScreenshotsScreen(
                                 }
                             }
                         }
-                    }
                     }
                 },
                 actions = {

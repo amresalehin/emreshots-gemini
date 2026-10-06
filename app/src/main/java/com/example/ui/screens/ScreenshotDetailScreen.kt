@@ -919,9 +919,8 @@ fun ScreenshotDetailScreen(
             }
         )
     }
-
-
-}
+        }
+    }
 
 @Composable
 fun DetailRow(label: String, value: String) {

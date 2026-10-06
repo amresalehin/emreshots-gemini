@@ -63,6 +63,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.amresalehin.emreshots.data.model.ScreenshotItem
 import com.amresalehin.emreshots.service.ai.AiAnalysisResult
+import com.amresalehin.emreshots.service.ai.OnDeviceVisionCatalog
+import com.amresalehin.emreshots.service.ai.OnDeviceVisionService
 import com.amresalehin.emreshots.viewmodel.AiOcrModelOption
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -88,6 +90,11 @@ fun OcrAiSheet(
     var writeDirectlyToMetadata by remember { mutableStateOf(false) }
 
     var aiResultPreview by remember { mutableStateOf<AiAnalysisResult?>(null) }
+    val visionService = remember(context) { OnDeviceVisionService(context) }
+    var installedVisionModels by remember { mutableStateOf<Set<String>>(emptySet()) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        installedVisionModels = runCatching { visionService.installedModels().map { it.model.id }.toSet() }.getOrDefault(emptySet())
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -305,20 +312,47 @@ fun OcrAiSheet(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        aiOcrModelOptions.forEach { option ->
+                        Text("Offline VLM", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                        OnDeviceVisionCatalog.all().forEach { model ->
+                            val selectionId = "local:" + model.id
+                            val installed = model.id in installedVisionModels
                             Row(
-                                modifier = Modifier.fillMaxWidth().clickable { onSelectOcrProvider(option.providerId) },
+                                modifier = Modifier.fillMaxWidth().clickable(enabled = installed) { onSelectOcrProvider(selectionId) },
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 RadioButton(
-                                    selected = selectedOcrProviderId == option.providerId,
-                                    onClick = { onSelectOcrProvider(option.providerId) }
+                                    selected = selectedOcrProviderId == selectionId,
+                                    onClick = { if (installed) onSelectOcrProvider(selectionId) },
+                                    enabled = installed
+                                )
+                                Column {
+                                    Text(model.displayName, fontWeight = FontWeight.SemiBold)
+                                    Text(
+                                        if (installed) model.quantization + " · Ready" else model.quantization + " · Download in Settings",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+
+                        Text("Cloud / custom", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                        aiOcrModelOptions.forEach { option ->
+                            val selectionId = "cloud:" + option.providerId
+                            Row(
+                                modifier = Modifier.fillMaxWidth().clickable { onSelectOcrProvider(selectionId) },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = selectedOcrProviderId == selectionId,
+                                    onClick = { onSelectOcrProvider(selectionId) }
                                 )
                                 Column {
                                     Text(option.modelName, fontWeight = FontWeight.SemiBold)
                                     Text(option.providerName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
+                        }
                         }
                     }
                 }

@@ -195,6 +195,7 @@ build_perl_for_abi() {
             -Dldflags='-Wl,-z,max-page-size=16384' \
             -Dnoextensions='POSIX' \
             -Duseposix=false \
+            -Dccflags='-Wno-error=implicit-function-declaration -Wno-error=int-conversion' \
             -Dlibs='-lm -ldl -lc' \
             -Dlddlflags='-shared -Wl,-z,max-page-size=16384 -lm -ldl -lc'
 

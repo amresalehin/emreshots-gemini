@@ -24,6 +24,8 @@ class AppPreferences(private val context: Context) {
         val onDeviceVisionMode = stringPreferencesKey("on_device_vision_mode")
         val onDeviceVisionModel = stringPreferencesKey("on_device_vision_model")
         val ocrAiProviderId = stringPreferencesKey("ocr_ai_provider_id")
+        val ocrEnrichmentProviderId = stringPreferencesKey("ocr_enrichment_provider_id")
+        val visionCaptionTagProviderId = stringPreferencesKey("vision_caption_tag_provider_id")
         val showFileNames = booleanPreferencesKey("gallery_show_file_names")
         val showTags = booleanPreferencesKey("gallery_show_tags")
     }
@@ -39,6 +41,8 @@ class AppPreferences(private val context: Context) {
     val onDeviceVisionMode: Flow<String> = context.appPreferencesDataStore.data.map { it[Keys.onDeviceVisionMode] ?: "Automatic" }
     val onDeviceVisionModel: Flow<String> = context.appPreferencesDataStore.data.map { it[Keys.onDeviceVisionModel] ?: "auto" }
     val ocrAiProviderId: Flow<String> = context.appPreferencesDataStore.data.map { it[Keys.ocrAiProviderId] ?: "" }
+    val ocrEnrichmentProviderId: Flow<String> = context.appPreferencesDataStore.data.map { it[Keys.ocrEnrichmentProviderId] ?: "" }
+    val visionCaptionTagProviderId: Flow<String> = context.appPreferencesDataStore.data.map { it[Keys.visionCaptionTagProviderId] ?: "" }
     val showFileNames: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.showFileNames] ?: true }
     val showTags: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.showTags] ?: true }
 
@@ -54,6 +58,8 @@ class AppPreferences(private val context: Context) {
     suspend fun setOnDeviceVisionMode(value: String) = context.appPreferencesDataStore.edit { it[Keys.onDeviceVisionMode] = value }
     suspend fun setOnDeviceVisionModel(value: String) = context.appPreferencesDataStore.edit { it[Keys.onDeviceVisionModel] = value }
     suspend fun setOcrAiProviderId(value: String) = context.appPreferencesDataStore.edit { it[Keys.ocrAiProviderId] = value }
+    suspend fun setOcrEnrichmentProviderId(value: String) = context.appPreferencesDataStore.edit { it[Keys.ocrEnrichmentProviderId] = value }
+    suspend fun setVisionCaptionTagProviderId(value: String) = context.appPreferencesDataStore.edit { it[Keys.visionCaptionTagProviderId] = value }
     suspend fun setLastBackupInfo(value: String?) = context.appPreferencesDataStore.edit { preferences ->
         if (value == null) preferences.remove(Keys.lastBackupInfo) else preferences[Keys.lastBackupInfo] = value
     }

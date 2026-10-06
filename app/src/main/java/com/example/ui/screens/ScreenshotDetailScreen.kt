@@ -9,7 +9,6 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -84,8 +83,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -250,10 +247,7 @@ fun ScreenshotDetailScreen(
                 )
             }
 
-            AnimatedVisibility(
-                visible = showGalleryControls,
-                modifier = Modifier.fillMaxSize()
-            ) {
+            if (showGalleryControls) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -548,38 +542,6 @@ fun ScreenshotDetailScreen(
                             contentDescription = "Edit",
                             tint = MaterialTheme.colorScheme.primary
                         )
-                    }
-                }
-
-                // Reminder Info if set
-                if (screenshot.reminderTime != null) {
-                    val dateFormatted = SimpleDateFormat("EEE, MMM d @ h:mm a", Locale.getDefault()).format(Date(screenshot.reminderTime))
-                    Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Alarm, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "Reminder: $dateFormatted",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                            TextButton(
-                                onClick = { viewModel.removeReminder(screenshot) },
-                                contentPadding = PaddingValues(0.dp)
-                            ) {
-                                Text("Clear", fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
-                            }
-                        }
                     }
                 }
 

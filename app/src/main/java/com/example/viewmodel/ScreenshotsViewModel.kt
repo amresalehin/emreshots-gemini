@@ -956,10 +956,18 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             _isAnalyzing.value = true
             _analysisStatusText.value = "Processing OCR text with AI..."
 
+            val metadataContext = buildString {
+                appendLine("Title: " + screenshot.title)
+                appendLine("Description: " + screenshot.description)
+                appendLine("Tags: " + screenshot.tags.joinToString(", "))
+                appendLine("Links: " + screenshot.links.joinToString(", "))
+                appendLine("Media type: " + screenshot.mediaType)
+            }
             val result = aiService.sendOcrToAi(
                 ocrText = ocrText,
                 provider = provider,
-                geminiApiKey = provider.apiKey
+                geminiApiKey = provider.apiKey,
+                metadataContext = metadataContext
             )
 
             if (result.isSuccess) {

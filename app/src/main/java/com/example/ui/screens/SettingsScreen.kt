@@ -78,9 +78,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.amresalehin.emreshots.data.model.CustomCloudProvider
 import com.amresalehin.emreshots.service.ai.OnDeviceVisionCatalog
 import com.amresalehin.emreshots.service.ai.OnDeviceVisionService
+import com.amresalehin.emreshots.service.ai.LocalGgufDiscovery
+import com.amresalehin.emreshots.data.local.AppPreferences
 import com.amresalehin.emreshots.service.backup.RestoreMode
 import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -109,6 +112,9 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
     val providers by viewModel.providers.collectAsStateWithLifecycle()
     val ocrEnrichmentProviderId by viewModel.ocrEnrichmentProviderId.collectAsStateWithLifecycle()
     val visionCaptionTagProviderId by viewModel.visionCaptionTagProviderId.collectAsStateWithLifecycle()
+    val gridColumns by viewModel.gridColumns.collectAsStateWithLifecycle()
+    val showFileNames by viewModel.showFileNames.collectAsStateWithLifecycle()
+    val showTags by viewModel.showTags.collectAsStateWithLifecycle()
 
     var showEditDialog by remember { mutableStateOf(false) }
     var editingProvider by remember { mutableStateOf<CustomCloudProvider?>(null) }
@@ -116,11 +122,26 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
     var showRestoreModeDialog by remember { mutableStateOf(false) }
     var pendingRestoreUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var showReprocessConfirm by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableStateOf(SettingsTab.GENERAL) }
+    var localGgufModels by remember { mutableStateOf(emptyList<com.amresalehin.emreshots.service.ai.LocalGgufModel>()) }
     val context = LocalContext.current
+    val ggufDiscovery = remember(context) { LocalGgufDiscovery(context) }
+    val preferences = remember(context) { AppPreferences(context) }
 
     val backupExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri -> if (uri != null) viewModel.exportBackupToUri(context, uri) }
     val backupRestoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) { pendingRestoreUri = uri; showRestoreModeDialog = true } }
     val mediaPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result -> viewModel.onPermissionsResult(result.values.any { it }) }
+    val ggufFolderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            val current = runCatching { kotlinx.coroutines.runBlocking { preferences.localGgufFolders.first() } }.getOrDefault(emptyList())
+            val folders = (current + uri.toString()).distinct()
+            kotlinx.coroutines.runBlocking { preferences.setLocalGgufFolders(folders) }
+            kotlinx.coroutines.runBlocking { localGgufModels = ggufDiscovery.scan(folders.map(android.net.Uri::parse)) }
+        }
+    }
 
     val total = allScreenshots.size
     val processed = allScreenshots.count { it.aiProcessed }
@@ -133,15 +154,15 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
     if (onNavigateBack != null) BackHandler(onBack = onNavigateBack)
 
 
+    LaunchedEffect(Unit) {
+        val folders = preferences.localGgufFolders.first().map(android.net.Uri::parse)
+        localGgufModels = ggufDiscovery.scan(folders)
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Column {
-                        Text("Settings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                        Text("Customize your screenshot workspace", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                },
+                title = { Text("Settings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     if (onNavigateBack != null) IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -151,254 +172,279 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
             )
         }
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(innerPadding).navigationBarsPadding(),
-            contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+        Column(
+            modifier = Modifier.fillMaxSize().padding(innerPadding).navigationBarsPadding()
         ) {
-            item {
-                SettingsOverviewCard(
-                    total = total, processed = processed, pending = pending, failed = failed, progress = progress,
-                    providerName = activeProvider?.name, isProcessing = isAnalyzing || indexingState.isIndexing,
-                    onPrimary = {
-                        if (isAnalyzing || indexingState.isIndexing) viewModel.cancelIndexing()
-                        else if (pending > 0) viewModel.batchAnalyzeScreenshots(allScreenshots.filter { !it.aiProcessed }, autoWriteExifSetting)
-                        else showReprocessConfirm = true
-                    },
-                    onOpenProcessing = onOpenProcessing
-                )
-            }
-
-            item {
-                SettingsSection("AI & intelligence", "How EmreShots understands your screenshots") {
-                    SettingsNavigationRow(
-                        icon = Icons.Default.Psychology,
-                        title = "Cloud AI",
-                        subtitle = activeProvider?.name ?: "No provider configured",
-                        value = if (activeProvider != null) "Active" else "Set up",
-                        onClick = { editingProvider = activeProvider; showEditDialog = true },
-                        valueIsPrimary = activeProvider != null
-                    )
-                    SettingsDivider()
-                    SettingsChoiceRow(
-                        icon = Icons.Default.AutoAwesome,
-                        title = "Analysis quality",
-                        subtitle = "Controls speed, detail and cloud usage",
-                        options = listOf("Fast", "Balanced", "Deep"),
-                        selected = aiQualityPreset,
-                        onSelected = viewModel::setAiQualityPreset
-                    )
-                    SettingsDivider()
-                    SettingsChoiceRow(
-                        icon = Icons.Default.Psychology,
-                        title = "On-device vision",
-                        subtitle = onDeviceVisionModel.ifBlank { "Automatic model selection" },
-                        options = listOf("Automatic", "Force local", "Disabled"),
-                        selected = onDeviceVisionMode,
-                        onSelected = viewModel::setOnDeviceVisionMode
-                    )
-                }
-            }
-
-            item {
-                SettingsSection("Local vision models", "Download models once and process images privately on-device") {
-                    LocalVisionModelsCard(
-                        selectedModelId = onDeviceVisionModel,
-                        onSelect = { viewModel.setOnDeviceVisionModel(it) },
-                        showMessage = viewModel::showMessage
-                    )
-                }
-            }
-
-            item {
-                SettingsSection("Function-specific AI models", "Each job can use its own offline VLM or cloud endpoint. API keys stay encrypted on-device.") {
-                    FunctionModelPicker(
-                        title = "OCR enrichment",
-                        subtitle = "Turn extracted OCR into title, description, tags and links.",
-                        selected = ocrEnrichmentProviderId,
-                        providers = providers,
-                        onSelect = viewModel::setOcrEnrichmentProviderId,
-                        onAddCustom = {
-                            providerDialogFunction = "ocr"
-                            editingProvider = null
-                            showEditDialog = true
+            SettingsTabRow(selectedTab) { selectedTab = it }
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 16.dp, top = 14.dp, end = 16.dp, bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                when (selectedTab) {
+                    SettingsTab.GENERAL -> {
+                        item {
+                            SettingsSection("Workspace", "Keep the gallery clean and focused") {
+                                CompactToggleRow(Icons.Default.Sync, "Auto-sync device media", autoSyncDeviceMedia) { viewModel.setAutoSyncDeviceMedia(it) }
+                                SettingsDivider()
+                                CompactToggleRow(Icons.Default.TextFields, "Show file names", showFileNames) { viewModel.setShowFileNames(it) }
+                                SettingsDivider()
+                                CompactToggleRow(Icons.Default.AutoAwesome, "Show tags", showTags) { viewModel.setShowTags(it) }
+                                SettingsDivider()
+                                SettingsChoiceRow(
+                                    icon = Icons.Default.AutoAwesome,
+                                    title = "Grid density",
+                                    subtitle = "Columns in the gallery",
+                                    options = listOf("2", "3", "4", "5"),
+                                    selected = gridColumns.toString(),
+                                    onSelected = { viewModel.setGridColumns(it.toInt()) }
+                                )
+                            }
                         }
-                    )
-                    SettingsDivider()
-                    FunctionModelPicker(
-                        title = "VLM captioning & tagging",
-                        subtitle = "Choose the model used for image understanding, captions and smart tags.",
-                        selected = visionCaptionTagProviderId,
-                        providers = providers,
-                        onSelect = viewModel::setVisionCaptionTagProviderId,
-                        onAddCustom = {
-                            providerDialogFunction = "vision"
-                            editingProvider = null
-                            showEditDialog = true
-                        }
-                    )
-                }
-            }
-
-            item {
-                SettingsSection("Enrichment", "Choose which metadata EmreShots creates") {
-                    CompactToggleRow(Icons.Default.TextFields, "OCR text extraction", ocrEnabled) { viewModel.setOcrEnabled(it) }
-                    SettingsDivider()
-                    CompactToggleRow(Icons.Default.Language, "URL & link detection", linksDetectionEnabled) { viewModel.setLinksDetectionEnabled(it) }
-                    SettingsDivider()
-                    CompactToggleRow(Icons.Default.AutoAwesome, "Smart keyword tagging", smartTagsEnabled) { viewModel.setSmartTagsEnabled(it) }
-                    SettingsDivider()
-                    CompactToggleRow(Icons.Default.CameraAlt, "Write metadata to EXIF", autoWriteExifSetting) { viewModel.setAutoWriteExifSetting(it) }
-                }
-            }
-
-            item {
-                SettingsSection("OCR", "Run text extraction independently from AI analysis") {
-                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.size(40.dp)) {
-                            BoxCenter { Icon(Icons.Default.TextFields, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer) }
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(if (ocrPending > 0) "${ocrPending} images need OCR" else "OCR is up to date", fontWeight = FontWeight.SemiBold)
-                            Text("${ocrEligible} images are OCR-capable", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                    if (ocrStatusText != null) {
-                        Spacer(Modifier.height(8.dp))
-                        Text(ocrStatusText!!, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.primary)
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        "OCR languages",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        "Select every script you expect in your images. OCR runs locally for each selected script.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    listOf(
-                        "Latin" to "English, Bengali Latin, French, Spanish and other Latin-script text",
-                        "Devanagari" to "Hindi, Marathi, Nepali and related scripts",
-                        "Chinese" to "Simplified and Traditional Chinese",
-                        "Japanese" to "Japanese",
-                        "Korean" to "Korean"
-                    ).forEach { (language, description) ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth().clickable {
-                                val next = if (ocrLanguages.contains(language)) {
-                                    ocrLanguages - language
-                                } else {
-                                    ocrLanguages + language
-                                }
-                                viewModel.setOcrLanguages(next)
-                            }.padding(vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(
-                                checked = ocrLanguages.contains(language),
-                                onCheckedChange = { checked ->
-                                    val next = if (checked) ocrLanguages + language else ocrLanguages - language
-                                    viewModel.setOcrLanguages(next)
-                                }
-                            )
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(language, fontWeight = FontWeight.Medium)
-                                Text(description, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        item {
+                            SettingsSection("Metadata", "Choose what EmreShots adds to media") {
+                                CompactToggleRow(Icons.Default.Language, "URL & link detection", linksDetectionEnabled) { viewModel.setLinksDetectionEnabled(it) }
+                                SettingsDivider()
+                                CompactToggleRow(Icons.Default.AutoAwesome, "Smart keyword tagging", smartTagsEnabled) { viewModel.setSmartTagsEnabled(it) }
+                                SettingsDivider()
+                                CompactToggleRow(Icons.Default.CameraAlt, "Write metadata to EXIF", autoWriteExifSetting) { viewModel.setAutoWriteExifSetting(it) }
                             }
                         }
                     }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = { viewModel.batchExtractOcr(allScreenshots, onlyMissing = true) },
-                            enabled = !isExtractingOcr && ocrPending > 0,
-                            modifier = Modifier.weight(1f).testTag("btn_local_ocr_pending")
-                        ) {
-                            if (isExtractingOcr) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                            else Icon(Icons.Default.TextFields, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("Process pending")
-                        }
-                        OutlinedButton(
-                            onClick = { viewModel.batchExtractOcr(allScreenshots, onlyMissing = false) },
-                            enabled = !isExtractingOcr && ocrEligible > 0,
-                            modifier = Modifier.weight(1f).testTag("btn_local_ocr_all")
-                        ) { Text("Run all") }
-                    }
-                }
-            }
 
-            item {
-                SettingsSection(
-                    "Duplicates",
-                    if (duplicateGroups.isEmpty()) "Find visually or structurally similar screenshots" else "${duplicateGroups.sumOf { it.items.size - 1 }} duplicate items found"
-                ) {
-                    SettingsActionRow(
-                        icon = Icons.Default.ContentCopy,
-                        title = if (isScanningDuplicates) "Scanning library…" else "Scan for duplicates",
-                        subtitle = "Compare your screenshots for duplicate content",
-                        enabled = !isScanningDuplicates && total > 0,
-                        onClick = viewModel::scanDuplicates
-                    )
-                    if (duplicateGroups.isNotEmpty()) {
-                        SettingsDivider()
-                        Text("Latest results", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-                        Spacer(Modifier.height(4.dp))
-                        duplicateGroups.take(3).forEach { group ->
-                            Text(
-                                "• ${group.kind.name.lowercase().replaceFirstChar { it.uppercase() }} · ${group.items.size} items",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                    SettingsTab.AI -> {
+                        item {
+                            SettingsSection("AI provider", "Choose the cloud endpoint used when local processing is not selected") {
+                                SettingsNavigationRow(
+                                    icon = Icons.Default.Psychology,
+                                    title = "Cloud AI",
+                                    subtitle = activeProvider?.name ?: "No provider configured",
+                                    value = if (activeProvider != null) "Active" else "Set up",
+                                    onClick = { editingProvider = activeProvider; showEditDialog = true },
+                                    valueIsPrimary = activeProvider != null
+                                )
+                                SettingsDivider()
+                                SettingsChoiceRow(
+                                    icon = Icons.Default.AutoAwesome,
+                                    title = "Analysis quality",
+                                    subtitle = "Controls speed, detail and cloud usage",
+                                    options = listOf("Fast", "Balanced", "Deep"),
+                                    selected = aiQualityPreset,
+                                    onSelected = viewModel::setAiQualityPreset
+                                )
+                                SettingsDivider()
+                                SettingsChoiceRow(
+                                    icon = Icons.Default.Psychology,
+                                    title = "On-device vision",
+                                    subtitle = onDeviceVisionModel.ifBlank { "Automatic model selection" },
+                                    options = listOf("Automatic", "Force local", "Disabled"),
+                                    selected = onDeviceVisionMode,
+                                    onSelected = viewModel::setOnDeviceVisionMode
+                                )
+                            }
+                        }
+                        item {
+                            SettingsSection("Local models", "Verified downloads plus models you already have on the device") {
+                                LocalVisionModelsCard(
+                                    selectedModelId = onDeviceVisionModel,
+                                    onSelect = { viewModel.setOnDeviceVisionModel(it) },
+                                    showMessage = viewModel::showMessage
+                                )
+                                SettingsDivider()
+                                Text("Local GGUF discovery", fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    "Choose a folder containing .gguf files. Files remain where they are; EmreShots only reads them for discovery.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                OutlinedButton(
+                                    onClick = { ggufFolderLauncher.launch(null) },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) { Text("Choose GGUF folder") }
+                                if (localGgufModels.isNotEmpty()) {
+                                    localGgufModels.take(12).forEach { model ->
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(model.displayName, fontWeight = FontWeight.Medium)
+                                                Text(
+                                                    (if (model.isProjector) "Projector" else "GGUF model") + " · " + (model.sizeBytes / 1024 / 1024) + " MB",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Text("No local GGUF files discovered yet.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                        item {
+                            SettingsSection("Function-specific models", "Use a different local or cloud model for each job") {
+                                FunctionModelPicker(
+                                    title = "OCR enrichment",
+                                    subtitle = "Turn extracted OCR into title, description, tags and links.",
+                                    selected = ocrEnrichmentProviderId,
+                                    providers = providers,
+                                    onSelect = viewModel::setOcrEnrichmentProviderId,
+                                    onAddCustom = {
+                                        providerDialogFunction = "ocr"
+                                        editingProvider = null
+                                        showEditDialog = true
+                                    }
+                                )
+                                SettingsDivider()
+                                FunctionModelPicker(
+                                    title = "VLM captioning & tagging",
+                                    subtitle = "Choose the model used for image understanding, captions and smart tags.",
+                                    selected = visionCaptionTagProviderId,
+                                    providers = providers,
+                                    onSelect = viewModel::setVisionCaptionTagProviderId,
+                                    onAddCustom = {
+                                        providerDialogFunction = "vision"
+                                        editingProvider = null
+                                        showEditDialog = true
+                                    }
+                                )
+                            }
+                        }
+                        item {
+                            SettingsSection("OCR", "Language-first local OCR. Select one or more languages.") {
+                                CompactToggleRow(Icons.Default.TextFields, "Local OCR extraction", ocrEnabled) { viewModel.setOcrEnabled(it) }
+                                SettingsDivider()
+                                Text("Supported languages", fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    "These are language choices, not script choices. Language packs are downloaded once and OCR then runs fully on-device.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                com.amresalehin.emreshots.service.ocr.LocalOcrService.supportedLanguages.forEach { language ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().clickable {
+                                            val next = if (ocrLanguages.contains(language.name)) ocrLanguages - language.name else ocrLanguages + language.name
+                                            viewModel.setOcrLanguages(next)
+                                        }.padding(vertical = 3.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Checkbox(
+                                            checked = ocrLanguages.contains(language.name),
+                                            onCheckedChange = { checked ->
+                                                val next = if (checked) ocrLanguages + language.name else ocrLanguages - language.name
+                                                viewModel.setOcrLanguages(next)
+                                            }
+                                        )
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(language.name, fontWeight = FontWeight.Medium)
+                                            Text(language.description, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    }
+                                }
+                                if (ocrStatusText != null) {
+                                    Text(ocrStatusText!!, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                                }
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Button(
+                                        onClick = { viewModel.batchExtractOcr(allScreenshots, true) },
+                                        enabled = !isExtractingOcr && ocrPending > 0,
+                                        modifier = Modifier.weight(1f).testTag("btn_local_ocr_pending")
+                                    ) {
+                                        Text(if (isExtractingOcr) "Processing…" else "Process pending")
+                                    }
+                                    OutlinedButton(
+                                        onClick = { viewModel.batchExtractOcr(allScreenshots, false) },
+                                        enabled = !isExtractingOcr && ocrEligible > 0,
+                                        modifier = Modifier.weight(1f).testTag("btn_local_ocr_all")
+                                    ) { Text("Run all") }
+                                }
+                            }
                         }
                     }
-                }
-            }
 
-            item {
-                SettingsSection("Processing", "Batch operations for your whole library") {
-                    SettingsActionRow(
-                        icon = Icons.Default.AutoAwesome,
-                        title = if (isAnalyzing) "Processing library…" else "Process pending",
-                        subtitle = if (pending > 0) "${pending} screenshots are waiting for analysis" else "Everything is analyzed",
-                        enabled = !isAnalyzing && pending > 0,
-                        onClick = { viewModel.batchAnalyzeScreenshots(allScreenshots.filter { !it.aiProcessed }, autoWriteExifSetting) }
-                    )
-                    SettingsDivider()
-                    SettingsActionRow(
-                        icon = Icons.Default.Replay,
-                        title = "Reprocess library",
-                        subtitle = "Run AI analysis again for all ${total} items",
-                        enabled = !isAnalyzing && total > 0,
-                        onClick = { showReprocessConfirm = true }
-                    )
-                    if (failed > 0) {
-                        SettingsDivider()
-                        Text("${failed} items failed during the last run", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                    }
-                }
-            }
-
-            item {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text("EmreShots", fontWeight = FontWeight.Bold)
-                            Text("Screenshot Intelligence", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    SettingsTab.DATA_BACKUP -> {
+                        item {
+                            SettingsSection("Data & sync", "Manage the library data EmreShots keeps locally") {
+                                CompactToggleRow(Icons.Default.Sync, "Auto-sync device media", autoSyncDeviceMedia) { viewModel.setAutoSyncDeviceMedia(it) }
+                                SettingsDivider()
+                                SettingsActionRow(
+                                    icon = Icons.Default.ContentCopy,
+                                    title = if (isScanningDuplicates) "Scanning library…" else "Scan for duplicates",
+                                    subtitle = if (duplicateGroups.isEmpty()) "Find visually or structurally similar media" else duplicateGroups.sumOf { it.items.size - 1 }.toString() + " duplicate items found",
+                                    enabled = !isScanningDuplicates && total > 0,
+                                    onClick = viewModel::scanDuplicates
+                                )
+                                if (duplicateGroups.isNotEmpty()) {
+                                    SettingsDivider()
+                                    Text("Latest duplicate groups", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                                    duplicateGroups.take(3).forEach { group ->
+                                        Text("• " + group.kind.name.lowercase().replaceFirstChar { it.uppercase() } + " · " + group.items.size + " items", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
                         }
-                        Text("1.0", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        item {
+                            SettingsSection("Permissions", "EmreShots needs access to read and update your media library") {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    PermissionChip("Media", hasMediaPermissions)
+                                    PermissionChip("Metadata", hasAllMetadataPermissions)
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                Button(
+                                    onClick = {
+                                        if (Build.VERSION.SDK_INT >= 33) {
+                                            mediaPermissionLauncher.launch(arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO))
+                                        } else {
+                                            mediaPermissionLauncher.launch(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE))
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) { Text(if (hasMediaPermissions) "Review media access" else "Grant media access") }
+                            }
+                        }
+                        item {
+                            SettingsSection("Backup & restore", "Export your library metadata and settings to a portable JSON file") {
+                                Text(lastBackupInfo ?: "No backup recorded yet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(Modifier.height(8.dp))
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Button(
+                                        onClick = { backupExportLauncher.launch("emreshots-backup.json") },
+                                        modifier = Modifier.weight(1f)
+                                    ) { Text("Export backup") }
+                                    OutlinedButton(
+                                        onClick = { backupRestoreLauncher.launch(arrayOf("application/json", "text/json")) },
+                                        modifier = Modifier.weight(1f)
+                                    ) { Text("Restore") }
+                                }
+                                Spacer(Modifier.height(6.dp))
+                                Text("API keys are not written to exported backups.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        item {
+                            SettingsSection("Library processing", "Keep expensive work separate from the rest of your settings") {
+                                SettingsActionRow(
+                                    icon = Icons.Default.AutoAwesome,
+                                    title = if (isAnalyzing) "Processing library…" else "Process pending",
+                                    subtitle = if (pending > 0) pending.toString() + " items are waiting for analysis" else "Everything is analyzed",
+                                    enabled = !isAnalyzing && pending > 0,
+                                    onClick = { viewModel.batchAnalyzeScreenshots(allScreenshots.filter { !it.aiProcessed }, autoWriteExifSetting) }
+                                )
+                                SettingsDivider()
+                                SettingsActionRow(
+                                    icon = Icons.Default.Replay,
+                                    title = "Reprocess library",
+                                    subtitle = "Run AI analysis again for all " + total + " items",
+                                    enabled = !isAnalyzing && total > 0,
+                                    onClick = { showReprocessConfirm = true }
+                                )
+                                if (failed > 0) {
+                                    SettingsDivider()
+                                    Text(failed.toString() + " items failed during the last run", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -443,6 +489,29 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
     }
 }
 
+
+
+private enum class SettingsTab(val label: String) {
+    GENERAL("General"), AI("AI"), DATA_BACKUP("Data & Backup")
+}
+
+@Composable
+private fun SettingsTabRow(selected: SettingsTab, onSelected: (SettingsTab) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        SettingsTab.entries.forEach { tab ->
+            Surface(
+                onClick = { onSelected(tab) },
+                shape = RoundedCornerShape(12.dp),
+                color = if (tab == selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = if (tab == selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            ) { Text(tab.label, textAlign = TextAlign.Center, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(vertical = 9.dp)) }
+        }
+    }
+}
 
 @Composable
 private fun SettingsOverviewCard(

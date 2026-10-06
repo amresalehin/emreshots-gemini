@@ -197,7 +197,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     val showFileNames: StateFlow<Boolean> = _showFileNames.asStateFlow()
     private val _showTags = MutableStateFlow(true)
     val showTags: StateFlow<Boolean> = _showTags.asStateFlow()
-    private val _ocrLanguages = MutableStateFlow(listOf("Latin"))
+    private val _ocrLanguages = MutableStateFlow(listOf("English"))
     val ocrLanguages: StateFlow<List<String>> = _ocrLanguages.asStateFlow()
 
     val aiOcrModelOptions: StateFlow<List<AiOcrModelOption>> = providers
@@ -219,7 +219,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch { appPreferences.setOcrEnabled(enabled) }
     }
     fun setOcrLanguages(languages: List<String>) {
-        val normalized = languages.distinct().ifEmpty { listOf("Latin") }
+        val normalized = localOcrService.normalizeLanguages(languages)
         _ocrLanguages.value = normalized
         viewModelScope.launch { appPreferences.setOcrLanguages(normalized) }
     }
@@ -1036,7 +1036,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                     _ocrStatusText.value = "Local OCR (" + (index + 1) + "/" + targets.size + "): " + item.title.ifBlank { "Image " + (index + 1) }
                     val file = resolveImageFile(item)
                     val result = if (file != null) {
-                        localOcrService.recognize(file)
+                        localOcrService.recognize(file, ocrLanguages.value)
                     } else {
                         Result.failure(IllegalArgumentException("Image is not accessible."))
                     }

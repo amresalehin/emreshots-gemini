@@ -173,7 +173,8 @@ fun ScreenshotsScreen(
 
     val isCustomOrganized = sortOption != MediaSortOption.NEWEST ||
             groupByOption != MediaGroupBy.NONE ||
-            viewMode != GalleryViewMode.GRID
+            viewMode != GalleryViewMode.GRID ||
+            ((viewMode == GalleryViewMode.GRID || viewMode == GalleryViewMode.MASONRY) && gridColumns != 2)
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -326,41 +327,6 @@ fun ScreenshotsScreen(
                                 modifier = Modifier.testTag("btn_organize_view")
                             )
 
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        when (viewMode) {
-                                            GalleryViewMode.GRID -> "Switch to Masonry"
-                                            GalleryViewMode.MASONRY -> "Switch to Feed"
-                                            GalleryViewMode.FEED -> "Switch to List"
-                                            GalleryViewMode.LIST -> "Switch to Grid"
-                                        }
-                                    )
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = when (viewMode) {
-                                            GalleryViewMode.GRID -> Icons.Default.Dashboard
-                                            GalleryViewMode.MASONRY -> Icons.Default.ViewAgenda
-                                            GalleryViewMode.FEED -> Icons.AutoMirrored.Filled.FormatListBulleted
-                                            GalleryViewMode.LIST -> Icons.Default.GridView
-                                        },
-                                        contentDescription = null
-                                    )
-                                },
-                                onClick = {
-                                    showMoreMenu = false
-                                    val nextMode = when (viewMode) {
-                                        GalleryViewMode.GRID -> GalleryViewMode.MASONRY
-                                        GalleryViewMode.MASONRY -> GalleryViewMode.FEED
-                                        GalleryViewMode.FEED -> GalleryViewMode.LIST
-                                        GalleryViewMode.LIST -> GalleryViewMode.GRID
-                                    }
-                                    viewModel.setViewMode(nextMode)
-                                },
-                                modifier = Modifier.testTag("btn_quick_view_toggle")
-                            )
-
                              DropdownMenuItem(
                                  text = { Text("Batch Rename Visible") },
                                  leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
@@ -371,17 +337,6 @@ fun ScreenshotsScreen(
                                  modifier = Modifier.testTag("btn_batch_rename")
                              )
 
-                            DropdownMenuItem(
-                                text = { Text("Settings") },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Settings, contentDescription = null)
-                                },
-                                onClick = {
-                                    showMoreMenu = false
-                                    onNavigateToSettings()
-                                },
-                                modifier = Modifier.testTag("btn_top_settings")
-                            )
                         }
                     }
                 },
@@ -444,8 +399,7 @@ fun ScreenshotsScreen(
                     color = if (isCustomOrganized) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .clickable { showOrganizeSheet = true }
-                        .testTag("btn_quick_organize_pill")
+                        .testTag("btn_sort_status_pill")
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -569,14 +523,13 @@ fun ScreenshotsScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .pointerInput(viewMode, gridColumns) {
+                    .pointerInput(Unit) {
                         awaitEachGesture {
                             awaitFirstDown(requireUnconsumed = false)
                             var zoomFactor = 1f
                             do {
                                 val event = awaitPointerEvent()
-                                val canceled = event.changes.any { it.isConsumed }
-                                if (!canceled && event.changes.size >= 2) {
+                                if (event.changes.size >= 2) {
                                     val p1 = event.changes[0].position
                                     val p2 = event.changes[1].position
                                     val prevP1 = event.changes[0].previousPosition
@@ -584,45 +537,49 @@ fun ScreenshotsScreen(
                                     val currentDist = hypot(p1.x - p2.x, p1.y - p2.y)
                                     val prevDist = hypot(prevP1.x - prevP2.x, prevP1.y - prevP2.y)
                                     if (prevDist > 10f && currentDist > 10f) {
-                                        val delta = currentDist / prevDist
-                                        zoomFactor *= delta
+                                        zoomFactor *= currentDist / prevDist
                                         if (zoomFactor > 1.30f) {
-                                            // Pinch Out (Expand / Zoom In)
-                                            when {
-                                                viewMode == GalleryViewMode.GRID && gridColumns > 2 -> {
+                                            when (viewMode) {
+                                                GalleryViewMode.GRID -> {
+                                                    if (gridColumns > 2) {
+                                                        viewModel.setGridColumns(gridColumns - 1)
+                                                        pinchNotification = "Grid (" + (gridColumns - 1) + " columns)"
+                                                    } else {
+                                                        viewModel.setViewMode(GalleryViewMode.MASONRY)
+                                                        pinchNotification = "Masonry View"
+                                                    }
+                                                }
+                                                GalleryViewMode.MASONRY -> {
+                                                    if (gridColumns > 2) {
+                                                        viewModel.setGridColumns(gridColumns - 1)
+                                                        pinchNotification = "Masonry (" + (gridColumns - 1) + " columns)"
+                                                    } else {
+                                                        viewModel.setViewMode(GalleryViewMode.FEED)
+                                                        pinchNotification = "Feed View"
+                                                    }
+                                                }
+                                                GalleryViewMode.LIST -> {
+                                                    viewModel.setViewMode(GalleryViewMode.MASONRY)
                                                     viewModel.setGridColumns(2)
-                                                    pinchNotification = "Grid (2 columns)"
-                                                }
-                                                viewMode == GalleryViewMode.GRID && gridColumns == 2 -> {
-                                                    viewModel.setViewMode(GalleryViewMode.MASONRY)
                                                     pinchNotification = "Masonry View"
                                                 }
-                                                viewMode == GalleryViewMode.MASONRY -> {
-                                                    viewModel.setViewMode(GalleryViewMode.FEED)
-                                                    pinchNotification = "Feed View"
-                                                }
-                                                viewMode == GalleryViewMode.LIST -> {
-                                                    viewModel.setViewMode(GalleryViewMode.MASONRY)
-                                                    pinchNotification = "Masonry View"
-                                                }
+                                                GalleryViewMode.FEED -> Unit
                                             }
                                             event.changes.forEach { it.consume() }
                                             zoomFactor = 1f
                                         } else if (zoomFactor < 0.72f) {
-                                            // Pinch In (Contract / Zoom Out)
-                                            when {
-                                                viewMode == GalleryViewMode.FEED -> {
+                                            when (viewMode) {
+                                                GalleryViewMode.GRID, GalleryViewMode.MASONRY -> {
+                                                    if (gridColumns < 5) {
+                                                        viewModel.setGridColumns(gridColumns + 1)
+                                                        pinchNotification = (if (viewMode == GalleryViewMode.GRID) "Grid" else "Masonry") +
+                                                            " (" + (gridColumns + 1) + " columns)"
+                                                    }
+                                                }
+                                                GalleryViewMode.FEED, GalleryViewMode.LIST -> {
                                                     viewModel.setViewMode(GalleryViewMode.MASONRY)
-                                                    pinchNotification = "Masonry View"
-                                                }
-                                                viewMode == GalleryViewMode.MASONRY -> {
-                                                    viewModel.setViewMode(GalleryViewMode.GRID)
-                                                    viewModel.setGridColumns(2)
-                                                    pinchNotification = "Grid (2 columns)"
-                                                }
-                                                viewMode == GalleryViewMode.GRID && gridColumns == 2 -> {
                                                     viewModel.setGridColumns(3)
-                                                    pinchNotification = "Compact Grid (3 columns)"
+                                                    pinchNotification = "Masonry (3 columns)"
                                                 }
                                             }
                                             event.changes.forEach { it.consume() }
@@ -697,7 +654,7 @@ fun ScreenshotsScreen(
                 } else {
                     if (viewMode == GalleryViewMode.MASONRY) {
                         LazyVerticalStaggeredGrid(
-                            columns = StaggeredGridCells.Fixed(2),
+                            columns = StaggeredGridCells.Fixed(gridColumns),
                             state = staggeredGridState,
                             contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 88.dp + navBarBottom),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -944,7 +901,7 @@ fun ScreenshotsScreen(
             currentGroupBy = groupByOption,
             onSelectViewMode = { mode, cols ->
                 viewModel.setViewMode(mode)
-                if (mode == GalleryViewMode.GRID) {
+                if (mode == GalleryViewMode.GRID || mode == GalleryViewMode.MASONRY) {
                     viewModel.setGridColumns(cols)
                 }
             },

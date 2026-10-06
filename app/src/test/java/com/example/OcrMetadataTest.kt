@@ -40,7 +40,7 @@ class OcrMetadataTest {
             {
               "title": "Hotel Reservation Receipt",
               "description": "Booking confirmation for Grand Hotel downtown with confirmation number 98765.",
-              "ocrText": "Grand Hotel"È›y¯ßy“ Confirmation #98765+ßuÁ‚ùÁb Total Paid: $340.00 ∫w^~)ﬁv Check-in: Nov 12",
+              "ocrText": "Grand Hotel Confirmation #98765 Total Paid: $340.00 Check-in: Nov 12",
               "tags": ["Receipt", "Hotel", "Travel"],
               "links": ["https://grandhotel.com/confirm"],
               "suggestedCollection": "Travel & Tickets",

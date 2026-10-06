@@ -13,7 +13,7 @@ class LlamaCppVisionRuntimeFactory:VisionRuntimeFactory{
  override fun supports(m:OnDeviceVisionModel,c:DeviceCapabilities)=m.runtime==VisionRuntimeBackend.LLAMA_CPP_MTMD&&c.abi in m.supportedAbis&&c.apiLevel>=m.minApiLevel
  override fun create(m:OnDeviceVisionModel,context:Context):VisionModelProvider?=if(supports(m,OnDeviceVisionCapabilityDetector.detect(context)))LlamaCppVisionModelProvider(m,context)else null
 }
-private class LlamaCppVisionModelProvider(override val model:OnDeviceVisionModel,private val context:Context):VisionModelProvider{
+private class LlamaCppVisionModelProvider(private val model:OnDeviceVisionModel,private val context:Context):VisionModelProvider{
  override val modelId get()=model.id
  override val runtime=VisionRuntimeBackend.LLAMA_CPP_MTMD
  private val events=MutableSharedFlow<LlamaHelper.LLMEvent>(extraBufferCapacity=64)

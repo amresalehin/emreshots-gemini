@@ -158,6 +158,7 @@ fun ScreenshotsScreen(
     var showViewMenu by remember { mutableStateOf(false) }
     var showSortMenu by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
+    var showProcessingMenu by remember { mutableStateOf(false) }
     val searchFocusRequester = remember { FocusRequester() }
     var showAiOcrDialog by remember { mutableStateOf(false) }
     var showBatchRenameDialog by remember { mutableStateOf(false) }
@@ -205,6 +206,9 @@ fun ScreenshotsScreen(
 
     val videoCount = allScreenshots.count { it.isVideo }
     val photoCount = allScreenshots.size - videoCount
+    val aiVisionPendingCount = allScreenshots.count { !it.isVideo && !it.aiProcessed }
+    val ocrPendingCount = allScreenshots.count { !it.isVideo && it.ocrText.orEmpty().isBlank() }
+    val aiOcrEligibleCount = allScreenshots.count { !it.isVideo && it.ocrText.orEmpty().isNotBlank() && !it.aiProcessed }
     val totalDisplayCount = groupedScreenshots.values.sumOf { it.size }
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
@@ -842,6 +846,103 @@ fun ScreenshotsScreen(
                         }
                     }
                 }
+            }
+        }
+
+        // Quick processing launcher: keep OCR / AI vision discoverable without taking over the gallery.
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .navigationBarsPadding()
+                .padding(end = 16.dp, bottom = 84.dp)
+        ) {
+            DropdownMenu(
+                expanded = showProcessingMenu,
+                onDismissRequest = { showProcessingMenu = false }
+            ) {
+                DropdownMenuItem(
+                    text = {
+                        Column {
+                            Text("AI Vision", fontWeight = FontWeight.SemiBold)
+                            Text(
+                                if (aiVisionPendingCount > 0) "$aiVisionPendingCount images waiting"
+                                else "Everything is analyzed",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
+                    trailingIcon = { if (aiVisionPendingCount > 0) Text("$aiVisionPendingCount") },
+                    enabled = !isAnalyzing && aiVisionPendingCount > 0,
+                    onClick = {
+                        showProcessingMenu = false
+                        viewModel.batchAnalyzeScreenshots(allScreenshots.filter { !it.isVideo && !it.aiProcessed })
+                    }
+                )
+                DropdownMenuItem(
+                    text = {
+                        Column {
+                            Text("OCR", fontWeight = FontWeight.SemiBold)
+                            Text(
+                                if (ocrPendingCount > 0) "$ocrPendingCount images waiting"
+                                else "All images have OCR text",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    trailingIcon = { if (ocrPendingCount > 0) Text("$ocrPendingCount") },
+                    enabled = !isExtractingOcr && ocrPendingCount > 0,
+                    onClick = {
+                        showProcessingMenu = false
+                        viewModel.batchExtractOcr(allScreenshots, onlyMissing = true)
+                    }
+                )
+                DropdownMenuItem(
+                    text = {
+                        Column {
+                            Text("AI OCR", fontWeight = FontWeight.SemiBold)
+                            Text(
+                                if (aiOcrEligibleCount > 0) "$aiOcrEligibleCount images ready"
+                                else "Run OCR first",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
+                    trailingIcon = { if (aiOcrEligibleCount > 0) Text("$aiOcrEligibleCount") },
+                    enabled = !isAnalyzing && aiOcrEligibleCount > 0,
+                    onClick = {
+                        showProcessingMenu = false
+                        showAiOcrDialog = true
+                    }
+                )
+            }
+
+            FloatingActionButton(
+                onClick = { showProcessingMenu = !showProcessingMenu },
+                containerColor = if (showProcessingMenu) {
+                    MaterialTheme.colorScheme.secondaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainerHigh
+                },
+                contentColor = if (showProcessingMenu) {
+                    MaterialTheme.colorScheme.onSecondaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+                shape = CircleShape,
+                modifier = Modifier
+                    .size(46.dp)
+                    .testTag("fab_processing_menu")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AutoAwesome,
+                    contentDescription = "AI and OCR tools"
+                )
             }
         }
 

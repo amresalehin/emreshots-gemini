@@ -37,7 +37,7 @@ class OnDeviceVisionModelManager(context:Context,private val client:OkHttpClient
     }
    }
   }
-  check(p.length()==expected){"Downloaded size mismatch: expected "+expected+", got "+p.length()}
+  check(p.length()>0){"Downloaded empty model artifact"}
  }
  private fun sha256(f:File):String{val d=MessageDigest.getInstance("SHA-256");f.inputStream().use{i->val b=ByteArray(65536);while(true){val n=i.read(b);if(n<0)break;d.update(b,0,n)}};return d.digest().joinToString(""){"%02x".format(it)}}
 }

@@ -732,9 +732,10 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     private suspend fun analyzeScreenshotInternal(
         screenshot: ScreenshotItem,
-        autoWriteExif: Boolean
+        autoWriteExif: Boolean,
+        forcedMode: com.amresalehin.emreshots.service.ai.OnDeviceVisionMode? = null
     ): AiAnalysisResult {
-        val mode = com.amresalehin.emreshots.service.ai.OnDeviceVisionMode.fromPreference(onDeviceVisionMode.value)
+        val mode = forcedMode ?: com.amresalehin.emreshots.service.ai.OnDeviceVisionMode.fromPreference(onDeviceVisionMode.value)
         val file = resolveImageFile(screenshot)
 
         if (mode == com.amresalehin.emreshots.service.ai.OnDeviceVisionMode.FORCE_LOCAL && file == null) {
@@ -826,6 +827,53 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             screenshotRepository.update(updatedScreenshot)
         }
         return result
+    }
+
+    fun analyzeLocalVision(
+        screenshot: ScreenshotItem,
+        autoWriteExif: Boolean = false,
+        onComplete: ((AiAnalysisResult) -> Unit)? = null
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isAnalyzing.value = true
+            _analysisStatusText.value = "Analyzing locally — image stays on this device…"
+            val result = analyzeScreenshotInternal(
+                screenshot = screenshot,
+                autoWriteExif = autoWriteExif,
+                forcedMode = com.amresalihin.emreshots.service.ai.OnDeviceVisionMode.FORCE_LOCAL
+            )
+            _isAnalyzing.value = false
+            _analysisStatusText.value = null
+            _snackbarMessage.value = if (result.isSuccess) "Local AI analysis complete via " + result.modelUsed + "." else "Local AI failed: " + (result.errorMessage ?: "Unknown error")
+            withContext(Dispatchers.Main) { onComplete?.invoke(result) }
+        }
+    }
+
+    fun analyzeCloudVision(
+        screenshot: ScreenshotItem,
+        autoWriteExif: Boolean = false,
+        onComplete: ((AiAnalysisResult) -> Unit)? = null
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val provider = activeProvider.value
+            if (provider == null) {
+                val result = AiAnalysisResult(isSuccess = false, errorMessage = "No cloud provider configured.")
+                _snackbarMessage.value = result.errorMessage
+                withContext(Dispatchers.Main) { onComplete?.invoke(result) }
+                return@launch
+            }
+            _isAnalyzing.value = true
+            _analysisStatusText.value = "Cloud Vision — uploading the image…"
+            val result = analyzeScreenshotInternal(
+                screenshot = screenshot,
+                autoWriteExif = autoWriteExif,
+                forcedMode = com.amresalihin.emreshots.service.ai.OnDeviceVisionMode.DISABLED
+            )
+            _isAnalyzing.value = false
+            _analysisStatusText.value = null
+            _snackbarMessage.value = if (result.isSuccess) "Cloud Vision complete via " + result.modelUsed + "." else "Cloud Vision failed: " + (result.errorMessage ?: "Unknown error")
+            withContext(Dispatchers.Main) { onComplete?.invoke(result) }
+        }
     }
 
     fun analyzeScreenshot(

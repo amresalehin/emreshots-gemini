@@ -77,7 +77,6 @@ import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 @Composable
 fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)? = null, onOpenProcessing: (() -> Unit)? = null) {
     val allScreenshots by viewModel.allScreenshots.collectAsStateWithLifecycle()
-    val providers by viewModel.providers.collectAsStateWithLifecycle()
     val activeProvider by viewModel.activeProvider.collectAsStateWithLifecycle()
     val isAnalyzing by viewModel.isAnalyzing.collectAsStateWithLifecycle()
     val statusText by viewModel.analysisStatusText.collectAsStateWithLifecycle()

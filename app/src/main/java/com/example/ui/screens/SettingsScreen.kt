@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CleaningServices
@@ -123,44 +125,114 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
 
     if (onNavigateBack != null) BackHandler(onBack = onNavigateBack)
 
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings", fontWeight = FontWeight.Bold) },
-                navigationIcon = { if (onNavigateBack != null) IconButton(onClick = onNavigateBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } },
+                title = {
+                    Column {
+                        Text("Settings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Text("Customize your screenshot workspace", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                },
+                navigationIcon = {
+                    if (onNavigateBack != null) IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         }
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(innerPadding).navigationBarsPadding(),
-            contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             item {
-                LibraryIntelligenceCard(
+                SettingsOverviewCard(
                     total = total, processed = processed, pending = pending, failed = failed, progress = progress,
-                    providerName = activeProvider?.name, quality = aiQualityPreset, isProcessing = isAnalyzing || indexingState.isIndexing,
-                    onPrimary = { if (isAnalyzing || indexingState.isIndexing) viewModel.cancelIndexing() else if (pending > 0) viewModel.batchAnalyzeScreenshots(allScreenshots.filter { !it.aiProcessed }, autoWriteExifSetting) else showReprocessConfirm = true },
+                    providerName = activeProvider?.name, isProcessing = isAnalyzing || indexingState.isIndexing,
+                    onPrimary = {
+                        if (isAnalyzing || indexingState.isIndexing) viewModel.cancelIndexing()
+                        else if (pending > 0) viewModel.batchAnalyzeScreenshots(allScreenshots.filter { !it.aiProcessed }, autoWriteExifSetting)
+                        else showReprocessConfirm = true
+                    },
                     onOpenProcessing = onOpenProcessing
                 )
             }
+
             item {
-                SectionTitle("QUICK ACTIONS", "Global controls for your screenshot library")
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    QuickActionButton(Icons.Default.AutoAwesome, "Process", enabled = !isAnalyzing && pending > 0, modifier = Modifier.weight(1f)) { viewModel.batchAnalyzeScreenshots(allScreenshots.filter { !it.aiProcessed }, autoWriteExifSetting) }
-                    QuickActionButton(Icons.Default.ContentCopy, "Duplicates", enabled = !isScanningDuplicates, modifier = Modifier.weight(1f)) { viewModel.scanDuplicates() }
-                    QuickActionButton(Icons.Default.Replay, "Re-index", enabled = !isAnalyzing && total > 0, modifier = Modifier.weight(1f)) { showReprocessConfirm = true }
+                SettingsSection("AI & intelligence", "How EmreShots understands your screenshots") {
+                    SettingsNavigationRow(
+                        icon = Icons.Default.Psychology,
+                        title = "Cloud AI",
+                        subtitle = activeProvider?.name ?: "No provider configured",
+                        value = if (activeProvider != null) "Active" else "Set up",
+                        onClick = { editingProvider = activeProvider; showEditDialog = true },
+                        valueIsPrimary = activeProvider != null
+                    )
+                    SettingsDivider()
+                    SettingsChoiceRow(
+                        icon = Icons.Default.AutoAwesome,
+                        title = "Analysis quality",
+                        subtitle = "Controls speed, detail and cloud usage",
+                        options = listOf("Fast", "Balanced", "Deep"),
+                        selected = aiQualityPreset,
+                        onSelected = viewModel::setAiQualityPreset
+                    )
+                    SettingsDivider()
+                    SettingsChoiceRow(
+                        icon = Icons.Default.Psychology,
+                        title = "On-device vision",
+                        subtitle = onDeviceVisionModel.ifBlank { "Automatic model selection" },
+                        options = listOf("Automatic", "Force local", "Disabled"),
+                        selected = onDeviceVisionMode,
+                        onSelected = viewModel::setOnDeviceVisionMode
+                    )
                 }
             }
+
             item {
-                SectionTitle("LOCAL OCR", "Extract text independently without running AI, vision, tagging, links, or EXIF")
-                SettingsCard {
-                    Text(
-                        text = ocrPending.toString() + " images have no OCR text yet · " + ocrEligible + " images are OCR-capable",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                SettingsSection("Local vision models", "Download models once and process images privately on-device") {
+                    LocalVisionModelsCard(
+                        selectedModelId = onDeviceVisionModel,
+                        onSelect = { viewModel.setOnDeviceVisionModel(it) },
+                        showMessage = viewModel::showMessage
                     )
+                }
+            }
+
+            item {
+                SettingsSection("Enrichment", "Choose which metadata EmreShots creates") {
+                    CompactToggleRow(Icons.Default.TextFields, "OCR text extraction", ocrEnabled) { viewModel.setOcrEnabled(it) }
+                    SettingsDivider()
+                    CompactToggleRow(Icons.Default.Language, "URL & link detection", linksDetectionEnabled) { viewModel.setLinksDetectionEnabled(it) }
+                    SettingsDivider()
+                    CompactToggleRow(Icons.Default.AutoAwesome, "Smart keyword tagging", smartTagsEnabled) { viewModel.setSmartTagsEnabled(it) }
+                    SettingsDivider()
+                    CompactToggleRow(Icons.Default.CameraAlt, "Write metadata to EXIF", autoWriteExifSetting) { viewModel.setAutoWriteExifSetting(it) }
+                }
+            }
+
+            item {
+                SettingsSection("OCR", "Run text extraction independently from AI analysis") {
+                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.size(40.dp)) {
+                            BoxCenter { Icon(Icons.Default.TextFields, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer) }
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(if (ocrPending > 0) "${ocrPending} images need OCR" else "OCR is up to date", fontWeight = FontWeight.SemiBold)
+                            Text("${ocrEligible} images are OCR-capable", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    if (ocrStatusText != null) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(ocrStatusText!!, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.primary)
+                    }
+                    Spacer(Modifier.height(10.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
                             onClick = { viewModel.batchExtractOcr(allScreenshots, onlyMissing = true) },
@@ -170,86 +242,89 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
                             if (isExtractingOcr) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                             else Icon(Icons.Default.TextFields, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("OCR pending")
+                            Text("Process pending")
                         }
                         OutlinedButton(
                             onClick = { viewModel.batchExtractOcr(allScreenshots, onlyMissing = false) },
                             enabled = !isExtractingOcr && ocrEligible > 0,
                             modifier = Modifier.weight(1f).testTag("btn_local_ocr_all")
-                        ) {
-                            Icon(Icons.Default.TextFields, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("OCR all")
-                        }
-                    }
-                    if (ocrStatusText != null) {
-                        Text(ocrStatusText!!, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.primary)
+                        ) { Text("Run all") }
                     }
                 }
             }
+
             item {
-                SectionTitle("AI & ANALYSIS", "Choose how EmreShots understands your screenshots")
-                SettingsCard {
-                    if (activeProvider != null) {
-                        SettingsHeaderRow(Icons.Default.Psychology, "Cloud AI", activeProvider!!.name, "Active") {
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                OutlinedButton(onClick = { editingProvider = activeProvider; showEditDialog = true }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) { Text("Edit", fontSize = 11.sp) }
-                                Button(onClick = { editingProvider = null; showEditDialog = true }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp), modifier = Modifier.testTag("btn_add_provider_settings")) { Text("Add", fontSize = 11.sp) }
-                            }
-                        }
-                    } else {
-                        SettingsHeaderRow(Icons.Default.Psychology, "Cloud AI", "No provider configured") {
-                            Button(onClick = { editingProvider = null; showEditDialog = true }, modifier = Modifier.testTag("btn_add_provider_settings")) { Text("Set up", fontSize = 11.sp) }
-                        }
-                    }
-                    HorizontalDivider()
-                    Text("Quality", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-                    SegmentedChoice(listOf("Fast", "Balanced", "Deep"), aiQualityPreset) { viewModel.setAiQualityPreset(it) }
-                    Spacer(Modifier.height(10.dp))
-                    Text("On-device vision", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-                    SegmentedChoice(listOf("Automatic", "Force local", "Disabled"), onDeviceVisionMode) { viewModel.setOnDeviceVisionMode(it) }
-                    Text("Selected model: " + onDeviceVisionModel.ifBlank { "Automatic" }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(8.dp))
-                    LocalVisionModelsCard(
-                        selectedModelId = onDeviceVisionModel,
-                        onSelect = { viewModel.setOnDeviceVisionModel(it) },
-                        showMessage = viewModel::showMessage
+                SettingsSection(
+                    "Duplicates",
+                    if (duplicateGroups.isEmpty()) "Find visually or structurally similar screenshots" else "${duplicateGroups.sumOf { it.items.size - 1 }} duplicate items found"
+                ) {
+                    SettingsActionRow(
+                        icon = Icons.Default.ContentCopy,
+                        title = if (isScanningDuplicates) "Scanning library…" else "Scan for duplicates",
+                        subtitle = "Compare your screenshots for duplicate content",
+                        enabled = !isScanningDuplicates && total > 0,
+                        onClick = viewModel::scanDuplicates
                     )
-                    Spacer(Modifier.height(6.dp))
-                    CompactToggleRow(Icons.Default.TextFields, "OCR text extraction", ocrEnabled) { viewModel.setOcrEnabled(it) }
-                    CompactToggleRow(Icons.Default.Language, "URL & link detection", linksDetectionEnabled) { viewModel.setLinksDetectionEnabled(it) }
-                    CompactToggleRow(Icons.Default.AutoAwesome, "Smart keyword tagging", smartTagsEnabled) { viewModel.setSmartTagsEnabled(it) }
-                    CompactToggleRow(Icons.Default.CameraAlt, "Write metadata to EXIF", autoWriteExifSetting) { viewModel.setAutoWriteExifSetting(it) }
-                }
-            }
-            item {
-                SectionTitle("DUPLICATES", "${duplicateGroups.sumOf { it.items.size - 1 }} duplicate items found")
-                SettingsCard {
-                    Button(onClick = { viewModel.scanDuplicates() }, enabled = !isScanningDuplicates && total > 0, modifier = Modifier.fillMaxWidth()) {
-                        if (isScanningDuplicates) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp) else Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp)); Text(if (isScanningDuplicates) "Scanning…" else "Scan for duplicates")
-                    }
                     if (duplicateGroups.isNotEmpty()) {
-                        Spacer(Modifier.height(8.dp))
+                        SettingsDivider()
                         Text("Latest results", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.height(4.dp))
                         duplicateGroups.take(3).forEach { group ->
-                            Text("• ${group.kind.name.lowercase().replaceFirstChar { it.uppercase() }} · ${group.items.size} items", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                "• ${group.kind.name.lowercase().replaceFirstChar { it.uppercase() }} · ${group.items.size} items",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
             }
+
             item {
-                Surface(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("EmreShots", fontWeight = FontWeight.Bold)
-                        Text("1.0 • Screenshot Intelligence", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                SettingsSection("Processing", "Batch operations for your whole library") {
+                    SettingsActionRow(
+                        icon = Icons.Default.AutoAwesome,
+                        title = if (isAnalyzing) "Processing library…" else "Process pending",
+                        subtitle = if (pending > 0) "${pending} screenshots are waiting for analysis" else "Everything is analyzed",
+                        enabled = !isAnalyzing && pending > 0,
+                        onClick = { viewModel.batchAnalyzeScreenshots(allScreenshots.filter { !it.aiProcessed }, autoWriteExifSetting) }
+                    )
+                    SettingsDivider()
+                    SettingsActionRow(
+                        icon = Icons.Default.Replay,
+                        title = "Reprocess library",
+                        subtitle = "Run AI analysis again for all ${total} items",
+                        enabled = !isAnalyzing && total > 0,
+                        onClick = { showReprocessConfirm = true }
+                    )
+                    if (failed > 0) {
+                        SettingsDivider()
+                        Text("${failed} items failed during the last run", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+
+            item {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("EmreShots", fontWeight = FontWeight.Bold)
+                            Text("Screenshot Intelligence", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Text("1.0", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
         }
     }
-
     if (showReprocessConfirm) {
         AlertDialog(
             onDismissRequest = { showReprocessConfirm = false },
@@ -281,31 +356,141 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
     }
 }
 
-@Composable private fun LibraryIntelligenceCard(total: Int, processed: Int, pending: Int, failed: Int, progress: Float, providerName: String?, quality: String, isProcessing: Boolean, onPrimary: () -> Unit, onOpenProcessing: (() -> Unit)?) {
-    Card(shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+@Composable
+private fun SettingsOverviewCard(
+    total: Int, processed: Int, pending: Int, failed: Int, progress: Float,
+    providerName: String?, isProcessing: Boolean, onPrimary: () -> Unit, onOpenProcessing: (() -> Unit)?
+) {
+    Card(
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), modifier = Modifier.size(40.dp)) {
+                Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), modifier = Modifier.size(44.dp)) {
                     BoxCenter { Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
                 }
-                Spacer(Modifier.width(10.dp))
-                Column { Text("LIBRARY INTELLIGENCE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold); Text("$total screenshots", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold) }
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Library overview", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        if (isProcessing) "Processing your screenshot library…" else if (pending > 0) "${pending} items are ready to process" else "Your library is up to date",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                StatBlock("READY", processed); StatBlock("REMAINING", pending); if (failed > 0) StatBlock("FAILED", failed)
+                StatBlock("TOTAL", total); StatBlock("READY", processed); StatBlock("PENDING", pending)
+                if (failed > 0) StatBlock("FAILED", failed)
             }
-            LinearProgressIndicator(progress = { progress.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().height(7.dp).clip(CircleShape), color = MaterialTheme.colorScheme.primary, trackColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.65f))
-            Text("${(progress * 100).toInt()}% analyzed", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
-            Text("${providerName ?: "No cloud provider"} · $quality · On-device ${if (isProcessing) "processing active" else "ready"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            LinearProgressIndicator(
+                progress = { progress.coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.65f)
+            )
+            Text(
+                "${(progress * 100).toInt()}% analyzed · ${providerName ?: "No cloud AI configured"}",
+                style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onPrimary, modifier = Modifier.weight(1f).testTag("btn_library_primary")) { Text(if (isProcessing) "Cancel Processing" else if (pending > 0) "Process $pending" else "Reprocess Library") }
-                if (onOpenProcessing != null) OutlinedButton(onClick = onOpenProcessing, modifier = Modifier.weight(1f)) { Text("View progress") }
+                Button(onClick = onPrimary, modifier = Modifier.weight(1f).testTag("btn_library_primary")) {
+                    Text(if (isProcessing) "Cancel" else if (pending > 0) "Process ${pending}" else "Reprocess")
+                }
+                if (onOpenProcessing != null) {
+                    OutlinedButton(onClick = onOpenProcessing, modifier = Modifier.weight(1f)) { Text("View progress") }
+                }
             }
         }
     }
 }
 
-@Composable private fun StatBlock(label: String, value: Int) { Column { Text(value.toString(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold); Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
+@Composable private fun StatBlock(label: String, value: Int) {
+    Column {
+        Text(value.toString(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun SettingsSection(title: String, subtitle: String, content: @Composable ColumnScope.() -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Card(
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp), content = content)
+        }
+    }
+}
+
+@Composable
+private fun SettingsNavigationRow(icon: ImageVector, title: String, subtitle: String, value: String, onClick: () -> Unit, valueIsPrimary: Boolean = false) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(shape = RoundedCornerShape(11.dp), color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(40.dp)) {
+            BoxCenter { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, fontWeight = FontWeight.SemiBold)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        }
+        Text(value, style = MaterialTheme.typography.labelMedium, color = if (valueIsPrimary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.width(6.dp))
+        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+    }
+}
+
+@Composable
+private fun SettingsActionRow(icon: ImageVector, title: String, subtitle: String, enabled: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(enabled = enabled, onClick = onClick).padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(shape = RoundedCornerShape(11.dp), color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.size(40.dp)) {
+            BoxCenter {
+                if (title.contains("Scanning") || title.contains("Processing")) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                else Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, fontWeight = FontWeight.SemiBold, color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f))
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (enabled) 1f else 0.5f), maxLines = 2)
+        }
+        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (enabled) 1f else 0.4f), modifier = Modifier.size(16.dp))
+    }
+}
+
+@Composable
+private fun SettingsChoiceRow(icon: ImageVector, title: String, subtitle: String, options: List<String>, selected: String, onSelected: (String) -> Unit) {
+    Column(modifier = Modifier.padding(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Surface(shape = RoundedCornerShape(11.dp), color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.size(40.dp)) {
+                BoxCenter { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+            }
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text(title, fontWeight = FontWeight.SemiBold)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        SegmentedChoice(options, selected, onSelected)
+    }
+}
+
+@Composable private fun SettingsDivider() {
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
+}
 
 @Composable
 private fun LocalVisionModelsCard(
@@ -412,19 +597,45 @@ private fun LocalVisionModelsCard(
         }
     }
 }
-@Composable private fun QuickActionButton(icon: ImageVector, label: String, enabled: Boolean = true, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    OutlinedButton(onClick = onClick, enabled = enabled, modifier = modifier.height(52.dp), contentPadding = PaddingValues(horizontal = 6.dp)) { Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text(label, fontSize = 11.sp) }
+
+@Composable
+private fun SegmentedChoice(options: List<String>, selected: String, onSelected: (String) -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        options.forEach { option ->
+            val active = selected.equals(option, true)
+            Surface(
+                onClick = { onSelected(option) },
+                color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(option, textAlign = TextAlign.Center, fontSize = 12.sp, fontWeight = if (active) FontWeight.Bold else FontWeight.Medium, modifier = Modifier.padding(vertical = 8.dp))
+            }
+        }
+    }
 }
 
-@Composable private fun SectionTitle(title: String, subtitle: String) { Column(modifier = Modifier.padding(horizontal = 2.dp)) { Text(title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, letterSpacing = 0.7.sp); Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
-
-@Composable private fun SettingsCard(content: @Composable () -> Unit) { Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp), modifier = Modifier.fillMaxWidth(), content = { Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { content() } }) }
-
-@Composable private fun SettingsHeaderRow(icon: ImageVector, title: String, subtitle: String, badge: String? = null, trailing: @Composable () -> Unit) { Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(40.dp)) { BoxCenter { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary) } }; Spacer(Modifier.width(12.dp)); Column(modifier = Modifier.weight(1f)) { Row(verticalAlignment = Alignment.CenterVertically) { Text(title, fontWeight = FontWeight.SemiBold); if (badge != null) { Spacer(Modifier.width(6.dp)); Text(badge, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) } }; Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1) }; trailing() } }
-
-@Composable private fun SegmentedChoice(options: List<String>, selected: String, onSelected: (String) -> Unit) { Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) { options.forEach { option -> val active = selected.equals(option, true); Surface(onClick = { onSelected(option) }, color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant, contentColor = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f)) { Text(option, textAlign = TextAlign.Center, fontSize = 12.sp, fontWeight = if (active) FontWeight.Bold else FontWeight.Medium, modifier = Modifier.padding(vertical = 9.dp)) } } } }
-
-@Composable private fun CompactToggleRow(icon: ImageVector, title: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) { Row(modifier = Modifier.fillMaxWidth().clickable { onCheckedChange(!checked) }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) { Icon(icon, contentDescription = null, tint = if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(12.dp)); Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f)); Switch(checked = checked, onCheckedChange = onCheckedChange) } }
+@Composable
+private fun CompactToggleRow(icon: ImageVector, title: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable { onCheckedChange(!checked) }.padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = if (checked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier.size(36.dp)
+        ) {
+            BoxCenter {
+                Icon(icon, contentDescription = null, tint = if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+            }
+        }
+        Spacer(Modifier.width(12.dp))
+        Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
 
 @Composable private fun PermissionChip(label: String, granted: Boolean) { Surface(shape = RoundedCornerShape(10.dp), color = if (granted) Color(0xFF10B981).copy(alpha = 0.12f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.55f)) { Text(if (granted) "$label · Granted" else "$label · Needed", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = if (granted) Color(0xFF10B981) else MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) } }
 

@@ -46,6 +46,10 @@ android {
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       if (hasReleaseSigning) {
         signingConfig = signingConfigs.getByName("release")
+      } else {
+        // CI/local smoke builds must still produce an installable APK.
+        // Production distribution should provide KEYSTORE_PATH + credentials.
+        signingConfig = signingConfigs.getByName("debug")
       }
     }
   }
@@ -56,6 +60,16 @@ android {
   buildFeatures {
     compose = true
     buildConfig = true
+  }
+
+  defaultConfig {
+    buildConfigField("Int", "PERL5_ASSET_VERSION", "2")
+  }
+
+  packaging {
+    jniLibs {
+      useLegacyPackaging = true
+    }
   }
   testOptions { unitTests { isIncludeAndroidResources = true } }
   dependenciesInfo {

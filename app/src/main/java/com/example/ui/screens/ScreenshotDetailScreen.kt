@@ -194,7 +194,7 @@ fun ScreenshotDetailScreen(
     val imageFile = File(screenshot.filePath)
 
     val configuration = LocalConfiguration.current
-    val galleryHeight = (configuration.screenHeightDp.dp * 0.76f).coerceAtLeast(440.dp)
+    val galleryHeight = configuration.screenHeightDp.dp
 
     DisposableEffect(Unit) {
         val window = (context as? android.app.Activity)?.window
@@ -217,16 +217,15 @@ fun ScreenshotDetailScreen(
         }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF6F7F9))
-            // MainActivity is edge-to-edge. Keep the detail viewer and its scrollable
-            // content inside the safe drawing region instead of drawing under the
-            // status/navigation bars.
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .verticalScroll(detailScrollState)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(detailScrollState)
             .pointerInput(screenshotId) {
                 var totalDrag = 0f
                 var triggered = false
@@ -253,13 +252,12 @@ fun ScreenshotDetailScreen(
                 )
             }
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(galleryHeight)
-                .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
-                .background(Color(0xFFF1F2F4))
-        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(galleryHeight)
+                    .background(Color(0xFFF1F2F4))
+            ) {
             if (screenshot.isVideo) {
                 InAppVideoPlayer(
                     screenshot = screenshot,
@@ -416,6 +414,7 @@ fun ScreenshotDetailScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 12.dp)
+                    .navigationBarsPadding()
                     .border(
                         1.dp,
                         MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),

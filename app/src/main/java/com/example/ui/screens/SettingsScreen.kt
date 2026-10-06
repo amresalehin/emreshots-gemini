@@ -39,6 +39,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -99,6 +100,7 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
     val autoWriteExifSetting by viewModel.autoWriteExifSetting.collectAsStateWithLifecycle()
     val isExtractingOcr by viewModel.isExtractingOcr.collectAsStateWithLifecycle()
     val ocrStatusText by viewModel.ocrStatusText.collectAsStateWithLifecycle()
+    val ocrLanguages by viewModel.ocrLanguages.collectAsStateWithLifecycle()
     val hasMediaPermissions by viewModel.hasMediaPermissions.collectAsStateWithLifecycle()
     val hasAllMetadataPermissions by viewModel.hasAllMetadataPermissions.collectAsStateWithLifecycle()
     val lastBackupInfo by viewModel.lastBackupInfo.collectAsStateWithLifecycle()
@@ -268,6 +270,48 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
                         LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.primary)
                     }
                     Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "OCR languages",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        "Select every script you expect in your images. OCR runs locally for each selected script.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    listOf(
+                        "Latin" to "English, Bengali Latin, French, Spanish and other Latin-script text",
+                        "Devanagari" to "Hindi, Marathi, Nepali and related scripts",
+                        "Chinese" to "Simplified and Traditional Chinese",
+                        "Japanese" to "Japanese",
+                        "Korean" to "Korean"
+                    ).forEach { (language, description) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                val next = if (ocrLanguages.contains(language)) {
+                                    ocrLanguages - language
+                                } else {
+                                    ocrLanguages + language
+                                }
+                                viewModel.setOcrLanguages(next)
+                            }.padding(vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = ocrLanguages.contains(language),
+                                onCheckedChange = { checked ->
+                                    val next = if (checked) ocrLanguages + language else ocrLanguages - language
+                                    viewModel.setOcrLanguages(next)
+                                }
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(language, fontWeight = FontWeight.Medium)
+                                Text(description, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
                             onClick = { viewModel.batchExtractOcr(allScreenshots, onlyMissing = true) },

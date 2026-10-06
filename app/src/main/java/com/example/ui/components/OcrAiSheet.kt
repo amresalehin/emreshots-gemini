@@ -139,6 +139,31 @@ fun OcrAiSheet(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
+            // Explicit privacy routing: OCR is local; optional enrichment sends text only.
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                ),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text("Processing paths", fontWeight = FontWeight.Bold)
+                    Text(
+                        "Local OCR → OCR + metadata → optional Local Gemma or Cloud Text AI.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        "Cloud Text AI receives OCR text/metadata only. Cloud Vision is separate and uploads the image.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
             // Action: Extract OCR
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -164,7 +189,7 @@ fun OcrAiSheet(
                     } else {
                         Icon(Icons.Default.DocumentScanner, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(if (ocrTextState.isBlank()) "Extract OCR Text" else "Re-scan OCR", fontSize = 13.sp)
+                        Text(if (ocrTextState.isBlank()) "Local OCR" else "Re-scan Local OCR", fontSize = 13.sp)
                     }
                 }
 
@@ -279,12 +304,12 @@ fun OcrAiSheet(
                         strokeWidth = 2.dp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Processing OCR with AI...", fontSize = 14.sp)
+                    Text("Enriching OCR with Cloud Text AI...", fontSize = 14.sp)
                 } else {
                     Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (writeDirectlyToMetadata) "Send OCR to AI & Write Metadata" else "Send OCR to AI",
+                        text = if (writeDirectlyToMetadata) "Cloud Text AI + Write Metadata" else "Enrich with Cloud Text AI",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )

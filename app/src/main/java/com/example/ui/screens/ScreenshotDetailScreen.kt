@@ -317,7 +317,7 @@ fun ScreenshotDetailScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
-                        onClick = { viewModel.analyzeScreenshot(screenshot, autoWriteExif = false) },
+                        onClick = { viewModel.analyzeLocalVision(screenshot, autoWriteExif = false) },
                         enabled = !isAnalyzing,
                         shape = RoundedCornerShape(20.dp),
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
@@ -334,8 +334,20 @@ fun ScreenshotDetailScreen(
                         } else {
                             Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(if (screenshot.aiProcessed) "Re-Analyze" else "Analyze AI", fontSize = 12.sp)
+                            Text("Local AI", fontSize = 12.sp)
                         }
+                    }
+
+                    OutlinedButton(
+                        onClick = { viewModel.analyzeCloudVision(screenshot, autoWriteExif = false) },
+                        enabled = !isAnalyzing,
+                        shape = RoundedCornerShape(20.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.testTag("btn_cloud_vision")
+                    ) {
+                        Icon(Icons.Default.Cloud, contentDescription = null, modifier = Modifier.size(15.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Cloud Vision", fontSize = 11.sp)
                     }
 
                     // OCR Feature Button

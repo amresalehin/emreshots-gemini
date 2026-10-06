@@ -18,10 +18,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -51,7 +48,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
@@ -71,11 +67,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -84,9 +80,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -101,7 +95,6 @@ import com.amresalehin.emreshots.ui.components.OcrAiSheet
 import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 import kotlinx.coroutines.launch
 import java.io.File
-import androidx.core.view.WindowCompat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -159,14 +152,11 @@ fun ScreenshotDetailScreen(
     var showExifEditor by remember { mutableStateOf(false) }
     var showOcrSheet by remember { mutableStateOf(false) }
     val ocrSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val coroutineScope = rememberCoroutineScope()
     val isExtractingOcr by viewModel.isExtractingOcr.collectAsStateWithLifecycle()
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showGalleryControls by remember { mutableStateOf(true) }
     val detailScrollState = rememberScrollState()
-    val view = LocalView.current
-    val density = LocalDensity.current
     var showAddTagDialog by remember { mutableStateOf(false) }
     var newTagInput by remember { mutableStateOf("") }
 
@@ -203,21 +193,31 @@ fun ScreenshotDetailScreen(
     val configuration = LocalConfiguration.current
     val galleryHeight = (configuration.screenHeightDp.dp * 0.76f).coerceAtLeast(440.dp)
 
-    LaunchedEffect(Unit) {
-        val window = (view.context as? android.app.Activity)?.window
-        window?.let {
-            val controller = WindowCompat.getInsetsController(it, it.decorView)
-            controller.isAppearanceLightStatusBars = false
-            controller.isAppearanceLightNavigationBars = false
-            it.statusBarColor = android.graphics.Color.BLACK
-            it.navigationBarColor = android.graphics.Color.BLACK
+    DisposableEffect(Unit) {
+        val window = (context as? android.app.Activity)?.window
+        val previousStatusBarColor = window?.statusBarColor
+        val previousNavigationBarColor = window?.navigationBarColor
+        val controller = window?.let { androidx.core.view.WindowCompat.getInsetsController(it, it.decorView) }
+        val previousLightStatusBars = controller?.isAppearanceLightStatusBars
+        val previousLightNavigationBars = controller?.isAppearanceLightNavigationBars
+
+        controller?.isAppearanceLightStatusBars = true
+        controller?.isAppearanceLightNavigationBars = true
+        window?.statusBarColor = android.graphics.Color.WHITE
+        window?.navigationBarColor = android.graphics.Color.WHITE
+
+        onDispose {
+            previousStatusBarColor?.let { window?.statusBarColor = it }
+            previousNavigationBarColor?.let { window?.navigationBarColor = it }
+            previousLightStatusBars?.let { controller?.isAppearanceLightStatusBars = it }
+            previousLightNavigationBars?.let { controller?.isAppearanceLightNavigationBars = it }
         }
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(Color.White)
             .verticalScroll(detailScrollState)
             .navigationBarsPadding()
             .pointerInput(screenshotId) {
@@ -250,7 +250,7 @@ fun ScreenshotDetailScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(galleryHeight)
-                .background(Color.Black)
+                .background(Color.White)
         ) {
             if (screenshot.isVideo) {
                 InAppVideoPlayer(
@@ -291,14 +291,14 @@ fun ScreenshotDetailScreen(
                     ) {
                         Text(
                             text = screenshot.title.ifBlank { "Untitled" },
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.titleSmall,
                             maxLines = 1,
                             fontWeight = FontWeight.Medium
                         )
                         Text(
                             text = "${currentIndex + 1} / ${allScreenshots.size}",
-                            color = Color.White.copy(alpha = 0.72f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.labelSmall
                         )
                     }
@@ -310,7 +310,7 @@ fun ScreenshotDetailScreen(
                         Icon(
                             imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = "Favorite",
-                            tint = if (screenshot.isFavorite) Color(0xFFFF5C7A) else Color.White
+                            tint = if (screenshot.isFavorite) Color(0xFFFF5C7A) else MaterialTheme.colorScheme.onSurface
                         )
                     }
 
@@ -328,7 +328,7 @@ fun ScreenshotDetailScreen(
                         },
                         modifier = Modifier.size(48.dp)
                     ) {
-                        Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
+                        Icon(Icons.Default.Share, contentDescription = "Share", tint = MaterialTheme.colorScheme.onSurface)
                     }
 
                     IconButton(
@@ -343,50 +343,6 @@ fun ScreenshotDetailScreen(
                     }
                 }
 
-                if (allScreenshots.size > 1) {
-                    LazyRow(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        contentPadding = PaddingValues(horizontal = 4.dp)
-                    ) {
-                        itemsIndexed(
-                            items = allScreenshots,
-                            key = { _, item -> item.id }
-                        ) { index, item ->
-                            val itemFile = File(item.filePath)
-                            Box(
-                                modifier = Modifier
-                                    .size(width = 58.dp, height = 46.dp)
-                                    .clip(RoundedCornerShape(5.dp))
-                                    .background(Color.White.copy(alpha = 0.10f))
-                                    .clickable { onNavigateToScreenshot(item.id) }
-                            ) {
-                                if (itemFile.exists() || !item.uriString.isNullOrBlank()) {
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(context)
-                                            .data(if (itemFile.exists()) itemFile else item.uriString)
-                                            .build(),
-                                        contentDescription = item.title,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                }
-                                if (index == currentIndex) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(Color.White.copy(alpha = 0.10f))
-                                            .border(2.dp, Color.White, RoundedCornerShape(5.dp))
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
             }
         }
 

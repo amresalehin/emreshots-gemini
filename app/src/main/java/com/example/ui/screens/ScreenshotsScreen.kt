@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -60,7 +61,6 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PermMedia
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.filled.ZoomIn
@@ -84,9 +84,12 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -116,7 +119,6 @@ import com.amresalehin.emreshots.ui.components.ScreenshotCard
 import com.amresalehin.emreshots.ui.components.ScreenshotFeedCard
 import com.amresalehin.emreshots.ui.components.ScreenshotListItem
 import com.amresalehin.emreshots.ui.components.ScreenshotMasonryCard
-import com.amresalehin.emreshots.ui.components.ViewOrganizeBottomSheet
 import com.amresalehin.emreshots.viewmodel.ScreenshotFilter
 import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 import kotlinx.coroutines.delay
@@ -145,16 +147,19 @@ fun ScreenshotsScreen(
     val viewMode by viewModel.viewMode.collectAsStateWithLifecycle()
     val groupedScreenshots by viewModel.groupedScreenshots.collectAsStateWithLifecycle()
     val autoSyncDeviceMedia by viewModel.autoSyncDeviceMedia.collectAsStateWithLifecycle()
+    val isExtractingOcr by viewModel.isExtractingOcr.collectAsStateWithLifecycle()
+    val ocrStatusText by viewModel.ocrStatusText.collectAsStateWithLifecycle()
+    val showFileNames by viewModel.showFileNames.collectAsStateWithLifecycle()
+    val showTags by viewModel.showTags.collectAsStateWithLifecycle()
+    val aiOcrModelOptions by viewModel.aiOcrModelOptions.collectAsStateWithLifecycle()
 
     var isSearchExpanded by remember { mutableStateOf(false) }
     var hidePermissionBanner by remember { mutableStateOf(false) }
-    var showOrganizeSheet by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
+    var showAiOcrDialog by remember { mutableStateOf(false) }
     var showBatchRenameDialog by remember { mutableStateOf(false) }
     var renameTemplate by remember { mutableStateOf("Screenshot_{date}_{index}") }
     var pinchNotification by remember { mutableStateOf<String?>(null) }
-    val organizeSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
     LaunchedEffect(autoSyncDeviceMedia, hasMediaPermissions) {
         if (autoSyncDeviceMedia && hasMediaPermissions) {
             viewModel.syncDeviceMedia()
@@ -242,37 +247,25 @@ fun ScreenshotsScreen(
                         )
                     }
 
-                    // Sync Gallery Media
+                    // Gallery search
                     IconButton(
-                        onClick = {
-                            if (hasMediaPermissions) {
-                                viewModel.syncDeviceMedia()
-                            } else {
-                                permissionLauncher.launch(DeviceMediaScanner.getRequiredPermissions())
-                            }
-                        },
-                        modifier = Modifier.testTag("btn_sync_media")
+                        onClick = { isSearchExpanded = !isSearchExpanded },
+                        modifier = Modifier.testTag("btn_toggle_search")
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Sync,
-                            contentDescription = "Sync Gallery",
-                            tint = MaterialTheme.colorScheme.onSurface
+                            imageVector = if (isSearchExpanded) Icons.Default.Close else Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = if (isSearchExpanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                         )
                     }
 
-                    // Direct Settings Action in Header
                     IconButton(
                         onClick = onNavigateToSettings,
                         modifier = Modifier.testTag("btn_top_settings")
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Settings",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
+                        Icon(Icons.Default.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.onSurface)
                     }
 
-                    // Three-dot More Menu with View & Organize function
                     Box {
                         IconButton(
                             onClick = { showMoreMenu = true },
@@ -280,66 +273,90 @@ fun ScreenshotsScreen(
                         ) {
                             BadgedBox(
                                 badge = {
-                                    if (isCustomOrganized) {
-                                        Badge(
-                                            modifier = Modifier.size(6.dp),
-                                            containerColor = MaterialTheme.colorScheme.primary
-                                        )
+                                    if (isCustomOrganized || !showFileNames || !showTags) {
+                                        Badge(modifier = Modifier.size(6.dp), containerColor = MaterialTheme.colorScheme.primary)
                                     }
                                 }
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.MoreVert,
-                                    contentDescription = "More Options",
-                                    tint = MaterialTheme.colorScheme.onSurface
-                                )
+                                Icon(Icons.Default.MoreVert, contentDescription = "Gallery options", tint = MaterialTheme.colorScheme.onSurface)
                             }
                         }
 
                         DropdownMenu(
                             expanded = showMoreMenu,
-                            onDismissRequest = { showMoreMenu = false }
+                            onDismissRequest = { showMoreMenu = false },
                         ) {
-                            DropdownMenuItem(
-                                text = { Text("View & Organize") },
-                                leadingIcon = {
-                                    BadgedBox(
-                                        badge = {
-                                            if (isCustomOrganized) {
-                                                Badge(
-                                                    modifier = Modifier.size(6.dp),
-                                                    containerColor = MaterialTheme.colorScheme.primary
-                                                )
-                                            }
-                                        }
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Tune,
-                                            contentDescription = null,
-                                            tint = if (isCustomOrganized) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                        )
-                                    }
-                                },
-                                onClick = {
-                                    showMoreMenu = false
-                                    showOrganizeSheet = true
-                                },
-                                modifier = Modifier.testTag("btn_organize_view")
-                            )
+                            Column(
+                                modifier = Modifier
+                                    .width(330.dp)
+                                    .heightIn(max = 560.dp)
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text("Gallery", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
 
-                             DropdownMenuItem(
-                                 text = { Text("Batch Rename Visible") },
-                                 leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
-                                 onClick = {
-                                     showMoreMenu = false
-                                     showBatchRenameDialog = true
-                                 },
-                                 modifier = Modifier.testTag("btn_batch_rename")
-                             )
+                                GalleryMenuToggle("Show file names", showFileNames) { viewModel.setShowFileNames(it) }
+                                GalleryMenuToggle("Show tags", showTags) { viewModel.setShowTags(it) }
 
+                                Text("Layout", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                                GalleryMenuChoiceRow(
+                                    options = listOf("Grid", "Masonry", "Feed", "List"),
+                                    selected = when (viewMode) {
+                                        GalleryViewMode.GRID -> "Grid"
+                                        GalleryViewMode.MASONRY -> "Masonry"
+                                        GalleryViewMode.FEED -> "Feed"
+                                        GalleryViewMode.LIST -> "List"
+                                    },
+                                    onSelected = {
+                                        viewModel.setViewMode(when (it) {
+                                            "Masonry" -> GalleryViewMode.MASONRY
+                                            "Feed" -> GalleryViewMode.FEED
+                                            "List" -> GalleryViewMode.LIST
+                                            else -> GalleryViewMode.GRID
+                                        })
+                                    },
+                                )
+
+                                Text("Columns", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                                GalleryMenuChoiceRow(
+                                    options = listOf("2×", "3×", "4×", "5×"),
+                                    selected = gridColumns.toString() + "×",
+                                    onSelected = { viewModel.setGridColumns(it.removeSuffix("×").toInt()) },
+                                )
+
+                                Text("Sort", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                                GalleryMenuChoiceRow(
+                                    options = MediaSortOption.entries.map { it.displayName },
+                                    selected = sortOption.displayName,
+                                    onSelected = { name -> MediaSortOption.entries.firstOrNull { it.displayName == name }?.let(viewModel::setSortOption) },
+                                    twoRows = true,
+                                )
+
+                                Text("Group", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                                GalleryMenuChoiceRow(
+                                    options = MediaGroupBy.entries.map { it.displayName },
+                                    selected = groupByOption.displayName,
+                                    onSelected = { name -> MediaGroupBy.entries.firstOrNull { it.displayName == name }?.let(viewModel::setGroupByOption) },
+                                    twoRows = true,
+                                )
+
+                                androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                DropdownMenuItem(
+                                    text = { Text("AI OCR enrichment") },
+                                    leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
+                                    onClick = { showMoreMenu = false; showAiOcrDialog = true },
+                                    modifier = Modifier.testTag("btn_ai_ocr_enrichment"),
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Batch rename visible") },
+                                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                                    onClick = { showMoreMenu = false; showBatchRenameDialog = true },
+                                    modifier = Modifier.testTag("btn_batch_rename"),
+                                )
+                            }
                         }
-                    }
-                },
+                    }                },
                 scrollBehavior = scrollBehavior,
                 windowInsets = TopAppBarDefaults.windowInsets,
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -393,34 +410,6 @@ fun ScreenshotsScreen(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Quick Organize Indicator Pill
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = if (isCustomOrganized) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .testTag("btn_sort_status_pill")
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Sort,
-                            contentDescription = null,
-                            tint = if (isCustomOrganized) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = if (groupByOption != MediaGroupBy.NONE) "${sortOption.displayName} • ${groupByOption.displayName}" else sortOption.displayName,
-                            fontSize = 12.sp,
-                            fontWeight = if (isCustomOrganized) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isCustomOrganized) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
                 ScreenshotFilter.entries.forEach { filter ->
                     val isSelected = selectedFilter == filter
                     FilterChip(
@@ -508,18 +497,38 @@ fun ScreenshotsScreen(
                 }
             }
 
-            // AI Status Progress Line
-            if (isAnalyzing) {
-                LinearProgressIndicator(
+            // Unified background processing indicator: sync, local OCR, and AI enrichment/indexing.
+            val galleryProcessing = isAnalyzing || isExtractingOcr || statusText != null
+            if (galleryProcessing) {
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(3.dp),
-                    color = MaterialTheme.colorScheme.primary
-                )
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    LinearProgressIndicator(
+                        modifier = Modifier.fillMaxWidth().height(3.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = ocrStatusText ?: statusText ?: "Processing…",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1
+                    )
+                }
             }
 
             // Gallery Grid / Feed / List with Section Grouping & Pinch-to-Change-View
-            Box(
+            PullToRefreshBox(
+                isRefreshing = isExtractingOcr || isAnalyzing || statusText != null,
+                onRefresh = {
+                    if (hasMediaPermissions) {
+                        viewModel.syncDeviceMedia()
+                    } else {
+                        permissionLauncher.launch(DeviceMediaScanner.getRequiredPermissions())
+                    }
+                },
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
@@ -703,7 +712,9 @@ fun ScreenshotsScreen(
                                     ScreenshotMasonryCard(
                                         screenshot = item,
                                         onClick = { onNavigateToDetail(item.id) },
-                                        onToggleFavorite = { viewModel.toggleFavorite(item) }
+                                        onToggleFavorite = { viewModel.toggleFavorite(item) },
+                                        showFileName = showFileNames,
+                                        showTags = showTags
                                     )
                                 }
                             }
@@ -772,18 +783,24 @@ fun ScreenshotsScreen(
                                         GalleryViewMode.FEED -> ScreenshotFeedCard(
                                             screenshot = item,
                                             onClick = { onNavigateToDetail(item.id) },
-                                            onToggleFavorite = { viewModel.toggleFavorite(item) }
+                                            onToggleFavorite = { viewModel.toggleFavorite(item) },
+                                            showFileName = showFileNames,
+                                            showTags = showTags
                                         )
                                         GalleryViewMode.LIST -> ScreenshotListItem(
                                             screenshot = item,
                                             onClick = { onNavigateToDetail(item.id) },
-                                            onToggleFavorite = { viewModel.toggleFavorite(item) }
+                                            onToggleFavorite = { viewModel.toggleFavorite(item) },
+                                            showFileName = showFileNames,
+                                            showTags = showTags
                                         )
                                         GalleryViewMode.MASONRY -> ScreenshotMasonryCard(
-                                            screenshot = item,
-                                            onClick = { onNavigateToDetail(item.id) },
-                                            onToggleFavorite = { viewModel.toggleFavorite(item) }
-                                        )
+                                        screenshot = item,
+                                        onClick = { onNavigateToDetail(item.id) },
+                                        onToggleFavorite = { viewModel.toggleFavorite(item) },
+                                        showFileName = showFileNames,
+                                        showTags = showTags
+                                    )
                                     }
                                 }
                             }
@@ -860,7 +877,6 @@ fun ScreenshotsScreen(
         }
     }
 
-    // Modal Bottom Sheet for View & Organize
     if (showBatchRenameDialog) {
         AlertDialog(
             onDismissRequest = { showBatchRenameDialog = false },
@@ -921,4 +937,81 @@ fun ScreenshotsScreen(
             }
         )
     }
+}
+@Composable
+private fun GalleryMenuToggle(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
+private fun GalleryMenuChoiceRow(
+    options: List<String>,
+    selected: String,
+    onSelected: (String) -> Unit,
+    twoRows: Boolean = false,
+) {
+    val rows = if (twoRows) options.chunked(3) else listOf(options)
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        rows.forEach { row ->
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                row.forEach { option ->
+                    Surface(
+                        onClick = { onSelected(option) },
+                        color = if (option == selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = if (option == selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(option, textAlign = TextAlign.Center, fontSize = 11.sp, fontWeight = if (option == selected) FontWeight.Bold else FontWeight.Medium, modifier = Modifier.padding(vertical = 7.dp))
+                    }
+                }
+                repeat(3 - row.size) { Spacer(modifier = Modifier.weight(1f)) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AiOcrEnrichmentDialog(
+    options: List<com.amresalehin.emreshots.viewmodel.AiOcrModelOption>,
+    eligibleCount: Int,
+    onDismiss: () -> Unit,
+    onStart: (String) -> Unit,
+) {
+    var selectedProviderId by remember(options) { mutableStateOf(options.firstOrNull()?.providerId.orEmpty()) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("AI OCR enrichment") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("$eligibleCount OCR-ready images can be enriched. OCR text only is sent to the selected AI model.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (options.isEmpty()) {
+                    Text("No configured AI model is available. Add an API key in Settings.", color = MaterialTheme.colorScheme.error)
+                } else {
+                    options.forEach { option ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable { selectedProviderId = option.providerId }.padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = selectedProviderId == option.providerId, onClick = { selectedProviderId = option.providerId })
+                            Column {
+                                Text(option.modelName, fontWeight = FontWeight.SemiBold)
+                                Text(option.providerName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onStart(selectedProviderId) }, enabled = selectedProviderId.isNotBlank() && eligibleCount > 0) { Text("Enrich") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }

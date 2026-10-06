@@ -181,6 +181,8 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     private val _onDeviceVisionMode = MutableStateFlow("Automatic")
     val onDeviceVisionMode: StateFlow<String> = _onDeviceVisionMode.asStateFlow()
     private val _onDeviceVisionModel = MutableStateFlow("auto")
+    private val _ocrAiProviderId = MutableStateFlow("")
+    val ocrAiProviderId: StateFlow<String> = _ocrAiProviderId.asStateFlow()
     val onDeviceVisionModel: StateFlow<String> = _onDeviceVisionModel.asStateFlow()
 
     private val _isExtractingOcr = MutableStateFlow(false)
@@ -237,6 +239,11 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     fun setOnDeviceVisionModel(value: String) {
         _onDeviceVisionModel.value = value
         viewModelScope.launch { appPreferences.setOnDeviceVisionModel(value) }
+    }
+
+    fun setOcrAiProviderId(value: String) {
+        _ocrAiProviderId.value = value
+        viewModelScope.launch { appPreferences.setOcrAiProviderId(value) }
     }
 
     fun getOnDeviceVisionRecommendation(callback: (com.amresalehin.emreshots.service.ai.OnDeviceModelRecommendation) -> Unit) {
@@ -886,7 +893,9 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         onComplete: ((AiAnalysisResult) -> Unit)? = null
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val provider = activeProvider.value
+            val selectedId = ocrAiProviderId.value
+            val provider = providers.value.firstOrNull { it.id == selectedId && it.apiKey.isNotBlank() }
+                ?: activeProvider.value
             if (provider == null) {
                 val result = AiAnalysisResult(isSuccess = false, errorMessage = "No cloud provider configured.")
                 _snackbarMessage.value = result.errorMessage

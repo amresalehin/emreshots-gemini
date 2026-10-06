@@ -9,11 +9,11 @@
 
 # Perl interpreter source (from https://www.cpan.org/src/5.0/)
 # SHA256 from https://www.cpan.org/src/5.0/sha256.txt
-# Pinned to 5.38.4 (LTS). 5.40.x triggers a duplicate-symbol link failure
+# Pinned to 5.42.2 (current maintained 5.42 branch).
 # under perl-cross 1.6.4's --no-dynaloader --all-static mode; revisit when
 # perl-cross issues a release that supports 5.40 cleanly in static mode.
-PERL_VERSION=5.38.4
-PERL_TARBALL_SHA256=fb888accf8b50b5180e91166e5153608be294c57c19878e95f7659c1f1f12758
+PERL_VERSION=5.42.2
+PERL_TARBALL_SHA256=9384e8deb75b7b1695e5637971b752281aaecd025a3d5d4734d33c1d0adfee47
 
 # Perl release-signing key fingerprint (Perl Authors / pumpking).
 # Public key fetched from https://keys.openpgp.org/ during build.

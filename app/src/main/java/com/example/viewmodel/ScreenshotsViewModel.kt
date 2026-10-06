@@ -420,7 +420,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     private suspend fun ensureConfiguredProviderActiveIfNeeded() {
         val active = providerRepository.getActiveProviderSync()
         val activeKey = active?.let { secureApiKeyStore.get(it.id).orEmpty() }
-        if (active != null && activeKey.isNotBlank()) return
+        if (active != null && activeKey.orEmpty().isNotBlank()) return
 
         val configured = providerRepository.getAllProvidersSync().firstOrNull {
             secureApiKeyStore.get(it.id).orEmpty().isNotBlank()
@@ -1585,7 +1585,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                 screenshotRepository.insertAll(data.screenshots)
             }
 
-            // Restore providers
+            // Restore providers without ever activating an unconfigured provider.
             if (data.providers.isNotEmpty()) {
                 data.providers.forEach { provider ->
                     if (provider.apiKey.isNotBlank()) {
@@ -1593,13 +1593,8 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                     }
                 }
                 providerRepository.insertAll(data.providers.map { it.copy(apiKey = "") })
-                val active = providerRepository.getActiveProviderSync()
-                if (active == null) {
-                    providerRepository.setActiveProvider(data.providers.first().id)
-                }
-            } else {
-                ensureDefaultProviderIfNeeded()
             }
+            ensureConfiguredProviderActiveIfNeeded()
 
             // Restore settings
             var settingsRestored = 0

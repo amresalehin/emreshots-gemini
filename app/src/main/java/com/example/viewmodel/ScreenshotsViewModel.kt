@@ -795,7 +795,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             return AiAnalysisResult(isSuccess = false, errorMessage = "Local-only analysis could not access the screenshot.")
         }
 
-        if (!mode.equals("DISABLED", ignoreCase = true) && file != null) {
+        if (visionCaptionTagProviderId.value.isBlank() && !mode.equals("DISABLED", ignoreCase = true) && file != null) {
             val quality = when (aiQualityPreset.value.lowercase()) {
                 "fast" -> com.amresalehin.emreshots.service.ai.VisionQualityPreset.FAST
                 "deep" -> com.amresalehin.emreshots.service.ai.VisionQualityPreset.DEEP

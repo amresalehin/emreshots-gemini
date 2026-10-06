@@ -733,16 +733,16 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     private suspend fun analyzeScreenshotInternal(
         screenshot: ScreenshotItem,
         autoWriteExif: Boolean,
-        forcedMode: com.amresalehin.emreshots.service.ai.OnDeviceVisionMode? = null
+        forcedMode: String? = null
     ): AiAnalysisResult {
-        val mode = forcedMode ?: com.amresalehin.emreshots.service.ai.OnDeviceVisionMode.fromPreference(onDeviceVisionMode.value)
+        val mode = forcedMode ?: onDeviceVisionMode.value
         val file = resolveImageFile(screenshot)
 
-        if (mode == com.amresalehin.emreshots.service.ai.OnDeviceVisionMode.FORCE_LOCAL && file == null) {
+        if (mode.equals("FORCE_LOCAL", ignoreCase = true) && file == null) {
             return AiAnalysisResult(isSuccess = false, errorMessage = "Local-only analysis could not access the screenshot.")
         }
 
-        if (mode != com.amresalehin.emreshots.service.ai.OnDeviceVisionMode.DISABLED && file != null) {
+        if (!mode.equals("DISABLED", ignoreCase = true) && file != null) {
             val quality = when (aiQualityPreset.value.lowercase()) {
                 "fast" -> com.amresalehin.emreshots.service.ai.VisionQualityPreset.FAST
                 "deep" -> com.amresalehin.emreshots.service.ai.VisionQualityPreset.DEEP
@@ -758,7 +758,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                 modePreference = mode,
                 modelPreference = onDeviceVisionModel.value
             )
-            if (local.isSuccess || mode == com.amresalehin.emreshots.service.ai.OnDeviceVisionMode.FORCE_LOCAL) {
+            if (local.isSuccess || mode.equals("FORCE_LOCAL", ignoreCase = true)) {
                 return AiAnalysisResult(
                     title = local.title,
                     description = local.description,

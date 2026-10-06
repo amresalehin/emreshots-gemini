@@ -66,7 +66,7 @@ android {
 
   defaultConfig {
     ndk { abiFilters += listOf("arm64-v8a") }
-    buildConfigField("Int", "PERL5_ASSET_VERSION", "2")
+    buildConfigField("String", "PERL5_ASSET_VERSION", "\"2\"")
   }
 
   packaging {

@@ -87,7 +87,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     val collectionRepository = CollectionRepository(database.collectionDao())
     val providerRepository = ProviderRepository(database.providerDao())
 
-    val exifManager = ExifMetadataManager()
+    val exifManager = ExifMetadataManager(application)
     val aiService = CloudAiService()
     private val localOcrService = LocalOcrService(application)
     val mediaScanner = com.amresalehin.emreshots.service.media.DeviceMediaScanner(application)

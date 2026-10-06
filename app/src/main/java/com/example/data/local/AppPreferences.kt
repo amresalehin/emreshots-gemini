@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.util.Locale
 
 private val Context.appPreferencesDataStore by preferencesDataStore(name = "app_preferences")
 
@@ -29,6 +30,7 @@ class AppPreferences(private val context: Context) {
         val showFileNames = booleanPreferencesKey("gallery_show_file_names")
         val showTags = booleanPreferencesKey("gallery_show_tags")
         val ocrLanguages = stringPreferencesKey("ocr_languages")
+        val localGgufFolders = stringPreferencesKey("local_gguf_folders")
     }
 
     val ocrEnabled: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.ocrEnabled] ?: true }

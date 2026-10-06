@@ -8,6 +8,7 @@ import android.os.Build
 import android.provider.MediaStore
 import androidx.exifinterface.media.ExifInterface
 import com.amresalehin.emreshots.data.model.ExifData
+import com.amresalehin.emreshots.service.exiftool.ExifToolMetadataService
 import com.amresalehin.emreshots.data.model.ScreenshotItem
 import java.io.File
 import java.io.FileOutputStream
@@ -15,7 +16,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class ExifMetadataManager {
+class ExifMetadataManager(private val appContext: Context? = null) {
+
+    private val exifToolService: ExifToolMetadataService? = appContext?.let { ExifToolMetadataService(it) }
 
     /**
      * Reads EXIF metadata from either a local file or a content URI,
@@ -152,7 +155,15 @@ class ExifMetadataManager {
     /**
      * Direct file write for internal or writable files.
      */
+    /** Writes with the bundled real ExifTool first; AndroidX ExifInterface remains the safety fallback. */
     fun writeExif(file: File, data: ExifData): Result<Unit> {
+        exifToolService?.let {
+            val result = it.writeFile(file, data)
+            if (result.isSuccess) return result
+        }
+        return writeExifFallback(file, data)
+    }
+    private fun writeExifFallback(file: File, data: ExifData): Result<Unit> {
         if (!file.exists() || !file.canWrite()) {
             return Result.failure(IllegalStateException("File does not exist or cannot be written: ${file.absolutePath}"))
         }
@@ -182,7 +193,15 @@ class ExifMetadataManager {
     /**
      * Direct write to a content URI (e.g. MediaStore) via FileDescriptor.
      */
+    /** Uses ExifTool against a private working copy, then writes the result back to the URI. */
     fun writeExifToUri(context: Context, uri: Uri, data: ExifData): Result<Unit> {
+        exifToolService?.let {
+            val result = it.writeUri(context, uri, data)
+            if (result.isSuccess) return result
+        }
+        return writeExifToUriFallback(context, uri, data)
+    }
+    private fun writeExifToUriFallback(context: Context, uri: Uri, data: ExifData): Result<Unit> {
         return try {
             val pfd = context.contentResolver.openFileDescriptor(uri, "rw")
                 ?: return Result.failure(IllegalStateException("Cannot open FileDescriptor for $uri"))

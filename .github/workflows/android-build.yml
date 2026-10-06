@@ -52,7 +52,7 @@ jobs:
           SOURCE_DATE_EPOCH: "1735689600"
         run: |
           set -euo pipefail
-          native/build.sh all
+          bash native/build.sh all
 
       - name: Install native runtime into Android project
         run: |

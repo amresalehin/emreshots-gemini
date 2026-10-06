@@ -40,7 +40,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,7 +48,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.platform.LocalContext
@@ -115,7 +113,6 @@ private fun VideoPlayerSurface(
     var isMuted by remember { mutableStateOf(false) }
     var isUserScrubbing by remember { mutableStateOf(false) }
     var scrubProgress by remember { mutableFloatStateOf(0f) }
-    var videoAspectRatio by remember { mutableFloatStateOf(0f) }
 
     LaunchedEffect(isPlaying, isUserScrubbing) {
         while (isPlaying && !isUserScrubbing) {
@@ -170,9 +167,6 @@ private fun VideoPlayerSurface(
                         mediaPlayerRef = mp
                         isPrepared = true
                         if (mp.duration > 0) durationMs = mp.duration
-                        if (mp.videoWidth > 0 && mp.videoHeight > 0) {
-                            videoAspectRatio = mp.videoWidth.toFloat() / mp.videoHeight.toFloat()
-                        }
                         mp.setVolume(1f, 1f)
                     }
                     setOnCompletionListener {
@@ -188,16 +182,6 @@ private fun VideoPlayerSurface(
             },
             modifier = Modifier
                 .fillMaxSize()
-                .graphicsLayer {
-                    if (videoAspectRatio > 0f && size.height > 0f) {
-                        val viewRatio = size.width / size.height
-                        if (videoAspectRatio > viewRatio) {
-                            scaleY = videoAspectRatio / viewRatio
-                        } else if (videoAspectRatio < viewRatio) {
-                            scaleX = viewRatio / videoAspectRatio
-                        }
-                    }
-                }
         )
 
         if (!isPrepared) {

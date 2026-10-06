@@ -192,7 +192,7 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
                                 CompactToggleRow(Icons.Default.AutoAwesome, "Show tags", showTags) { viewModel.setShowTags(it) }
                                 SettingsDivider()
                                 SettingsChoiceRow(
-                                    icon = Icons.Default.Storage,
+                                    icon = Icons.Default.Settings,
                                     title = "Grid density",
                                     subtitle = "Columns in the gallery",
                                     options = listOf("2", "3", "4", "5"),
@@ -512,7 +512,8 @@ private fun SettingsTabRow(selected: SettingsTab, onSelected: (SettingsTab) -> U
         }
     }
 }
-\n@Composable
+
+@Composable
 private fun SettingsOverviewCard(
     total: Int, processed: Int, pending: Int, failed: Int, progress: Float,
     providerName: String?, isProcessing: Boolean, onPrimary: () -> Unit, onOpenProcessing: (() -> Unit)?

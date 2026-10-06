@@ -1,5 +1,7 @@
 package com.amresalehin.emreshots.service.exiftool
 
+import com.amresalehin.emreshots.BuildConfig
+
 import android.content.Context
 import android.os.Build
 import android.system.Os

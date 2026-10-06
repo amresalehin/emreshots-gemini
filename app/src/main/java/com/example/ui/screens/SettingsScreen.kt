@@ -234,7 +234,6 @@ fun SettingsScreen(viewModel: ScreenshotsViewModel, onNavigateBack: (() -> Unit)
                         OutlinedButton(onClick = { viewModel.clearThumbnailCache() }, modifier = Modifier.weight(1f).testTag("btn_clear_cache")) { Text("Cache") }
                     }
                     Text("Gallery layout is controlled from View & Organize in the gallery. This keeps grid, masonry, columns, sorting, and grouping in one place.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    SegmentedChoice(listOf("2", "3", "4").map { "${it}×" }, "${gridColumns}×") { viewModel.setGridColumns(it.removeSuffix("×").toInt()) }
                 }
             }
             item {

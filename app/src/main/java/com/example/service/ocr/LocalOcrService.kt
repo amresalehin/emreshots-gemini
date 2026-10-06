@@ -29,7 +29,7 @@ class LocalOcrService(
             OcrLanguage("Arabic", "ara", "Arabic"),
             OcrLanguage("Bengali", "ben", "Bengali"),
             OcrLanguage("Portuguese", "por", "Portuguese"),
-            OcrLanguage("Russian", "rus", "Russian"),
+            OcrLanguage("Indonesian", "ind", "Indonesian"),
             OcrLanguage("Urdu", "urd", "Urdu"),
         )
         private const val TESSDATA_BASE = "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/main/"

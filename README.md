@@ -289,3 +289,5 @@ Add CONTRIBUTING.md and clear issue templates.
 
 
 Publish first release and track feedback against Shots Studio / Pixel Screenshots feature gaps.
+
+<!-- CI validation marker: gesture build verification 2026-10-06 -->

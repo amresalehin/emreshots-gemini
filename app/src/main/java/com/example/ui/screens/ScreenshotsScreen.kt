@@ -51,6 +51,7 @@ import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Collections
@@ -520,6 +521,7 @@ fun ScreenshotsScreen(
             // Gallery Grid / Feed / List with Section Grouping & Pinch-to-Change-View
             PullToRefreshBox(
                 isRefreshing = isExtractingOcr || isAnalyzing || statusText != null,
+                enabled = !isExtractingOcr && !isAnalyzing && statusText == null,
                 onRefresh = {
                     if (hasMediaPermissions) {
                         viewModel.syncDeviceMedia()

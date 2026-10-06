@@ -15,7 +15,7 @@ import org.robolectric.annotation.Config
 import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
+@Config(sdk = [35])
 class LowEndDeviceOptimizationTest {
 
     private lateinit var viewModel: ScreenshotsViewModel

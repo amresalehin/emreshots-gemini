@@ -151,7 +151,7 @@ fun ProcessingScreen(
                             Text("Last run finished. Successful results are already stored in the library.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                Spacer(Modifier.height(1.dp).weight(0f))
+                                Spacer(Modifier.width(8.dp))
                                 Text("Processing complete", fontWeight = FontWeight.SemiBold)
                             }
                         }

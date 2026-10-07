@@ -223,4 +223,6 @@
     <string name="save_to_file">Save to File</string>
     <string name="favorite">Favorite</string>
     <string name="close_viewer">Close</string>
+    <string name="auto_fill_with_ai_analysis">Auto-Fill with AI Analysis</string>
+    <string name="photo">Photo</string>
 </resources>

@@ -269,7 +269,18 @@ fun ScreenshotDetailScreen(
                             leadingIcon = { Icon(if (isEditingDetails) Icons.Default.Close else Icons.Default.Edit, contentDescription = null) },
                             onClick = {
                                 showOverflowMenu = false
-                                if (!isEditingDetails) isEditingDetails = true
+                                if (isEditingDetails) {
+                                    viewModel.updateScreenshot(
+                                        screenshot.copy(
+                                            title = editTitle.ifBlank { screenshot.title },
+                                            description = editDescription,
+                                            notes = editNotes.ifBlank { null }
+                                        )
+                                    )
+                                    isEditingDetails = false
+                                } else {
+                                    isEditingDetails = true
+                                }
                             }
                         )
                         DropdownMenuItem(

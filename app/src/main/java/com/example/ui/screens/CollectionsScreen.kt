@@ -13,8 +13,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.Delete
@@ -69,11 +72,11 @@ fun CollectionsScreen(
             )
         }
     ) { inner ->
-        Column(
+        LazyColumn(
             modifier = Modifier.fillMaxSize().navigationBarsPadding().padding(inner).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            collections.forEach { collection ->
+            items(collections, key = { it.id }) { collection ->
                 Card(
                     onClick = { onOpenCollection(collection.id) },
                     modifier = Modifier.fillMaxWidth(),
@@ -91,16 +94,23 @@ fun CollectionsScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                         IconButton(onClick = { viewModel.deleteCollection(collection.id) }) {
                             Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete) + " " + collection.name, tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
             }
-            Button(onClick = { showCreate = true }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.Add, contentDescription = null)
-                Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.create_collection))
+            item {
+                Button(onClick = { showCreate = true }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.create_collection))
+                }
             }
         }
     }

@@ -350,7 +350,7 @@ fun ProviderCard(
                     Text(
                         text = provider.lastTestStatus,
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (provider.lastTestStatus.startsWith("Connected")) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (provider.lastTestStatus.startsWith("Connected")) SuccessEmerald else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f)
                     )
                 } else {
@@ -591,7 +591,7 @@ fun ProviderEditDialog(
 
                 if (fetchStatusText != null) {
                     Surface(
-                        color = if (fetchStatusSuccess) Color(0xFF10B981).copy(alpha = 0.12f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
+                        color = if (fetchStatusSuccess) SuccessEmerald.copy(alpha = 0.12f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -602,7 +602,7 @@ fun ProviderEditDialog(
                             Icon(
                                 imageVector = if (fetchStatusSuccess) Icons.Default.CheckCircle else Icons.Default.Warning,
                                 contentDescription = null,
-                                tint = if (fetchStatusSuccess) Color(0xFF10B981) else MaterialTheme.colorScheme.error,
+                                tint = if (fetchStatusSuccess) SuccessEmerald else MaterialTheme.colorScheme.error,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))

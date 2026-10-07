@@ -263,7 +263,7 @@ fun ScreenshotCard(
                         }
                         if (showTags && screenshot.tags.isNotEmpty()) {
                             Text(
-                                text = "#\${screenshot.tags.first()}",
+                                text = "#${screenshot.tags.first()}",
                                 color = MaterialTheme.colorScheme.primaryContainer,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,

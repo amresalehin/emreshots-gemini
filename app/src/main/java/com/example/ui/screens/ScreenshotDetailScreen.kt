@@ -280,7 +280,10 @@ fun ScreenshotDetailScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         if (screenshot.reminderTime != null) {
-                            stringResource(R.string.reminder_current) + " " + SimpleDateFormat("EEE, MMM d · h:mm a", Locale.getDefault()).format(Date(screenshot.reminderTime))
+                            stringResource(
+                                R.string.reminder_scheduled_for,
+                                SimpleDateFormat("EEE, MMM d · h:mm a", Locale.getDefault()).format(Date(screenshot.reminderTime))
+                            )
                         } else {
                             stringResource(R.string.reminder_choose_time)
                         },

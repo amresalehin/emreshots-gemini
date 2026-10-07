@@ -161,13 +161,13 @@ fun ScreenshotCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.AutoAwesome,
-                                contentDescription = "AI Analyzed",
+                                contentDescription = stringResource(R.string.ai_analyzed),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(11.dp)
                             )
                             Spacer(modifier = Modifier.width(3.dp))
                             Text(
-                                text = "AI",
+                                text = stringResource(R.string.ai_label),
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
@@ -186,7 +186,7 @@ fun ScreenshotCard(
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Default.Alarm,
-                                contentDescription = "Reminder",
+                                contentDescription = stringResource(R.string.reminder),
                                 tint = Color.White,
                                 modifier = Modifier.size(11.dp)
                             )
@@ -321,7 +321,7 @@ fun ScreenshotCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Link,
-                            contentDescription = "Links",
+                            contentDescription = stringResource(R.string.links),
                             tint = Color.White,
                             modifier = Modifier.size(11.dp)
                         )

@@ -55,8 +55,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -292,12 +290,11 @@ fun ScreenshotsScreen(
                     }
 
                     Box {
-                        IconButton(onClick = { showMoreMenu = true }, modifier = Modifier.testTag("btn_more_menu")) {
-                            BadgedBox(
-                                badge = { if (!showFileNames || !showTags) Badge(modifier = Modifier.size(6.dp), containerColor = MaterialTheme.colorScheme.primary) }
-                            ) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "More options")
-                            }
+                        IconButton(
+                            onClick = { showMoreMenu = true },
+                            modifier = Modifier.testTag("btn_more_menu")
+                        ) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "More options")
                         }
                         DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
                             DropdownMenuItem(
@@ -339,6 +336,37 @@ fun ScreenshotsScreen(
                                 leadingIcon = { Icon(Icons.Default.GridView, contentDescription = null) },
                                 onClick = { showMoreMenu = false; showGroupDialog = true },
                                 modifier = Modifier.testTag("btn_group_by_option")
+                            )
+                            androidx.compose.material3.HorizontalDivider()
+                            Column(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = "View",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                )
+                                GalleryMenuChoiceRow(
+                                    options = GalleryViewMode.entries.map { it.displayName },
+                                    selected = viewMode.displayName,
+                                    onSelected = { selected ->
+                                        GalleryViewMode.entries
+                                            .firstOrNull { it.displayName == selected }
+                                            ?.let(viewModel::setViewMode)
+                                    },
+                                    twoRows = true
+                                )
+                            }
+                            GalleryMenuToggle(
+                                label = "Show file names",
+                                checked = showFileNames,
+                                onCheckedChange = viewModel::setShowFileNames
+                            )
+                            GalleryMenuToggle(
+                                label = "Show tags",
+                                checked = showTags,
+                                onCheckedChange = viewModel::setShowTags
                             )
                             androidx.compose.material3.HorizontalDivider()
                             DropdownMenuItem(
@@ -457,33 +485,7 @@ fun ScreenshotsScreen(
                  }
              }
 
-            // Explicit view mode control replaces the undocumented pinch gesture.
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("View", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-                GalleryViewMode.entries.forEach { mode ->
-                    Surface(
-                        onClick = { viewModel.setViewMode(mode) },
-                        color = if (mode == viewMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = if (mode == viewMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier
-                            .height(40.dp)
-                            .testTag("gallery_view_mode_" + mode.name.lowercase())
-                    ) {
-                        Box(modifier = Modifier.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
-                            Text(mode.displayName, style = MaterialTheme.typography.labelMedium, fontWeight = if (mode == viewMode) FontWeight.SemiBold else FontWeight.Medium)
-                        }
-                    }
-                }
-            }
-             // Compact, non-intrusive permission card (only if not granted and not dismissed)
+            // Compact, non-intrusive permission card (only if not granted and not dismissed)
             if (!hasMediaPermissions && !hidePermissionBanner) {
                 Surface(
                     color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
@@ -640,11 +642,11 @@ fun ScreenshotsScreen(
                 } else {
                     if (viewMode == GalleryViewMode.MASONRY) {
                         LazyVerticalStaggeredGrid(
-                            columns = StaggeredGridCells.Fixed(3),
+                            columns = StaggeredGridCells.Adaptive(minSize = 160.dp),
                             state = staggeredGridState,
                             contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 88.dp + navBarBottom),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalItemSpacing = 4.dp,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalItemSpacing = 8.dp,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .testTag("grid_screenshots")
@@ -978,9 +980,22 @@ private fun GalleryMenuChoiceRow(
                         color = if (option == selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                         contentColor = if (option == selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp)
+                            .testTag("gallery_view_option_" + option.lowercase())
                     ) {
-                        Text(option, textAlign = TextAlign.Center, fontSize = 11.sp, fontWeight = if (option == selected) FontWeight.Bold else FontWeight.Medium, modifier = Modifier.padding(vertical = 7.dp))
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                option,
+                                textAlign = TextAlign.Center,
+                                fontSize = 11.sp,
+                                fontWeight = if (option == selected) FontWeight.Bold else FontWeight.Medium
+                            )
+                        }
                     }
                 }
                 repeat(3 - row.size) { Spacer(modifier = Modifier.weight(1f)) }

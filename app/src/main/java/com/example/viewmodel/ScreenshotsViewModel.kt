@@ -1423,7 +1423,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                 getApplication(),
                 screenshot.id,
                 timeMs,
-                context.getString(R.string.reminder_notification_title),
+                getApplication<Application>().getString(R.string.reminder_notification_title),
                 text
             )
             _snackbarMessage.value = "Reminder scheduled!"

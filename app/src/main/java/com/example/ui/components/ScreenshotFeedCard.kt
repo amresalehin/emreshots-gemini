@@ -210,7 +210,7 @@ fun ScreenshotFeedCard(
                             Icon(
                                 imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                 contentDescription = "Favorite",
-                                tint = if (screenshot.isFavorite) Color(0xFFFF5252) else Color.White,
+                                tint = if (screenshot.isFavorite) DangerRose else MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(18.dp)
                             )
                         }

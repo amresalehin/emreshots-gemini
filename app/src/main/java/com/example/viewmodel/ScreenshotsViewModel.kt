@@ -62,6 +62,29 @@ import java.util.Locale
 import java.util.UUID
 import java.util.regex.Pattern
 
+data class IndexingState(
+    val isIndexing: Boolean = false,
+    val current: Int = 0,
+    val total: Int = 0,
+    val progress: Float = 0f,
+    val currentItemTitle: String = "",
+    val currentModel: String = "",
+    val successCount: Int = 0,
+    val failureCount: Int = 0,
+    val isCancelled: Boolean = false
+)
+
+enum class ScreenshotFilter(val displayName: String) {
+    ALL("All"),
+    PHOTOS("Photos"),
+    VIDEOS("Videos"),
+    SCREENSHOTS("Screenshots"),
+    AI_PROCESSED("AI Processed"),
+    HAS_LINKS("With Links"),
+    FAVORITES("Favorites"),
+    REMINDERS("Reminders")
+}
+
 class ScreenshotsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val database = AppDatabase.getInstance(application)

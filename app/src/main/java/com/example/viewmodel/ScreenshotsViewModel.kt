@@ -227,6 +227,8 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         secureApiKeyStore = secureApiKeyStore,
         appPreferences = appPreferences,
         aiService = aiService,
+        allScreenshots = allScreenshots,
+        collections = collections,
         providers = providers,
         ocrEnabled = ocrEnabled,
         linksDetectionEnabled = linksDetectionEnabled,

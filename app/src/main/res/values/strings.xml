@@ -225,4 +225,6 @@
     <string name="close_viewer">Close</string>
     <string name="auto_fill_with_ai_analysis">Auto-Fill with AI Analysis</string>
     <string name="photo">Photo</string>
+    <string name="gallery_search_placeholder">Search titles, notes, tags…</string>
+    <string name="settings">Settings</string>
 </resources>

@@ -20,3 +20,6 @@ debug.keystore
 # Local signing material
 *.jks
 *.keystore
+
+# Generated during build; bundled into the APK.
+app/src/main/assets/models/*.gguf

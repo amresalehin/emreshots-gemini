@@ -914,7 +914,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                     description = local.description,
                     tags = local.tags,
                     detectedLinks = local.detectedLinks,
-                    ocrText = local.ocrTextUsed,
+                    ocrText = null,
                     modelUsed = local.modelUsed,
                     processingTimeMs = local.processingTimeMs,
                     isSuccess = local.isSuccess,
@@ -943,7 +943,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                 modePreference = "FORCE_LOCAL",
                 modelPreference = localId
             )
-            return AiAnalysisResult(title = local.title, description = local.description, tags = local.tags, detectedLinks = local.detectedLinks, ocrText = local.ocrTextUsed, modelUsed = local.modelUsed, processingTimeMs = local.processingTimeMs, isSuccess = local.isSuccess, errorMessage = local.errorMessage)
+            return AiAnalysisResult(title = local.title, description = local.description, tags = local.tags, detectedLinks = local.detectedLinks, ocrText = null, modelUsed = local.modelUsed, processingTimeMs = local.processingTimeMs, isSuccess = local.isSuccess, errorMessage = local.errorMessage)
         }
 
         val provider = if (selection.startsWith("cloud:")) {
@@ -972,7 +972,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             var updatedScreenshot = screenshot.copy(
                 title = if (result.title.isNotBlank()) result.title else screenshot.title,
                 description = if (result.description.isNotBlank()) result.description else screenshot.description,
-                ocrText = if (ocrEnabled.value) result.ocrText ?: screenshot.ocrText else screenshot.ocrText,
+                ocrText = screenshot.ocrText,
                 tags = if (smartTagsEnabled.value) (screenshot.tags + result.tags).distinct() else screenshot.tags,
                 links = if (linksDetectionEnabled.value) (screenshot.links + result.detectedLinks).distinct() else screenshot.links,
                 collectionIds = newColIds,

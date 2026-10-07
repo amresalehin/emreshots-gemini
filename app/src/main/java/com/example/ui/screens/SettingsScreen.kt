@@ -376,6 +376,30 @@ fun SettingsScreen(
                         onCheckedChange = { viewModel.setLinksDetectionEnabled(it) }
                     )
                     SettingsSimpleDivider()
+                    SettingsToggleRow(
+                        icon = Icons.Default.Psychology,
+                        title = "Smart Tags",
+                        subtitle = "Keep AI-generated tags when enriching media",
+                        checked = smartTagsEnabled,
+                        onCheckedChange = { viewModel.setSmartTagsEnabled(it) }
+                    )
+                    SettingsSimpleDivider()
+                    SettingsToggleRow(
+                        icon = Icons.Default.Refresh,
+                        title = "Automatic Media Sync",
+                        subtitle = "Keep the library synchronized with device media in the background",
+                        checked = viewModel.autoSyncDeviceMedia.collectAsStateWithLifecycle().value,
+                        onCheckedChange = { viewModel.setAutoSyncDeviceMedia(it) }
+                    )
+                    SettingsSimpleDivider()
+                    SettingsToggleRow(
+                        icon = Icons.Default.CameraAlt,
+                        title = "Auto-write EXIF",
+                        subtitle = "Write successful AI metadata back to compatible image files",
+                        checked = autoWriteExifSetting,
+                        onCheckedChange = { viewModel.setAutoWriteExifSetting(it) }
+                    )
+
                     SettingsSimpleDivider()
 
                     // Backup & Restore

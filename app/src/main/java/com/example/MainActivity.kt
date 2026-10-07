@@ -133,7 +133,7 @@ class MainActivity : ComponentActivity() {
                                 viewModel = viewModel,
                                 onNavigateBack = { navController.popBackStack() },
                                 onNavigateToProviders = {
-                                    navController.navigate(Screen.CloudProvidersFromAiStudio.route)
+                                    navController.navigate(Screen.CloudProviders.route)
                                 }
                             )
                         }
@@ -142,14 +142,6 @@ class MainActivity : ComponentActivity() {
                             CloudProvidersScreen(
                                 viewModel = viewModel,
                                 onNavigateBack = { navController.popBackStack() }
-                            )
-                        }
-
-                        composable(Screen.CloudProvidersFromAiStudio.route) {
-                            CloudProvidersScreen(
-                                viewModel = viewModel,
-                                onNavigateBack = { navController.popBackStack() },
-                                onBackToAiStudio = { navController.popBackStack() }
                             )
                         }
 

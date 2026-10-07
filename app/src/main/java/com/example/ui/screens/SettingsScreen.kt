@@ -109,7 +109,6 @@ fun SettingsScreen(
     val ocrLanguage by viewModel.ocrLanguage.collectAsStateWithLifecycle()
     val installedOcrLanguages by viewModel.installedOcrLanguages.collectAsStateWithLifecycle()
     val ocrDownloadProgress by viewModel.ocrLanguageDownloadProgress.collectAsStateWithLifecycle()
-    val fixOcrArtefactsEnabled by viewModel.fixOcrArtefactsEnabled.collectAsStateWithLifecycle()
     val linksDetectionEnabled by viewModel.linksDetectionEnabled.collectAsStateWithLifecycle()
     val smartTagsEnabled by viewModel.smartTagsEnabled.collectAsStateWithLifecycle()
     val autoWriteExifSetting by viewModel.autoWriteExifSetting.collectAsStateWithLifecycle()
@@ -348,48 +347,6 @@ fun SettingsScreen(
                         onCheckedChange = { viewModel.setLinksDetectionEnabled(it) }
                     )
                     SettingsSimpleDivider()
-                    SettingsToggleRow(
-                        icon = Icons.Default.AutoAwesome,
-                        title = "Smart Keyword Tagging",
-                        subtitle = "Auto-assign tags and topics",
-                        checked = smartTagsEnabled,
-                        onCheckedChange = { viewModel.setSmartTagsEnabled(it) }
-                    )
-                    SettingsSimpleDivider()
-                    SettingsToggleRow(
-                        icon = Icons.Default.CameraAlt,
-                        title = "Write to EXIF Metadata",
-                        subtitle = "Save tags & title directly into image files",
-                        checked = autoWriteExifSetting,
-                        onCheckedChange = { viewModel.setAutoWriteExifSetting(it) }
-                    )
-                }
-            }
-
-            // Card 4: Tools, Duplicates & Backup
-            item {
-                SettingsSimpleCard(title = "Tools & Backup") {
-                    // Duplicates
-                    SettingsRow(
-                        icon = Icons.Default.ContentCopy,
-                        title = "Scan for Duplicates",
-                        subtitle = if (isScanningDuplicates) "Scanning library…"
-                        else if (duplicateGroups.isEmpty()) "Find similar or identical screenshots"
-                        else "${duplicateGroups.sumOf { it.items.size - 1 }} duplicates found",
-                        trailing = {
-                            Button(
-                                onClick = viewModel::scanDuplicates,
-                                enabled = !isScanningDuplicates && total > 0,
-                                shape = RoundedCornerShape(10.dp),
-                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
-                            ) {
-                                if (isScanningDuplicates) CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                                else Text("Scan")
-                            }
-                        },
-                        onClick = viewModel::scanDuplicates
-                    )
-
                     SettingsSimpleDivider()
 
                     // Backup & Restore

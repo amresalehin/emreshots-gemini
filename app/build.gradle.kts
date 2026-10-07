@@ -109,7 +109,6 @@ dependencies {
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.okhttp)
-  implementation(libs.mlkit.text.recognition)
   implementation("cz.adaptech.tesseract4android:tesseract4android:4.7.0")
   implementation("io.github.ljcamargo:llamacpp-kotlin:0.4.0")
   testImplementation(libs.androidx.compose.ui.test.junit4)

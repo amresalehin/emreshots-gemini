@@ -208,6 +208,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         scope = viewModelScope,
         screenshotRepository = screenshotRepository,
         collectionRepository = collectionRepository,
+        allScreenshots = allScreenshots,
         collections = collections,
         activeProvider = activeProvider,
         exifDataStore = exifDataStore,

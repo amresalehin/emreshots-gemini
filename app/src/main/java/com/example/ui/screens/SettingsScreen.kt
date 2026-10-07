@@ -119,6 +119,7 @@ fun SettingsScreen(
     val aiQualityPreset by viewModel.aiQualityPreset.collectAsStateWithLifecycle()
     val onDeviceVisionMode by viewModel.onDeviceVisionMode.collectAsStateWithLifecycle()
     val onDeviceVisionModel by viewModel.onDeviceVisionModel.collectAsStateWithLifecycle()
+    val autoSyncDeviceMedia by viewModel.autoSyncDeviceMedia.collectAsStateWithLifecycle()
     val lastBackupInfo by viewModel.lastBackupInfo.collectAsStateWithLifecycle()
 
     var showEditDialog by remember { mutableStateOf(false) }
@@ -388,7 +389,7 @@ fun SettingsScreen(
                         icon = Icons.Default.Refresh,
                         title = "Automatic Media Sync",
                         subtitle = "Keep the library synchronized with device media in the background",
-                        checked = viewModel.autoSyncDeviceMedia.collectAsStateWithLifecycle().value,
+                        checked = autoSyncDeviceMedia,
                         onCheckedChange = { viewModel.setAutoSyncDeviceMedia(it) }
                     )
                     SettingsSimpleDivider()

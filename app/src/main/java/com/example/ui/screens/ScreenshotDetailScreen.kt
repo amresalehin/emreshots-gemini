@@ -391,7 +391,7 @@ fun ScreenshotDetailScreen(
                                 text = { Text(if (isEditingDetails) stringResource(R.string.finish_editing) else stringResource(R.string.edit_details)) },
                                 leadingIcon = {
                                     Icon(
-                                        if (isEditingDetails) Icons.Default.Close else Icons.Default.Edit,
+                                        if (isEditingDetails) Icons.Default.Check else Icons.Default.Edit,
                                         contentDescription = null
                                     )
                                 },

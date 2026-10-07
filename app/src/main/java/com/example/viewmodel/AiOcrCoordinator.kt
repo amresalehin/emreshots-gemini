@@ -2,6 +2,7 @@ package com.amresalehin.emreshots.viewmodel
 
 import android.app.Application
 import android.net.Uri
+import com.amresalehin.emreshots.R
 import com.amresalehin.emreshots.data.model.CollectionItem
 import com.amresalehin.emreshots.data.model.CustomCloudProvider
 import com.amresalehin.emreshots.data.model.ExifData
@@ -349,7 +350,7 @@ class AiOcrCoordinator(
     fun extractOcr(screenshot: ScreenshotItem, onComplete: ((String?) -> Unit)? = null) {
         scope.launch(Dispatchers.IO) {
             _isExtractingOcr.value = true
-            val langLabel = TessLanguage.findByCode(_ocrLanguage.value).englishName
+            val langLabel = TessLanguage.findByCode(ocrLanguage.value).englishName
             val engineLabel = "Tesseract ($langLabel)"
             _ocrStatusText.value = "Extracting text using $engineLabel…"
 
@@ -404,7 +405,7 @@ class AiOcrCoordinator(
      */
     fun batchExtractOcr(items: List<ScreenshotItem>, onlyMissing: Boolean = true) {
         if (isExtractingOcr.value) return
-        if (!_ocrEnabled.value) {
+        if (!ocrEnabled.value) {
             _snackbarMessage.value = "OCR is disabled in Settings. Enable it to run text extraction."
             return
         }
@@ -509,7 +510,7 @@ class AiOcrCoordinator(
             return
         }
 
-        val allItems = targetScreenshots ?: allScreenshots.value
+        val allItems = targetScreenshots ?: screenshotRepository.getAllScreenshotsSync()
         val items = if (onlyUnindexed) allItems.filter { !it.aiProcessed } else allItems
 
         if (items.isEmpty()) {
@@ -618,7 +619,7 @@ class AiOcrCoordinator(
     }
 
     fun retryFailedItems(autoWriteExif: Boolean = autoWriteExifSetting.value) {
-        val failedItems = allScreenshots.value.filter { it.id in _lastFailedScreenshotIds.value }
+        val failedItems = screenshotRepository.getAllScreenshotsSync().filter { it.id in _lastFailedScreenshotIds.value }
         if (failedItems.isEmpty()) {
             _snackbarMessage.value = application.getString(R.string.no_failed_items_to_retry)
             return

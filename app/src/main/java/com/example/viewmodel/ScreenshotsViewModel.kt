@@ -62,35 +62,6 @@ import java.util.Locale
 import java.util.UUID
 import java.util.regex.Pattern
 
-data class AiOcrModelOption(
-    val providerId: String,
-    val providerName: String,
-    val modelName: String
-)
-
-data class IndexingState(
-    val isIndexing: Boolean = false,
-    val current: Int = 0,
-    val total: Int = 0,
-    val progress: Float = 0f,
-    val currentItemTitle: String = "",
-    val currentModel: String = "",
-    val successCount: Int = 0,
-    val failureCount: Int = 0,
-    val isCancelled: Boolean = false
-)
-
-enum class ScreenshotFilter(val displayName: String) {
-    ALL("All"),
-    PHOTOS("Photos"),
-    VIDEOS("Videos"),
-    SCREENSHOTS("Screenshots"),
-    AI_PROCESSED("AI Processed"),
-    HAS_LINKS("With Links"),
-    FAVORITES("Favorites"),
-    REMINDERS("Reminders")
-}
-
 class ScreenshotsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val database = AppDatabase.getInstance(application)
@@ -186,10 +157,6 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     private val _onDeviceVisionMode = MutableStateFlow("Automatic")
     val onDeviceVisionMode: StateFlow<String> = _onDeviceVisionMode.asStateFlow()
     private val _onDeviceVisionModel = MutableStateFlow("auto")
-    private val _ocrAiProviderId = MutableStateFlow("")
-    val ocrAiProviderId: StateFlow<String> = _ocrAiProviderId.asStateFlow()
-    private val _ocrEnrichmentProviderId = MutableStateFlow("")
-    val ocrEnrichmentProviderId: StateFlow<String> = _ocrEnrichmentProviderId.asStateFlow()
     private val _visionCaptionTagProviderId = MutableStateFlow("")
     val visionCaptionTagProviderId: StateFlow<String> = _visionCaptionTagProviderId.asStateFlow()
     val onDeviceVisionModel: StateFlow<String> = _onDeviceVisionModel.asStateFlow()
@@ -202,13 +169,6 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     val showFileNames: StateFlow<Boolean> = _showFileNames.asStateFlow()
     private val _showTags = MutableStateFlow(true)
     val showTags: StateFlow<Boolean> = _showTags.asStateFlow()
-
-    val aiOcrModelOptions: StateFlow<List<AiOcrModelOption>> = providers
-        .map { list ->
-            list.filter { it.apiKey.isNotBlank() && it.selectedModel.isNotBlank() }
-                .map { AiOcrModelOption(it.id, it.name, it.selectedModel) }
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _gridColumns = MutableStateFlow(3)
     val gridColumns: StateFlow<Int> = _gridColumns.asStateFlow()
@@ -225,9 +185,6 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     val isDownloadingLocalOcrLlm: StateFlow<Boolean> = localOcrLlmManager.isDownloading
     val localOcrLlmDownloadProgress: StateFlow<Float> = localOcrLlmManager.downloadProgress
 
-    private val _ocrEngine = MutableStateFlow("tesseract")
-    val ocrEngine: StateFlow<String> = _ocrEngine.asStateFlow()
-
     private val _ocrLanguage = MutableStateFlow("eng")
     val ocrLanguage: StateFlow<String> = _ocrLanguage.asStateFlow()
 
@@ -242,11 +199,6 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     private val _ocrLanguageDownloadProgress = MutableStateFlow<Map<String, Float>>(emptyMap())
     val ocrLanguageDownloadProgress: StateFlow<Map<String, Float>> = _ocrLanguageDownloadProgress.asStateFlow()
-
-    fun setOcrEngine(engine: String) {
-        _ocrEngine.value = engine
-        viewModelScope.launch { appPreferences.setOcrEngine(engine) }
-    }
 
     fun setOcrLanguage(language: String) {
         _ocrLanguage.value = language
@@ -426,15 +378,6 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch { appPreferences.setOnDeviceVisionModel(value) }
     }
 
-    fun setOcrAiProviderId(value: String) {
-        _ocrAiProviderId.value = value
-        viewModelScope.launch { appPreferences.setOcrAiProviderId(value) }
-    }
-    fun setOcrEnrichmentProviderId(value: String) {
-        _ocrEnrichmentProviderId.value = value
-        _ocrAiProviderId.value = value
-        viewModelScope.launch { appPreferences.setOcrEnrichmentProviderId(value); appPreferences.setOcrAiProviderId(value) }
-    }
     fun setVisionCaptionTagProviderId(value: String) {
         _visionCaptionTagProviderId.value = value
         viewModelScope.launch { appPreferences.setVisionCaptionTagProviderId(value) }
@@ -1173,12 +1116,12 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch(Dispatchers.IO) {
             _isExtractingOcr.value = true
             val langLabel = TessLanguage.findByCode(_ocrLanguage.value).englishName
-            val engineLabel = if (_ocrEngine.value == "tesseract") "Tesseract ($langLabel)" else "ML Kit"
+            val engineLabel = "Tesseract ($langLabel)"
             _ocrStatusText.value = "Extracting text using $engineLabel…"
 
             val file = resolveImageFile(screenshot)
             val result = if (file != null) {
-                localOcrService.recognize(file, engine = _ocrEngine.value, languageCode = _ocrLanguage.value)
+                localOcrService.recognize(file, languageCode = _ocrLanguage.value)
             } else {
                 Result.failure(IllegalArgumentException("Screenshot image is not accessible."))
             }
@@ -1242,14 +1185,14 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             var completed = 0
             var failed = 0
             val langLabel = TessLanguage.findByCode(_ocrLanguage.value).englishName
-            val engineLabel = if (_ocrEngine.value == "tesseract") "Tesseract ($langLabel)" else "ML Kit"
+            val engineLabel = "Tesseract ($langLabel)"
             try {
                 targets.forEachIndexed { index, item ->
                     if (!isActive) return@forEachIndexed
                     _ocrStatusText.value = "$engineLabel (" + (index + 1) + "/" + targets.size + "): " + item.title.ifBlank { "Image " + (index + 1) }
                     val file = resolveImageFile(item)
                     val result = if (file != null) {
-                        localOcrService.recognize(file, engine = _ocrEngine.value, languageCode = _ocrLanguage.value)
+                        localOcrService.recognize(file, languageCode = _ocrLanguage.value)
                     } else {
                         Result.failure(IllegalArgumentException("Image is not accessible."))
                     }
@@ -1284,134 +1227,6 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun sendOcrToAi(
-        screenshot: ScreenshotItem,
-        ocrText: String,
-        writeToMetadata: Boolean = false,
-        onComplete: ((AiAnalysisResult) -> Unit)? = null
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val selection = ocrEnrichmentProviderId.value.ifBlank { ocrAiProviderId.value }
-            _isAnalyzing.value = true
-            val cloudId = selection.removePrefix("cloud:").removePrefix("local:")
-            val provider = if (selection.startsWith("cloud:")) providers.value.firstOrNull { it.id == cloudId && it.apiKey.isNotBlank() } else activeProvider.value
-            if (provider == null) {
-                _isAnalyzing.value = false
-                _analysisStatusText.value = null
-                _snackbarMessage.value = "No OCR enrichment provider configured. Set up an AI provider in Settings."
-                onComplete?.invoke(AiAnalysisResult(isSuccess = false, errorMessage = "No OCR enrichment provider configured."))
-                return@launch
-            }
-            _analysisStatusText.value = "Processing OCR text with " + provider.selectedModel + "…"
-            val result = enrichOcrWithProvider(screenshot, ocrText, provider, writeToMetadata)
-            _isAnalyzing.value = false
-            _analysisStatusText.value = null
-            _snackbarMessage.value = if (result.isSuccess) {
-                if (writeToMetadata) "OCR analyzed & written to EXIF metadata!" else "OCR enriched successfully with AI!"
-            } else {
-                "Failed to analyze OCR: " + (result.errorMessage ?: "Unknown error")
-            }
-            onComplete?.invoke(result)
-        }
-    }
-
-    fun batchAiOcrEnrichment(
-        screenshots: List<ScreenshotItem>,
-        providerId: String,
-        onlyUnenriched: Boolean = true
-    ) {
-        if (_isAnalyzing.value) return
-        val provider = providers.value.firstOrNull { it.id == providerId && it.apiKey.isNotBlank() }
-        if (provider == null) {
-            _snackbarMessage.value = "Choose a configured AI OCR model first."
-            return
-        }
-        val targets = screenshots.filter {
-            !it.isVideo && it.ocrText.orEmpty().isNotBlank() &&
-                (!onlyUnenriched || !it.aiProcessed)
-        }
-        if (targets.isEmpty()) {
-            _snackbarMessage.value = "No OCR text is waiting for AI enrichment."
-            return
-        }
-        viewModelScope.launch(Dispatchers.IO) {
-            _isAnalyzing.value = true
-            var completed = 0
-            var failed = 0
-            try {
-                targets.forEachIndexed { index, item ->
-                    if (!isActive) return@forEachIndexed
-                    _analysisStatusText.value = "AI OCR enrichment (" + (index + 1) + "/" + targets.size + ") · " + provider.selectedModel
-                    val result = enrichOcrWithProvider(item, item.ocrText.orEmpty(), provider, false)
-                    if (result.isSuccess) completed++ else failed++
-                }
-            } finally {
-                _isAnalyzing.value = false
-                _analysisStatusText.value = null
-            }
-            _snackbarMessage.value = "AI OCR enrichment complete: " + completed + " processed" +
-                if (failed > 0) ", " + failed + " failed." else "."
-        }
-    }
-
-    private suspend fun enrichOcrWithProvider(
-        screenshot: ScreenshotItem,
-        ocrText: String,
-        provider: CustomCloudProvider,
-        writeToMetadata: Boolean
-    ): AiAnalysisResult {
-        val metadataContext = buildString {
-            appendLine("Title: " + screenshot.title)
-            appendLine("Description: " + screenshot.description)
-            appendLine("Tags: " + screenshot.tags.joinToString(", "))
-            appendLine("Links: " + screenshot.links.joinToString(", "))
-            appendLine("Media type: " + screenshot.mediaType)
-        }
-        val result = aiService.sendOcrToAi(
-            ocrText = ocrText,
-            provider = provider,
-            geminiApiKey = provider.apiKey,
-            metadataContext = metadataContext,
-        )
-        if (!result.isSuccess) return result
-        val matchedCol = collections.value.find {
-            it.name.equals(result.suggestedCollection, ignoreCase = true)
-        }
-        val newColIds = if (matchedCol != null && !screenshot.collectionIds.contains(matchedCol.id)) {
-            screenshot.collectionIds + matchedCol.id
-        } else {
-            screenshot.collectionIds
-        }
-        var updated = screenshot.copy(
-            title = if (result.title.isNotBlank()) result.title else screenshot.title,
-            description = if (result.description.isNotBlank()) result.description else screenshot.description,
-            ocrText = result.ocrText?.takeIf { it.isNotBlank() } ?: ocrText,
-            tags = (screenshot.tags + result.tags).distinct(),
-            links = (screenshot.links + result.detectedLinks).distinct(),
-            collectionIds = newColIds,
-            aiProcessed = true,
-            aiModelUsed = result.modelUsed,
-        )
-        if (writeToMetadata) {
-            val aiExifResult = exifManager.applyAiMetadataToExifSafe(
-                context = getApplication(),
-                screenshot = updated,
-                title = updated.title,
-                description = "OCR Summary: " + updated.description,
-                tags = updated.tags,
-                modelName = result.modelUsed,
-            )
-            if (aiExifResult.isSuccess) {
-                val (savedFile, exif) = aiExifResult.getOrThrow()
-                updated = updated.copy(filePath = savedFile.absolutePath)
-                val current = _exifDataState.value.toMutableMap()
-                current[screenshot.id] = exif
-                _exifDataState.value = current
-            }
-        }
-        screenshotRepository.update(updated)
-        return result
-    }
     fun writeOcrAndAiToMetadata(
         screenshot: ScreenshotItem,
         ocrText: String,

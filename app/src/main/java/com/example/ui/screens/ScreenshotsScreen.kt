@@ -887,16 +887,6 @@ fun ScreenshotsScreen(
                     },
                     modifier = Modifier.testTag("btn_home_ocr")
                 )
-                        }
-                    },
-                    leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
-                    trailingIcon = { if (aiOcrEligibleCount > 0) Text("$aiOcrEligibleCount") },
-                    enabled = !isAnalyzing && aiOcrEligibleCount > 0,
-                    onClick = {
-                        showProcessingMenu = false
-                        showAiOcrDialog = true
-                    }
-                )
             }
 
             FloatingActionButton(

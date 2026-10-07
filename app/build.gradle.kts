@@ -4,6 +4,58 @@ plugins {
   alias(libs.plugins.google.devtools.ksp)
 }
 
+val bundledOcrModelName = "SmolLM2-135M-Instruct-Q2_K.gguf"
+val bundledOcrModelUrl = "https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q2_K.gguf"
+val bundledOcrModelSha256 = "741ad12b64088fedc17c33aacb22e48be1972ef36a39f03666dd68bd15614fb9"
+val bundledOcrModelFile = layout.projectDirectory.file("src/main/assets/models/$bundledOcrModelName").asFile
+
+fun sha256(file: java.io.File): String {
+  val digest = MessageDigest.getInstance("SHA-256")
+  file.inputStream().use { input ->
+    val buffer = ByteArray(1024 * 1024)
+    var read: Int
+    while (input.read(buffer).also { read = it } != -1) digest.update(buffer, 0, read)
+  }
+  return digest.digest().joinToString("") { "%02x".format(it) }
+}
+
+tasks.register("prepareBundledLocalOcrModel") {
+  outputs.file(bundledOcrModelFile)
+  doLast {
+    bundledOcrModelFile.parentFile.mkdirs()
+    if (bundledOcrModelFile.isFile && bundledOcrModelFile.length() > 80L * 1024L * 1024L && sha256(bundledOcrModelFile).equals(bundledOcrModelSha256, ignoreCase = true)) {
+      logger.lifecycle("Bundled local OCR LLM already present and verified.")
+      return@doLast
+    }
+    val tempFile = java.io.File(bundledOcrModelFile.parentFile, "$bundledOcrModelName.download")
+    if (tempFile.exists()) tempFile.delete()
+    logger.lifecycle("Downloading $bundledOcrModelName (~88 MB) for offline OCR cleanup…")
+    val connection = (URL(bundledOcrModelUrl).openConnection() as HttpURLConnection).apply {
+      connectTimeout = 30_000
+      readTimeout = 10 * 60_000
+      instanceFollowRedirects = true
+      requestMethod = "GET"
+      setRequestProperty("User-Agent", "EmreShots-Android-Build")
+    }
+    try {
+      check(connection.responseCode in 200..299) { "Failed to download bundled OCR model: HTTP ${connection.responseCode}" }
+      connection.inputStream.use { input ->
+        FileOutputStream(tempFile).use { output ->
+          val buffer = ByteArray(1024 * 1024)
+          var read: Int
+          while (input.read(buffer).also { read = it } != -1) output.write(buffer, 0, read)
+        }
+      }
+    } finally { connection.disconnect() }
+    check(tempFile.isFile && tempFile.length() > 80L * 1024L * 1024L) { "Downloaded OCR model is unexpectedly small." }
+    check(sha256(tempFile).equals(bundledOcrModelSha256, ignoreCase = true)) { "Bundled OCR model SHA-256 mismatch." }
+    if (bundledOcrModelFile.exists()) bundledOcrModelFile.delete()
+    check(tempFile.renameTo(bundledOcrModelFile)) { "Could not install verified OCR model into assets." }
+  }
+}
+
+tasks.named("preBuild").configure { dependsOn("prepareBundledLocalOcrModel") }
+
 android {
   namespace = "com.amresalehin.emreshots"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
@@ -29,12 +81,6 @@ android {
       file(releaseKeystorePath!!).exists()
 
   signingConfigs {
-    create("debugConfig") {
-      storeFile = file("${rootDir}/debug.keystore")
-      storePassword = "android"
-      keyAlias = "androiddebugkey"
-      keyPassword = "android"
-    }
     if (hasReleaseSigning) {
       create("release") {
         storeFile = file(releaseKeystorePath!!)
@@ -46,9 +92,7 @@ android {
   }
 
   buildTypes {
-    debug {
-      signingConfig = signingConfigs.getByName("debugConfig")
-    }
+    debug { }
     release {
       isCrunchPngs = false
       isMinifyEnabled = false
@@ -58,7 +102,7 @@ android {
       } else {
         // CI/local smoke builds must still produce an installable APK.
         // Production distribution should provide KEYSTORE_PATH + credentials.
-        signingConfig = signingConfigs.getByName("debugConfig")
+        signingConfig = signingConfigs.getByName("debug")
       }
     }
   }

@@ -44,6 +44,7 @@ class AiOcrCoordinator(
     private val visionCaptionTagProviderId: StateFlow<String>,
     private val ocrLanguage: StateFlow<String>,
     private val autoWriteExifSetting: StateFlow<Boolean>,
+    private val exifDataStore: MutableStateFlow<Map<String, ExifData>>,
     private val exifManager: ExifMetadataManager,
     private val aiService: CloudAiService,
     private val localOcrService: LocalOcrService,
@@ -61,8 +62,7 @@ class AiOcrCoordinator(
     private val _indexingState = MutableStateFlow(IndexingState())
     val indexingState: StateFlow<IndexingState> = _indexingState.asStateFlow()
     private var indexingJob: Job? = null
-    private val _exifDataState = MutableStateFlow<Map<String, ExifData>>(emptyMap())
-    val exifDataState: StateFlow<Map<String, ExifData>> = _exifDataState.asStateFlow()
+    val exifDataState: StateFlow<Map<String, ExifData>> = exifDataStore.asStateFlow()
     private val _isExtractingOcr = MutableStateFlow(false)
     val isExtractingOcr: StateFlow<Boolean> = _isExtractingOcr.asStateFlow()
     private val _ocrStatusText = MutableStateFlow<String?>(null)
@@ -252,9 +252,9 @@ class AiOcrCoordinator(
                 if (aiExifResult.isSuccess) {
                     val (savedFile, exif) = aiExifResult.getOrThrow()
                     updatedScreenshot = updatedScreenshot.copy(filePath = savedFile.absolutePath)
-                    val current = _exifDataState.value.toMutableMap()
+                    val current = exifDataStore.value.toMutableMap()
                     current[screenshot.id] = exif
-                    _exifDataState.value = current
+                    exifDataStore.value = current
                 }
             }
 
@@ -480,9 +480,9 @@ class AiOcrCoordinator(
                 screenshotRepository.update(updatedScreenshot)
 
                 val newExif = exifManager.readExif(application, updatedScreenshot)
-                val current = _exifDataState.value.toMutableMap()
+                val current = exifDataStore.value.toMutableMap()
                 current[screenshot.id] = newExif
-                _exifDataState.value = current
+                exifDataStore.value = current
 
                 _snackbarMessage.value = "OCR and AI insights written directly into image EXIF metadata!"
             } else {

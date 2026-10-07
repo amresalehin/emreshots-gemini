@@ -1,3 +1,23 @@
 <resources>
     <string name="app_name">EmreShots</string>
+    <string name="gallery_search_placeholder">Search media…</string>
+    <string name="clear_search">Clear search</string>
+    <string name="close_search">Close search</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="processing_ai_analysis">Media analysis</string>
+    <string name="ai_analysis">AI analysis</string>
+    <string name="processing_complete">Processing complete</string>
+    <string name="process_pending">Process pending</string>
+    <string name="retry_failed">Retry failed</string>
+    <string name="retry_failed_description">Retry only media that failed during the last analysis run.</string>
+    <string name="cancel">Cancel</string>
+    <string name="memory_cache_cleared">Memory cache cleared.</string>
+    <string name="add_to_favorites">Add to favorites</string>
+    <string name="remove_from_favorites">Remove from favorites</string>
+    <string name="remove_tag">Remove tag</string>
+    <string name="close">Close</string>
+    <string name="clear_gps">Clear GPS</string>
+    <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
+    <string name="no_failed_items_to_retry">There are no failed media items to retry.</string>
 </resources>

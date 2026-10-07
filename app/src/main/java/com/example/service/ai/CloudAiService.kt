@@ -911,9 +911,8 @@ Return ONLY a valid JSON object with the following fields:
 {
   "title": "A concise, informative title (3-6 words)",
   "description": "Clear 1-2 sentence description explaining what is shown, context, and key takeaway",
-  "ocrText": "Verbatim transcript of any readable text, labels, numbers, or code in the image",
   "tags": ["relevant", "searchable", "keywords"],
-  "links": ["any phone numbers, URLs, addresses detected in text"],
+  "links": ["relevant URLs, phone numbers, or addresses visible in the image"],
   "suggestedCollection": "One matching category from: Work & Receipts, Code & Dev, Design Inspiration, Travel & Tickets, Social & Chat, or Personal",
   "exifUserComment": "Compact summary string suitable for embedding directly into EXIF UserComment header"
 }

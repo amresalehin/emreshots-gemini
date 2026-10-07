@@ -99,7 +99,9 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     viewModel: ScreenshotsViewModel,
     onNavigateBack: (() -> Unit)? = null,
-    onOpenProcessing: (() -> Unit)? = null
+    onOpenProcessing: (() -> Unit)? = null,
+    onOpenAiStudio: (() -> Unit)? = null,
+    onOpenProviders: (() -> Unit)? = null
 ) {
     val allScreenshots by viewModel.allScreenshots.collectAsStateWithLifecycle()
     val activeProvider by viewModel.activeProvider.collectAsStateWithLifecycle()
@@ -204,6 +206,41 @@ fun SettingsScreen(
             contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            // Workspace destinations: keep Settings as an index instead of a kitchen-sink destination.
+            item {
+                SettingsSimpleCard(title = "Workspace") {
+                    SettingsRow(
+                        icon = Icons.Default.AutoAwesome,
+                        title = "AI Studio",
+                        subtitle = "Run batch vision analysis and review AI results",
+                        trailing = {
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        },
+                        onClick = { onOpenAiStudio?.invoke() }
+                    )
+                    SettingsSimpleDivider()
+                    SettingsRow(
+                        icon = Icons.Default.CloudDone,
+                        title = "Cloud Providers",
+                        subtitle = "Configure endpoints, models, and connection tests",
+                        trailing = {
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        },
+                        onClick = { onOpenProviders?.invoke() }
+                    )
+                    SettingsSimpleDivider()
+                    SettingsRow(
+                        icon = Icons.Default.Refresh,
+                        title = "Library Processing",
+                        subtitle = "Process pending media and retry failed items",
+                        trailing = {
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        },
+                        onClick = { onOpenProcessing?.invoke() }
+                    )
+                }
+            }
+
             // Card 1: Cloud AI & Quality
             item {
                 SettingsSimpleCard(title = "Cloud AI Provider") {
@@ -430,15 +467,21 @@ fun SettingsScreen(
                     showRestoreModeDialog = false
                     pendingRestoreUri = null
                     if (uri != null) viewModel.restoreFromUri(uri, RestoreMode.MERGE)
-                }) { Text("Merge") }
+                }) { Text("Merge backup") }
             },
             dismissButton = {
-                OutlinedButton(onClick = {
-                    val uri = pendingRestoreUri
-                    showRestoreModeDialog = false
-                    pendingRestoreUri = null
-                    if (uri != null) viewModel.restoreFromUri(uri, RestoreMode.REPLACE)
-                }) { Text("Replace") }
+                Button(
+                    onClick = {
+                        val uri = pendingRestoreUri
+                        showRestoreModeDialog = false
+                        pendingRestoreUri = null
+                        if (uri != null) viewModel.restoreFromUri(uri, RestoreMode.REPLACE)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                ) { Text("Replace all") }
             }
         )
     }

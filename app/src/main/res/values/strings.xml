@@ -98,6 +98,9 @@
     <string name="on_device_vision">On-Device Vision</string>
     <string name="inference_mode">Inference Mode</string>
     <string name="inference_mode_description">Choose when local GGUF models may run.</string>
+    <string name="on_device_mode_automatic">Automatic</string>
+    <string name="on_device_mode_force_local">Force local</string>
+    <string name="on_device_mode_disabled">Disabled</string>
     <string name="custom_gguf_model">Custom GGUF Model</string>
     <string name="custom_gguf_model_description">Import a local vision model.</string>
     <string name="import">Import</string>

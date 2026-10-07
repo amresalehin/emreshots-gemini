@@ -157,8 +157,6 @@ fun ScreenshotDetailScreen(
     val coroutineScope = rememberCoroutineScope()
     val isExtractingOcr by viewModel.isExtractingOcr.collectAsStateWithLifecycle()
     val isFixingArtefacts by viewModel.isFixingArtefacts.collectAsStateWithLifecycle()
-    val aiOcrModelOptions by viewModel.aiOcrModelOptions.collectAsStateWithLifecycle()
-    val ocrEnrichmentProviderId by viewModel.ocrEnrichmentProviderId.collectAsStateWithLifecycle()
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
     val detailScrollState = rememberScrollState()
@@ -844,14 +842,8 @@ fun ScreenshotDetailScreen(
             isExtractingOcr = isExtractingOcr,
             isAiProcessing = isAnalyzing,
             isFixingArtefacts = isFixingArtefacts,
-            aiOcrModelOptions = aiOcrModelOptions,
-            selectedOcrProviderId = ocrEnrichmentProviderId,
-            onSelectOcrProvider = viewModel::setOcrEnrichmentProviderId,
             onExtractOcr = { onText -> viewModel.extractOcr(screenshot) { fixed -> if (!fixed.isNullOrBlank()) onText(fixed) } },
             onFixOcrArtefacts = { _, callback -> viewModel.fixScreenshotOcrArtefacts(screenshot) { callback(it) } },
-            onSendOcrToAi = { text, writeMetadata ->
-                viewModel.sendOcrToAi(screenshot, text, writeMetadata)
-            },
             onWriteToMetadata = { text, title, desc, tags ->
                 viewModel.writeOcrAndAiToMetadata(screenshot, text, title, desc, tags)
             },

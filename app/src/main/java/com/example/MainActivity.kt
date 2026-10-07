@@ -95,6 +95,7 @@ class MainActivity : ComponentActivity() {
                         composable(Screen.AiStudio.route) {
                             AiStudioScreen(
                                 viewModel = viewModel,
+                                onNavigateBack = { navController.popBackStack() },
                                 onNavigateToProviders = {
                                     navController.navigate(Screen.CloudProviders.route)
                                 }

@@ -32,7 +32,7 @@ class GalleryOrganizeTest {
     fun testViewModeOptions() {
         assertEquals(GalleryViewMode.GRID, viewModel.viewMode.value)
         viewModel.setViewMode(GalleryViewMode.MASONRY)
-        assertEquals(GalleryViewMode.GRID, viewModel.viewMode.value)
+        assertEquals(GalleryViewMode.MASONRY, viewModel.viewMode.value)
         viewModel.setViewMode(GalleryViewMode.FEED)
         assertEquals(GalleryViewMode.FEED, viewModel.viewMode.value)
         viewModel.setViewMode(GalleryViewMode.LIST)

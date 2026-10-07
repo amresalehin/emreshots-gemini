@@ -1,3 +1,8 @@
+plugins {
+  alias(libs.plugins.android.application)
+  alias(libs.plugins.kotlin.compose)
+  alias(libs.plugins.google.devtools.ksp)
+}
 android {
   namespace = "com.amresalehin.emreshots"
   compileSdk { version = release(36) { minorApiLevel = 1 } }

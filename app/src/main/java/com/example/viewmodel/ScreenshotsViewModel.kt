@@ -188,12 +188,6 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     private val _ocrLanguage = MutableStateFlow("eng")
     val ocrLanguage: StateFlow<String> = _ocrLanguage.asStateFlow()
 
-    private val _fixOcrArtefactsEnabled = MutableStateFlow(true)
-    val fixOcrArtefactsEnabled: StateFlow<Boolean> = _fixOcrArtefactsEnabled.asStateFlow()
-
-    private val _isFixingArtefacts = MutableStateFlow(false)
-    val isFixingArtefacts: StateFlow<Boolean> = _isFixingArtefacts.asStateFlow()
-
     private val _installedOcrLanguages = MutableStateFlow<List<String>>(emptyList())
     val installedOcrLanguages: StateFlow<List<String>> = _installedOcrLanguages.asStateFlow()
 
@@ -203,11 +197,6 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     fun setOcrLanguage(language: String) {
         _ocrLanguage.value = language
         viewModelScope.launch { appPreferences.setOcrLanguage(language) }
-    }
-
-    fun setFixOcrArtefactsEnabled(enabled: Boolean) {
-        _fixOcrArtefactsEnabled.value = enabled
-        viewModelScope.launch { appPreferences.setFixOcrArtefactsEnabled(enabled) }
     }
 
     fun downloadLocalOcrLlm() {
@@ -246,51 +235,6 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                     aiModelUsed = "Local LLM"
                 )
             )
-        }
-    }
-
-    fun fixOcrArtefacts(rawText: String, onComplete: (String) -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) {
-            _isFixingArtefacts.value = true
-            _ocrStatusText.value = "Processing with Local AI (PixelShot)…"
-            val aiResult = ocrArtefactLlmFixer.processOcrWithLocalAi(rawText)
-            _isFixingArtefacts.value = false
-            _ocrStatusText.value = null
-            withContext(Dispatchers.Main) {
-                onComplete(aiResult.fixedOcrText)
-            }
-        }
-    }
-
-    fun fixScreenshotOcrArtefacts(screenshot: ScreenshotItem, onComplete: ((String) -> Unit)? = null) {
-        val raw = screenshot.ocrText.orEmpty()
-        if (raw.isBlank()) return
-        viewModelScope.launch(Dispatchers.IO) {
-            _isFixingArtefacts.value = true
-            _ocrStatusText.value = "Processing with Local AI (PixelShot)…"
-            val aiResult = ocrArtefactLlmFixer.processOcrWithLocalAi(raw)
-            val mergedTags = (screenshot.tags + aiResult.tags).distinct().filter { it.isNotBlank() }
-            val mergedLinks = (screenshot.links + aiResult.detectedLinks).distinct().filter { it.isNotBlank() }
-            val newTitle = if (screenshot.title.isBlank() || screenshot.title.startsWith("Screenshot_") || screenshot.title.startsWith("IMG_")) {
-                aiResult.title ?: screenshot.title
-            } else screenshot.title
-
-            val updated = screenshot.copy(
-                ocrText = aiResult.fixedOcrText,
-                tags = mergedTags,
-                links = mergedLinks,
-                title = newTitle,
-                aiProcessed = true,
-                aiModelUsed = "Local LLM"
-            )
-            screenshotRepository.update(updated)
-
-            _isFixingArtefacts.value = false
-            _ocrStatusText.value = null
-            _snackbarMessage.value = "Local AI: OCR fixed & ${aiResult.tags.size} tags assigned."
-            withContext(Dispatchers.Main) {
-                onComplete?.invoke(aiResult.fixedOcrText)
-            }
         }
     }
 
@@ -564,7 +508,6 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
         viewModelScope.launch { appPreferences.ocrEnabled.collect { _ocrEnabled.value = it } }
         viewModelScope.launch { appPreferences.ocrLanguage.collect { _ocrLanguage.value = it } }
-        viewModelScope.launch { appPreferences.fixOcrArtefactsEnabled.collect { _fixOcrArtefactsEnabled.value = it } }
         refreshInstalledOcrLanguages()
         viewModelScope.launch { appPreferences.linksDetectionEnabled.collect { _linksDetectionEnabled.value = it } }
         viewModelScope.launch { appPreferences.smartTagsEnabled.collect { _smartTagsEnabled.value = it } }

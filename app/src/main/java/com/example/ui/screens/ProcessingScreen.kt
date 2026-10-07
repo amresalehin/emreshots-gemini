@@ -75,10 +75,10 @@ fun ProcessingScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Processing Library", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.processing_library), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     if (onNavigateBack != null) IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -96,8 +96,8 @@ fun ProcessingScreen(
                 ) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(stringResource(R.string.processing_ai_analysis), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                        Text(if (state.isIndexing) "Analyzing your library…" else "Your library is ready for analysis", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                        Text(if (state.total > 0) "$completed completed · $failed failed · $remaining remaining" else "${screenshots.count { it.aiProcessed }} analyzed · $remaining remaining", style = MaterialTheme.typography.bodyMedium)
+                        Text(if (state.isIndexing) stringResource(R.string.analyzing_library) else stringResource(R.string.library_ready_for_analysis), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        Text(if (state.total > 0) stringResource(R.string.processing_progress, completed, failed, remaining) else stringResource(R.string.analysis_progress, screenshots.count { it.aiProcessed }, remaining), style = MaterialTheme.typography.bodyMedium)
                         LinearProgressIndicator(
                             progress = { progress.coerceIn(0f, 1f) },
                             modifier = Modifier.fillMaxWidth(),
@@ -115,10 +115,10 @@ fun ProcessingScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.AutoAwesome, contentDescription = stringResource(R.string.ai_analysis), tint = MaterialTheme.colorScheme.primary)
                                 Spacer(Modifier.weight(1f))
-                                Text(state.currentModel.ifBlank { "AI" }, style = MaterialTheme.typography.labelMedium)
+                                Text(state.currentModel.ifBlank { stringResource(R.string.ai_label) }, style = MaterialTheme.typography.labelMedium)
                             }
-                            Text(state.currentItemTitle.ifBlank { "Preparing…" }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                            Text("Item ${state.current.coerceAtLeast(0)} of ${state.total}", style = MaterialTheme.typography.bodySmall)
+                            Text(state.currentItemTitle.ifBlank { stringResource(R.string.preparing) }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.processing_item, state.current.coerceAtLeast(0), state.total), style = MaterialTheme.typography.bodySmall)
                             OutlinedButton(onClick = { viewModel.cancelIndexing() }) {
                                 Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cancel))
                                 Text(stringResource(R.string.cancel))
@@ -138,7 +138,7 @@ fun ProcessingScreen(
                     } else {
                         OutlinedButton(onClick = { viewModel.cancelIndexing() }, modifier = Modifier.weight(1f)) {
                             Icon(Icons.Default.Pause, contentDescription = null)
-                            Text("Stop")
+                            Text(stringResource(R.string.stop))
                         }
                     }
                     OutlinedButton(onClick = { showRetryInfo = true }, enabled = failed > 0 && !state.isIndexing, modifier = Modifier.weight(1f)) {
@@ -151,12 +151,12 @@ fun ProcessingScreen(
             item {
                 Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("Enrichment & Sync", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.enrichment_and_sync), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("Smart Tags", fontWeight = FontWeight.SemiBold)
+                                Text(stringResource(R.string.smart_tags), fontWeight = FontWeight.SemiBold)
                                 Text(
-                                    "Keep AI-generated tags when enriching media.",
+                                    stringResource(R.string.smart_tags_description),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -168,9 +168,9 @@ fun ProcessingScreen(
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("Automatic Media Sync", fontWeight = FontWeight.SemiBold)
+                                Text(stringResource(R.string.automatic_media_sync), fontWeight = FontWeight.SemiBold)
                                 Text(
-                                    "Keep the library synchronized with device media.",
+                                    stringResource(R.string.automatic_media_sync_description),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -186,16 +186,16 @@ fun ProcessingScreen(
             item {
                 Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Queue summary", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text("Completed: $completed")
-                        Text("Failed: $failed")
-                        Text("Remaining: $remaining")
+                        Text(stringResource(R.string.queue_summary), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.completed_count, completed))
+                        Text(stringResource(R.string.failed_count, failed))
+                        Text(stringResource(R.string.remaining_count, remaining))
                         if (!state.isIndexing && state.total > 0 && state.progress >= 1f) {
-                            Text("Last run finished. Successful results are already stored in the library.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.last_run_finished), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.CheckCircle, contentDescription = stringResource(R.string.processing_complete), tint = MaterialTheme.colorScheme.primary)
                                 Spacer(Modifier.width(8.dp))
-                                Text("Processing complete", fontWeight = FontWeight.SemiBold)
+                                Text(stringResource(R.string.processing_complete), fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
@@ -217,7 +217,7 @@ fun ProcessingScreen(
                 }) { Text(stringResource(R.string.retry_failed)) }
             },
             dismissButton = {
-                androidx.compose.material3.TextButton(onClick = { showRetryInfo = false }) { Text("Close") }
+                androidx.compose.material3.TextButton(onClick = { showRetryInfo = false }) { Text(stringResource(R.string.close)) }
             }
         )
     }

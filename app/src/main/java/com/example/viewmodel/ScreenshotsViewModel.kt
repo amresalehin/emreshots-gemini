@@ -15,6 +15,9 @@ import com.amresalehin.emreshots.data.local.AppDatabase
 import com.amresalehin.emreshots.data.local.SecureApiKeyStore
 import com.amresalehin.emreshots.data.local.seedInitialData
 import com.amresalehin.emreshots.data.model.CollectionItem
+import com.amresalehin.emreshots.data.model.GalleryViewMode
+import com.amresalehin.emreshots.data.model.MediaGroupBy
+import com.amresalehin.emreshots.data.model.MediaSortOption
 import com.amresalehin.emreshots.data.model.CustomCloudProvider
 import com.amresalehin.emreshots.data.model.ExifData
 import com.amresalehin.emreshots.data.model.ScreenshotItem
@@ -111,6 +114,14 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     val searchQuery: StateFlow<String> = galleryViewModel.searchQuery
     val selectedFilter: StateFlow<ScreenshotFilter> = galleryViewModel.selectedFilter
+
+    val sortOption: StateFlow<MediaSortOption> = galleryViewModel.sortOption
+    val groupByOption: StateFlow<MediaGroupBy> = galleryViewModel.groupByOption
+    val viewMode: StateFlow<GalleryViewMode> = galleryViewModel.viewMode
+    val filteredScreenshots: StateFlow<List<ScreenshotItem>> = galleryViewModel.filteredScreenshots
+    val sortedScreenshots: StateFlow<List<ScreenshotItem>> = galleryViewModel.sortedScreenshots
+    val groupedScreenshots: StateFlow<Map<String, List<ScreenshotItem>>> = galleryViewModel.groupedScreenshots
+
 
     private val _snackbarMessage = MutableStateFlow<String?>(null)
     val snackbarMessage: StateFlow<String?> = _snackbarMessage.asStateFlow()
@@ -517,6 +528,10 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     fun setSearchQuery(query: String) { galleryViewModel.setSearchQuery(query) }
 
     fun setFilter(filter: ScreenshotFilter) { galleryViewModel.setFilter(filter) }
+    fun setSortOption(option: MediaSortOption) = galleryViewModel.setSortOption(option)
+    fun setGroupByOption(option: MediaGroupBy) = galleryViewModel.setGroupByOption(option)
+    fun setViewMode(mode: GalleryViewMode) = galleryViewModel.setViewMode(mode)
+
     fun analyzeLocalVision(screenshot: ScreenshotItem, autoWriteExif: Boolean = false, onComplete: ((AiAnalysisResult) -> Unit)? = null) =
         aiOcrCoordinator.analyzeLocalVision(screenshot, autoWriteExif, onComplete)
 

@@ -8,6 +8,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -116,7 +118,7 @@ import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ScreenshotsScreen(
     viewModel: ScreenshotsViewModel,
@@ -435,14 +437,13 @@ fun ScreenshotsScreen(
                 )
             )
 
-            // Sleek, Unified Filter Pills Row
-            Row(
+            // Wrapping filter pills keep both filter and file-type chips accessible without a horizontal-only row.
+            FlowRow(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 ScreenshotFilter.entries.filter { it != ScreenshotFilter.ALL }.forEach { filter ->
                     val isSelected = selectedFilter == filter
@@ -466,25 +467,31 @@ fun ScreenshotsScreen(
                         border = null,
                         modifier = Modifier.testTag("filter_chip_${filter.name.lowercase()}")
                     )
-                 }
-                 availableFileTypes.forEach { type ->
-                     val isSelected = selectedMediaType == type
-                     FilterChip(
-                         selected = isSelected,
-                         onClick = { selectedMediaType = if (isSelected) null else type },
-                         label = { Text(type.uppercase(Locale.ROOT), fontSize = 12.sp, fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal) },
-                         shape = RoundedCornerShape(20.dp),
-                         colors = FilterChipDefaults.filterChipColors(
-                             selectedContainerColor = MaterialTheme.colorScheme.primary,
-                             selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                             labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                         ),
-                         border = null,
-                         modifier = Modifier.testTag("filter_chip_type_${type}")
-                     )
-                 }
-             }
+                }
+                availableFileTypes.forEach { type ->
+                    val isSelected = selectedMediaType == type
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { selectedMediaType = if (isSelected) null else type },
+                        label = {
+                            Text(
+                                type.uppercase(Locale.ROOT),
+                                fontSize = 12.sp,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                            )
+                        },
+                        shape = RoundedCornerShape(20.dp),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        border = null,
+                        modifier = Modifier.testTag("filter_chip_type_$type")
+                    )
+                }
+            }
 
             // Compact, non-intrusive permission card (only if not granted and not dismissed)
             if (!hasMediaPermissions && !hidePermissionBanner) {
@@ -513,7 +520,7 @@ fun ScreenshotsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Grant media access to sync all photos",
+                                text = stringResource(R.string.grant_media_access_to_sync_all_photos),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface
                             )

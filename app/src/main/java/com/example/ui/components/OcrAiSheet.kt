@@ -62,8 +62,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.amresalehin.emreshots.data.model.ScreenshotItem
-import com.amresalehin.emreshots.service.ai.AiAnalysisResult
-import com.amresalehin.emreshots.viewmodel.AiOcrModelOption
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -73,12 +71,8 @@ fun OcrAiSheet(
     isExtractingOcr: Boolean,
     isAiProcessing: Boolean,
     isFixingArtefacts: Boolean = false,
-    aiOcrModelOptions: List<AiOcrModelOption> = emptyList(),
-    selectedOcrProviderId: String = "",
-    onSelectOcrProvider: (String) -> Unit = {},
     onExtractOcr: ((String) -> Unit) -> Unit,
     onFixOcrArtefacts: ((String, (String) -> Unit) -> Unit)? = null,
-    onSendOcrToAi: (String, Boolean) -> Unit,
     onWriteToMetadata: (String, String, String, List<String>) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -88,8 +82,6 @@ fun OcrAiSheet(
     }
     // "By default not write directly"
     var writeDirectlyToMetadata by remember { mutableStateOf(false) }
-
-    var aiResultPreview by remember { mutableStateOf<AiAnalysisResult?>(null) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -128,12 +120,12 @@ fun OcrAiSheet(
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
                         Text(
-                            text = "OCR & AI Text Intelligence",
+                            text = "OCR Text Intelligence",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Extract text from image & process with AI",
+                            text = "Tesseract OCR with automatic local text cleanup & tags",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -147,30 +139,8 @@ fun OcrAiSheet(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-            // Explicit privacy routing: OCR is local; optional enrichment sends text only.
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
-                ),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text("Processing paths", fontWeight = FontWeight.Bold)
-                    Text(
-                        "Local OCR → OCR + metadata → optional Local Gemma or Cloud Text AI.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Text(
-                        "Cloud Text AI receives OCR text/metadata only. Cloud Vision is separate and uploads the image.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+            // One OCR path: Tesseract traineddata -> bundled local text LLM.
+            // The LLM repairs the transcript and generates tags automatically.
 
             // Action: Extract OCR
             Row(

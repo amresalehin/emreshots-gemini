@@ -116,7 +116,7 @@ fun OnDeviceVisionScreen(
                                 "Disabled" to R.string.on_device_mode_disabled
                             ).forEach { (value, labelRes) ->
                                 FilterChip(
-                                    selected = mode.equals(value, ignoreCase = true),
+                                    selected = mode.replace(" ", "_").equals(value, ignoreCase = true),
                                     onClick = { viewModel.setOnDeviceVisionMode(value) },
                                     label = { Text(stringResource(labelRes)) },
                                     modifier = Modifier.weight(1f)

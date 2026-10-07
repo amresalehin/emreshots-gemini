@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -67,10 +68,10 @@ fun BackupRestoreScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Backup & Restore", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.backup_and_restore), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -86,18 +87,18 @@ fun BackupRestoreScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Library Backup", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(lastBackupInfo ?: "No backup has been exported or restored yet.", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.library_backup), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(lastBackupInfo ?: stringResource(R.string.no_backup_yet), style = MaterialTheme.typography.bodySmall)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = { exportLauncher.launch("emreshots-backup.json") }, modifier = Modifier.weight(1f)) {
                             Icon(Icons.Default.Backup, contentDescription = null)
                             Spacer(Modifier.width(6.dp))
-                            Text("Export JSON")
+                            Text(stringResource(R.string.export_json))
                         }
                         OutlinedButton(onClick = { restoreLauncher.launch(arrayOf("application/json", "*/*")) }, modifier = Modifier.weight(1f)) {
                             Icon(Icons.Default.CloudDone, contentDescription = null)
                             Spacer(Modifier.width(6.dp))
-                            Text("Restore JSON")
+                            Text(stringResource(R.string.restore_json))
                         }
                     }
                 }
@@ -108,8 +109,8 @@ fun BackupRestoreScreen(
     pendingRestoreUri?.let { uri ->
         AlertDialog(
             onDismissRequest = { pendingRestoreUri = null },
-            title = { Text("Restore Backup") },
-            text = { Text("Choose how to apply this backup.") },
+            title = { Text(stringResource(R.string.restore_backup)) },
+            text = { Text(stringResource(R.string.choose_backup_apply_mode)) },
             confirmButton = {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
@@ -117,7 +118,7 @@ fun BackupRestoreScreen(
                             pendingRestoreUri = null
                             viewModel.restoreFromUri(uri, RestoreMode.MERGE)
                         }
-                    ) { Text("Merge") }
+                    ) { Text(stringResource(R.string.merge)) }
                     Button(
                         onClick = {
                             pendingRestoreUri = null
@@ -127,11 +128,11 @@ fun BackupRestoreScreen(
                             containerColor = MaterialTheme.colorScheme.errorContainer,
                             contentColor = MaterialTheme.colorScheme.onErrorContainer
                         )
-                    ) { Text("Replace") }
+                    ) { Text(stringResource(R.string.replace)) }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { pendingRestoreUri = null }) { Text("Cancel") }
+                TextButton(onClick = { pendingRestoreUri = null }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }

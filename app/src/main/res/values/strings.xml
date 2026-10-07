@@ -159,6 +159,7 @@
     <string name="share_media">Share media</string>
     <string name="unable_to_share_item">Unable to share this item.</string>
     <string name="reminder_current">Current:</string>
+    <string name="reminder_scheduled_for">Scheduled for %1$s</string>
     <string name="reminder_choose_time">Choose a reminder time for this media item.</string>
     <string name="reminder_notification_title">Reminder</string>
     <string name="reminder_notification_channel">Reminders</string>

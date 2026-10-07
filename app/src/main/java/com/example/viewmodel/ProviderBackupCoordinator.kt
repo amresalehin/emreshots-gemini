@@ -2,9 +2,11 @@ package com.amresalehin.emreshots.viewmodel
 
 import android.app.Application
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import com.amresalehin.emreshots.data.local.AppPreferences
 import com.amresalehin.emreshots.data.local.SecureApiKeyStore
+import com.amresalehin.emreshots.data.model.CollectionItem
 import com.amresalehin.emreshots.data.model.CustomCloudProvider
 import com.amresalehin.emreshots.data.model.ScreenshotItem
 import com.amresalehin.emreshots.data.repository.ProviderRepository
@@ -34,6 +36,8 @@ class ProviderBackupCoordinator(
     private val secureApiKeyStore: SecureApiKeyStore,
     private val appPreferences: AppPreferences,
     private val aiService: CloudAiService,
+    private val allScreenshots: kotlinx.coroutines.flow.StateFlow<List<ScreenshotItem>>,
+    private val collections: kotlinx.coroutines.flow.StateFlow<List<CollectionItem>>,
     private val providers: kotlinx.coroutines.flow.StateFlow<List<CustomCloudProvider>>,
     private val ocrEnabled: kotlinx.coroutines.flow.StateFlow<Boolean>,
     private val linksDetectionEnabled: kotlinx.coroutines.flow.StateFlow<Boolean>,
@@ -51,7 +55,15 @@ class ProviderBackupCoordinator(
     private val setGridColumns: (Int) -> Unit,
     private val ensureConfiguredProviderActiveIfNeeded: suspend () -> Unit,
     private val onMessage: (String) -> Unit
-) {
+) {    private val _snackbarMessage = object {
+        var value: String? = null
+            set(newValue) {
+                field = newValue
+                if (!newValue.isNullOrBlank()) onMessage(newValue)
+            }
+    }
+
+
     fun saveProvider(provider: CustomCloudProvider, makeActive: Boolean = true) {
         scope.launch(Dispatchers.IO) {
             val isGemini = provider.baseUrl.contains("generativelanguage.googleapis.com") ||

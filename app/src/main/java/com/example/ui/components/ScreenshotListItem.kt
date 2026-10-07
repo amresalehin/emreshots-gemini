@@ -165,7 +165,7 @@ fun ScreenshotListItem(
                     ) {
                         Icon(
                             imageVector = Icons.Default.PlayArrow,
-                            contentDescription = "Video",
+                            contentDescription = stringResource(R.string.video),
                             tint = Color.White,
                             modifier = Modifier.size(24.dp)
                         )
@@ -179,7 +179,7 @@ fun ScreenshotListItem(
             Column(modifier = Modifier.weight(1f)) {
                 if (showFileName) Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = screenshot.title.ifBlank { "Untitled" },
+                        text = screenshot.title.ifBlank { stringResource(R.string.untitled) },
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
@@ -190,7 +190,7 @@ fun ScreenshotListItem(
                         Spacer(modifier = Modifier.width(6.dp))
                         Icon(
                             imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = "AI",
+                            contentDescription = stringResource(R.string.ai_label),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(14.dp)
                         )
@@ -203,7 +203,7 @@ fun ScreenshotListItem(
                     text = listOfNotNull(
                         dateStr,
                         sizeStr.takeIf { it.isNotBlank() },
-                        if (screenshot.isVideo) "Video" else "Photo"
+                        if (screenshot.isVideo) stringResource(R.string.video) else stringResource(R.string.photo)
                     ).joinToString(" • "),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant

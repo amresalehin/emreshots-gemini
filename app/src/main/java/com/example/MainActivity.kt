@@ -80,8 +80,7 @@ class MainActivity : ComponentActivity() {
                                 viewModel = viewModel,
                                 onNavigateBack = { navController.popBackStack() },
                                 onOpenProcessing = { navController.navigate(Screen.Processing.route) },
-                                onOpenAiStudio = { navController.navigate(Screen.AiStudio.route) },
-                                onOpenProviders = { navController.navigate(Screen.CloudProviders.route) }
+                                onOpenAiStudio = { navController.navigate(Screen.AiStudio.route) }
                             )
                         }
 

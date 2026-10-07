@@ -92,6 +92,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -184,8 +185,22 @@ fun ScreenshotDetailScreen(
         }
     }
 
-    if (screenshot == null) {
-        Scaffold { padding ->
+    // EXIF Editor Modal    if (screenshot == null) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Media item not found", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("btn_detail_back")) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
+                )
+            }
+        ) { padding ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -203,116 +218,140 @@ fun ScreenshotDetailScreen(
     val configuration = LocalConfiguration.current
     val galleryHeight = (configuration.screenHeightDp.dp * 0.58f).coerceIn(300.dp, 560.dp)
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        TopAppBar(
-            title = { Text(if (screenshot.isVideo) "Video" else "Photo", maxLines = 1) },
-            navigationIcon = {
-                IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("btn_detail_back")) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                }
-            },
-            actions = {
-                IconButton(
-                    onClick = { viewModel.toggleFavorite(screenshot) },
-                    modifier = Modifier.testTag("btn_detail_favorite")
-                ) {
-                    Icon(
-                        imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = if (screenshot.isFavorite) "Remove from favorites" else "Add to favorites",
-                        tint = if (screenshot.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        if (screenshot.isVideo) "Video" else "Photo",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
-                }
-                IconButton(
-                    onClick = {
-                        val uri = screenshot.uriString?.let(Uri::parse)
-                        if (uri == null) {
-                            viewModel.showMessage("Sharing is unavailable for this item.")
-                        } else {
-                            runCatching {
-                                val type = context.contentResolver.getType(uri)
-                                    ?: if (screenshot.isVideo) "video/*" else "image/*"
-                                val intent = Intent(Intent.ACTION_SEND).apply {
-                                    this.type = type
-                                    putExtra(Intent.EXTRA_STREAM, uri)
-                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                }
-                                context.startActivity(Intent.createChooser(intent, "Share media"))
-                            }.onFailure {
-                                viewModel.showMessage("Unable to share this item.")
-                            }
-                        }
-                    },
-                    modifier = Modifier.testTag("btn_detail_share")
-                ) {
-                    Icon(Icons.Default.Share, contentDescription = "Share")
-                }
-                IconButton(
-                    onClick = { showDeleteConfirm = true },
-                    modifier = Modifier.testTag("btn_detail_delete")
-                ) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
-                }
-                Box {
-                    IconButton(onClick = { showOverflowMenu = true }, modifier = Modifier.testTag("btn_detail_overflow")) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More actions")
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("btn_detail_back")) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                    DropdownMenu(
-                        expanded = showOverflowMenu,
-                        onDismissRequest = { showOverflowMenu = false }
+                },
+                actions = {
+                    IconButton(
+                        onClick = { viewModel.toggleFavorite(screenshot) },
+                        modifier = Modifier.testTag("btn_detail_favorite")
                     ) {
-                        DropdownMenuItem(
-                            text = { Text(if (isEditingDetails) "Finish editing" else "Edit details") },
-                            leadingIcon = { Icon(if (isEditingDetails) Icons.Default.Close else Icons.Default.Edit, contentDescription = null) },
-                            onClick = {
-                                showOverflowMenu = false
-                                if (isEditingDetails) {
-                                    viewModel.updateScreenshot(
-                                        screenshot.copy(
-                                            title = editTitle.ifBlank { screenshot.title },
-                                            description = editDescription,
-                                            notes = editNotes.ifBlank { null }
-                                        )
-                                    )
-                                    isEditingDetails = false
-                                } else {
-                                    isEditingDetails = true
-                                }
-                            }
+                        Icon(
+                            imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = if (screenshot.isFavorite) "Remove from favorites" else "Add to favorites",
+                            tint = if (screenshot.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        DropdownMenuItem(
-                            text = { Text("OCR") },
-                            leadingIcon = { Icon(Icons.Default.DocumentScanner, contentDescription = null) },
-                            onClick = { showOverflowMenu = false; showOcrSheet = true }
-                        )
-                        if (!screenshot.isVideo) {
+                    }
+                    Box {
+                        IconButton(
+                            onClick = { showOverflowMenu = true },
+                            modifier = Modifier.testTag("btn_detail_overflow")
+                        ) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "More actions")
+                        }
+                        DropdownMenu(
+                            expanded = showOverflowMenu,
+                            onDismissRequest = { showOverflowMenu = false }
+                        ) {
                             DropdownMenuItem(
-                                text = { Text("Edit EXIF") },
-                                leadingIcon = { Icon(Icons.Default.CameraAlt, contentDescription = null) },
+                                text = { Text(if (isEditingDetails) "Finish editing" else "Edit details") },
+                                leadingIcon = {
+                                    Icon(
+                                        if (isEditingDetails) Icons.Default.Close else Icons.Default.Edit,
+                                        contentDescription = null
+                                    )
+                                },
                                 onClick = {
                                     showOverflowMenu = false
-                                    if (!hasMediaLocationPermission) {
-                                        permissionLauncher.launch(com.amresalehin.emreshots.service.media.DeviceMediaScanner.getRequiredPermissions())
+                                    if (isEditingDetails) {
+                                        viewModel.updateScreenshot(
+                                            screenshot.copy(
+                                                title = editTitle.ifBlank { screenshot.title },
+                                                description = editDescription,
+                                                notes = editNotes.ifBlank { null }
+                                            )
+                                        )
+                                        isEditingDetails = false
+                                    } else {
+                                        isEditingDetails = true
                                     }
-                                    showExifEditor = true
                                 }
                             )
+                            DropdownMenuItem(
+                                text = { Text("Share") },
+                                leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    val uri = screenshot.uriString?.let(Uri::parse)
+                                    if (uri == null) {
+                                        viewModel.showMessage("Sharing is unavailable for this item.")
+                                    } else {
+                                        runCatching {
+                                            val type = context.contentResolver.getType(uri)
+                                                ?: if (screenshot.isVideo) "video/*" else "image/*"
+                                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                                this.type = type
+                                                putExtra(Intent.EXTRA_STREAM, uri)
+                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                            }
+                                            context.startActivity(Intent.createChooser(intent, "Share media"))
+                                        }.onFailure {
+                                            viewModel.showMessage("Unable to share this item.")
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.testTag("btn_detail_share")
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    showDeleteConfirm = true
+                                },
+                                modifier = Modifier.testTag("btn_detail_delete")
+                            )
+                            DropdownMenuItem(
+                                text = { Text("OCR") },
+                                leadingIcon = { Icon(Icons.Default.DocumentScanner, contentDescription = null) },
+                                onClick = { showOverflowMenu = false; showOcrSheet = true }
+                            )
+                            if (!screenshot.isVideo) {
+                                DropdownMenuItem(
+                                    text = { Text("Edit EXIF") },
+                                    leadingIcon = { Icon(Icons.Default.CameraAlt, contentDescription = null) },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        if (!hasMediaLocationPermission) {
+                                            permissionLauncher.launch(
+                                                com.amresalehin.emreshots.service.media.DeviceMediaScanner.getRequiredPermissions()
+                                            )
+                                        }
+                                        showExifEditor = true
+                                    }
+                                )
+                            }
                         }
                     }
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.surface
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             )
-        )
-
+        }
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 64.dp)
+                .padding(padding)
                 .verticalScroll(detailScrollState)
         ) {
             Surface(
@@ -831,7 +870,7 @@ fun ScreenshotDetailScreen(
             }
         }
 
-    // EXIF Editor Modal
+
     if (showExifEditor) {
         ExifEditorDialog(
             initialData = exifData,

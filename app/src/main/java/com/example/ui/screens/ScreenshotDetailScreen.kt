@@ -304,10 +304,6 @@ fun ScreenshotDetailScreen(
                 .padding(top = 64.dp)
                 .verticalScroll(detailScrollState)
         ) {
-            modifier = Modifier
-                .fillMaxSize()
-.verticalScroll(detailScrollState)
-        ) {
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()

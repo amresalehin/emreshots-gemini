@@ -25,18 +25,28 @@ import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
 class MediaLibraryCoordinator(
     private val application: Application,
     private val scope: CoroutineScope,
     private val screenshotRepository: ScreenshotRepository,
     private val collectionRepository: CollectionRepository,
+    private val allScreenshots: StateFlow<List<ScreenshotItem>>,
     private val collections: StateFlow<List<CollectionItem>>,
     private val activeProvider: StateFlow<CustomCloudProvider?>,
     private val exifDataStore: MutableStateFlow<Map<String, ExifData>>,
     private val exifManager: ExifMetadataManager,
     private val onMessage: (String) -> Unit
-) {
+) {    private val _snackbarMessage = object {
+        var value: String? = null
+            set(newValue) {
+                field = newValue
+                if (!newValue.isNullOrBlank()) onMessage(newValue)
+            }
+    }
+
+
     private val _pendingWriteIntentSender = MutableStateFlow<android.content.IntentSender?>(null)
     val pendingWriteIntentSender: StateFlow<android.content.IntentSender?> = _pendingWriteIntentSender.asStateFlow()
     val exifDataState: StateFlow<Map<String, ExifData>> = exifDataStore.asStateFlow()
@@ -46,7 +56,7 @@ class MediaLibraryCoordinator(
     fun batchRename(items: List<ScreenshotItem>, template: String) {
         scope.launch(Dispatchers.IO) {
             val cleanTemplate = template.trim()
-            if (cleanTemplate.isBlank()) { onMessage = "Enter a rename template."; return@launch }
+            if (cleanTemplate.isBlank()) { _snackbarMessage.value = "Enter a rename template."; return@launch }
             var renamed = 0; var failed = 0
             items.forEachIndexed { index, item ->
                 val extension = item.filePath.substringAfterLast(".", "").takeIf { it.isNotBlank() } ?: if (item.isVideo) "mp4" else "jpg"
@@ -64,7 +74,7 @@ class MediaLibraryCoordinator(
                     screenshotRepository.update(item.copy(title = baseName, filePath = newPath)); renamed++
                 } else failed++
             }
-            onMessage = "Batch rename complete: $renamed renamed${if (failed > 0) ", $failed failed" else ""}."
+            _snackbarMessage.value = "Batch rename complete: $renamed renamed${if (failed > 0) ", $failed failed" else ""}."
         }
     }
 
@@ -124,7 +134,7 @@ class MediaLibraryCoordinator(
                 val current = exifDataStore.value.toMutableMap()
                 current[shot.id] = updatedExif
                 exifDataStore.value = current
-                onMessage = "Write consent granted: EXIF saved to original media!"
+                _snackbarMessage.value = "Write consent granted: EXIF saved to original media!"
             } catch (e: Exception) {
                 // Fallback to safe file write
                 saveExif(shot, data)
@@ -170,7 +180,7 @@ class MediaLibraryCoordinator(
                         val current = exifDataStore.value.toMutableMap()
                         current[screenshot.id] = updatedExif
                         exifDataStore.value = current
-                        onMessage = "EXIF metadata saved directly to device gallery image!"
+                        _snackbarMessage.value = "EXIF metadata saved directly to device gallery image!"
                         onComplete?.invoke(true)
                         return@launch
                     }
@@ -208,10 +218,10 @@ class MediaLibraryCoordinator(
                 current[screenshot.id] = updatedExif
                 exifDataStore.value = current
 
-                onMessage = "EXIF metadata saved directly to image!"
+                _snackbarMessage.value = "EXIF metadata saved directly to image!"
                 onComplete?.invoke(true)
             } else {
-                onMessage = "Failed to save EXIF: ${result.exceptionOrNull()?.message}"
+                _snackbarMessage.value = "Failed to save EXIF: ${result.exceptionOrNull()?.message}"
                 onComplete?.invoke(false)
             }
         }
@@ -237,9 +247,9 @@ class MediaLibraryCoordinator(
                 val current = exifDataStore.value.toMutableMap()
                 current[screenshot.id] = updatedExif
                 exifDataStore.value = current
-                onMessage = "AI metadata written directly into image EXIF headers!"
+                _snackbarMessage.value = "AI metadata written directly into image EXIF headers!"
             } else {
-                onMessage = "Failed to write AI to EXIF: ${result.exceptionOrNull()?.message}"
+                _snackbarMessage.value = "Failed to write AI to EXIF: ${result.exceptionOrNull()?.message}"
             }
         }
     }
@@ -264,7 +274,7 @@ class MediaLibraryCoordinator(
                 if (file.exists()) file.delete()
             } catch (_: Exception) {}
             screenshotRepository.delete(screenshot)
-            onMessage = "Screenshot deleted"
+            _snackbarMessage.value = "Screenshot deleted"
         }
     }
 
@@ -279,7 +289,7 @@ class MediaLibraryCoordinator(
                 application.getString(R.string.reminder_notification_title),
                 text
             )
-            onMessage = "Reminder scheduled!"
+            _snackbarMessage.value = "Reminder scheduled!"
         }
     }
 
@@ -288,7 +298,7 @@ class MediaLibraryCoordinator(
             ReminderReceiver.cancel(application, screenshot.id)
             val updated = screenshot.copy(reminderTime = null, reminderText = null)
             screenshotRepository.update(updated)
-            onMessage = "Reminder removed"
+            _snackbarMessage.value = "Reminder removed"
         }
     }
 
@@ -330,7 +340,7 @@ class MediaLibraryCoordinator(
                 colorHex = colorHex
             )
             collectionRepository.insert(newCol)
-            onMessage = "Collection '$name' created!"
+            _snackbarMessage.value = "Collection '$name' created!"
         }
     }
 
@@ -342,7 +352,7 @@ class MediaLibraryCoordinator(
             all.filter { it.collectionIds.contains(collectionId) }.forEach { item ->
                 screenshotRepository.update(item.copy(collectionIds = item.collectionIds - collectionId))
             }
-            onMessage = "Collection removed"
+            _snackbarMessage.value = "Collection removed"
         }
     }
 
@@ -412,9 +422,9 @@ class MediaLibraryCoordinator(
                 if (!isVideo) {
                     loadExif(newItem)
                 }
-                onMessage = "Imported 1 ${if (isVideo) "video" else "photo"} successfully!"
+                _snackbarMessage.value = "Imported 1 ${if (isVideo) "video" else "photo"} successfully!"
             } catch (e: Exception) {
-                onMessage = "Failed to import media: ${e.message}"
+                _snackbarMessage.value = "Failed to import media: ${e.message}"
             }
         }
     }

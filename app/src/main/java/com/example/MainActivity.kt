@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -79,6 +80,18 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
+                        composable(Screen.GalleryCollection.route, arguments = listOf(navArgument("collectionId") { type = NavType.StringType })) { backStackEntry ->
+                            ScreenshotsScreen(
+                                viewModel = viewModel,
+                                onNavigateToDetail = { id ->
+                                    navController.navigate(Screen.ScreenshotDetail.createRoute(id))
+                                },
+                                onNavigateToSettings = {
+                                    navController.navigate(Screen.Settings.route)
+                                },
+                                initialCollectionId = backStackEntry.arguments?.getString("collectionId")
+                            )
+                        }
                         composable(Screen.Settings.route) {
                             SettingsScreen(
                                 viewModel = viewModel,
@@ -124,7 +137,10 @@ class MainActivity : ComponentActivity() {
                         composable(Screen.Collections.route) {
                             CollectionsScreen(
                                 viewModel = viewModel,
-                                onNavigateBack = { navController.popBackStack() }
+                                onNavigateBack = { navController.popBackStack() },
+                                onOpenCollection = { collectionId ->
+                                    navController.navigate(Screen.GalleryCollection.createRoute(collectionId))
+                                }
                             )
                         }
 

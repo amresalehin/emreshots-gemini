@@ -39,7 +39,7 @@ data class CollectionItem(
     val name: String,
     val description: String = "",
     val iconName: String = "folder",
-    val colorHex: String = "#6366F1",
+    val colorHex: String = "#C2410C",
     val createdAt: Long = System.currentTimeMillis()
 )
 

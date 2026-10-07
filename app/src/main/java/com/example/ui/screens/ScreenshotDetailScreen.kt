@@ -4,6 +4,8 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -41,6 +43,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
@@ -106,6 +109,7 @@ import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -170,6 +174,9 @@ fun ScreenshotDetailScreen(
     val detailScrollState = rememberScrollState()
     var showAddTagDialog by remember { mutableStateOf(false) }
     var newTagInput by remember { mutableStateOf("") }
+    var showCollectionsDialog by remember { mutableStateOf(false) }
+    var showReminderDialog by remember { mutableStateOf(false) }
+    val collections by viewModel.collections.collectAsStateWithLifecycle()
 
     var isEditingDetails by remember { mutableStateOf(false) }
     var editTitle by remember { mutableStateOf("") }
@@ -183,6 +190,127 @@ fun ScreenshotDetailScreen(
             editDescription = screenshot.description
             editNotes = screenshot.notes ?: ""
         }
+    }
+
+    if (showCollectionsDialog) {
+        AlertDialog(
+            onDismissRequest = { showCollectionsDialog = false },
+            title = { Text("Collections") },
+            text = {
+                if (collections.isEmpty()) {
+                    Text("No collections yet. Create one in Settings.")
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        collections.forEach { collection ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        if (screenshot.collectionIds.contains(collection.id)) {
+                                            viewModel.removeScreenshotFromCollection(screenshot.id, collection.id)
+                                        } else {
+                                            viewModel.addScreenshotToCollection(screenshot.id, collection.id)
+                                        }
+                                    }
+                                    .padding(vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = screenshot.collectionIds.contains(collection.id),
+                                    onCheckedChange = { checked ->
+                                        if (checked) viewModel.addScreenshotToCollection(screenshot.id, collection.id)
+                                        else viewModel.removeScreenshotFromCollection(screenshot.id, collection.id)
+                                    }
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(collection.name, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showCollectionsDialog = false }) { Text("Done") }
+            }
+        )
+    }
+
+    if (showReminderDialog) {
+        AlertDialog(
+            onDismissRequest = { showReminderDialog = false },
+            title = { Text("Reminder") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        if (screenshot.reminderTime != null) {
+                            "Current: " + SimpleDateFormat("EEE, MMM d · h:mm a", Locale.getDefault()).format(Date(screenshot.reminderTime))
+                        } else {
+                            "Choose a reminder time for this media item."
+                        },
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            val calendar = Calendar.getInstance().apply {
+                                add(Calendar.DAY_OF_YEAR, 1)
+                                set(Calendar.HOUR_OF_DAY, 9)
+                                set(Calendar.MINUTE, 0)
+                                set(Calendar.SECOND, 0)
+                                set(Calendar.MILLISECOND, 0)
+                            }
+                            viewModel.setReminder(screenshot, calendar.timeInMillis, "Review: " + screenshot.title)
+                            showReminderDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Tomorrow · 9:00 AM") }
+                    OutlinedButton(
+                        onClick = {
+                            val calendar = Calendar.getInstance().apply {
+                                add(Calendar.DAY_OF_YEAR, 1)
+                                set(Calendar.HOUR_OF_DAY, 18)
+                                set(Calendar.MINUTE, 0)
+                                set(Calendar.SECOND, 0)
+                                set(Calendar.MILLISECOND, 0)
+                            }
+                            viewModel.setReminder(screenshot, calendar.timeInMillis, "Review: " + screenshot.title)
+                            showReminderDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Tomorrow · 6:00 PM") }
+                    OutlinedButton(
+                        onClick = {
+                            val initial = Calendar.getInstance()
+                            DatePickerDialog(
+                                context,
+                                { _, year, month, day ->
+                                    TimePickerDialog(
+                                        context,
+                                        { _, hour, minute ->
+                                            val picked = Calendar.getInstance().apply {
+                                                set(year, month, day, hour, minute, 0)
+                                                set(Calendar.MILLISECOND, 0)
+                                            }
+                                            viewModel.setReminder(screenshot, picked.timeInMillis, "Review: " + screenshot.title)
+                                            showReminderDialog = false
+                                        },
+                                        initial.get(Calendar.HOUR_OF_DAY),
+                                        initial.get(Calendar.MINUTE),
+                                        false
+                                    ).show()
+                                },
+                                initial.get(Calendar.YEAR),
+                                initial.get(Calendar.MONTH),
+                                initial.get(Calendar.DAY_OF_MONTH),
+                            ).show()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Choose date & time") }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showReminderDialog = false }) { Text("Cancel") }
+            },
+        )
     }
 
     // EXIF Editor Modal    if (screenshot == null) {
@@ -339,6 +467,39 @@ fun ScreenshotDetailScreen(
                                     }
                                 )
                             }
+                        }
+
+                        DropdownMenuItem(
+                            text = { Text("Collections") },
+                            leadingIcon = { Icon(Icons.Default.Collections, contentDescription = null) },
+                            onClick = {
+                                showOverflowMenu = false
+                                showCollectionsDialog = true
+                            },
+                            modifier = Modifier.testTag("menu_detail_collections")
+                        )
+
+                        DropdownMenuItem(
+                            text = {
+                                Text(if (screenshot.reminderTime != null) "Edit reminder" else "Set reminder")
+                            },
+                            leadingIcon = { Icon(Icons.Default.Alarm, contentDescription = null) },
+                            onClick = {
+                                showOverflowMenu = false
+                                showReminderDialog = true
+                            },
+                            modifier = Modifier.testTag("menu_detail_reminder")
+                        )
+                        if (screenshot.reminderTime != null) {
+                            DropdownMenuItem(
+                                text = { Text("Remove reminder") },
+                                leadingIcon = { Icon(Icons.Default.Close, contentDescription = null) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    viewModel.removeReminder(screenshot)
+                                },
+                                modifier = Modifier.testTag("menu_detail_remove_reminder")
+                            )
                         }
                     }
                 },

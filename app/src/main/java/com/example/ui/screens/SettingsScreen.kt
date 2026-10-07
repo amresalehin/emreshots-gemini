@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Backup
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.Refresh
@@ -81,7 +82,7 @@ fun SettingsScreen(
 
             SettingsDestination(Icons.Default.AutoAwesome, stringResource(R.string.ai_studio), "AI analysis quality and direct EXIF writing", onOpenAiStudio)
             SettingsDestination(Icons.Default.CloudDone, stringResource(R.string.cloud_providers), "Endpoints, credentials, models, and connection tests", onOpenCloudProviders)
-            SettingsDestination(Icons.Default.AutoAwesome, stringResource(R.string.on_device_vision), "Local GGUF mode, model selection, and imports", onOpenOnDeviceVision)
+            SettingsDestination(Icons.Default.CameraAlt, stringResource(R.string.on_device_vision), "Local GGUF mode, model selection, and imports", onOpenOnDeviceVision)
             SettingsDestination(Icons.Default.TextFields, stringResource(R.string.ocr_and_text), "OCR extraction, language packs, and link detection", onOpenOcr)
             SettingsDestination(Icons.Default.Refresh, stringResource(R.string.library_processing), "Indexing, retries, smart tags, and media sync", onOpenProcessing)
             SettingsDestination(Icons.Default.Backup, stringResource(R.string.backup_and_restore), "Export and restore library data", onOpenBackupRestore)

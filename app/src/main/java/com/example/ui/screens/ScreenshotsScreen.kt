@@ -266,13 +266,13 @@ fun ScreenshotsScreen(
                                 ) {
                                     Icon(Icons.Default.Collections, contentDescription = null, modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(7.dp))
-                                    Text(selectedFolder ?: "All media", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                                    Text(selectedFolder ?: stringResource(R.string.all_media), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
                                     Spacer(modifier = Modifier.width(5.dp))
                                     Text(totalDisplayCount.toString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                             DropdownMenu(expanded = showFolderMenu, onDismissRequest = { showFolderMenu = false }) {
-                                DropdownMenuItem(text = { Text("All media") }, trailingIcon = { if (selectedFolder == null) Text("✓") }, onClick = { selectedFolder = null; showFolderMenu = false })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.all_media)) }, trailingIcon = { if (selectedFolder == null) Text("✓") }, onClick = { selectedFolder = null; showFolderMenu = false })
                                 if (availableFolders.isNotEmpty()) {
                                     androidx.compose.material3.HorizontalDivider()
                                     availableFolders.take(24).forEach { folder ->
@@ -286,7 +286,7 @@ fun ScreenshotsScreen(
                 actions = {
                     if (!isSearchExpanded) {
                         IconButton(onClick = { isSearchExpanded = true }, modifier = Modifier.testTag("btn_toggle_search")) {
-                            Icon(Icons.Default.Search, contentDescription = "Search")
+                            Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
                         }
                     }
 
@@ -295,7 +295,7 @@ fun ScreenshotsScreen(
                             onClick = { showMoreMenu = true },
                             modifier = Modifier.testTag("btn_more_menu")
                         ) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more_options))
                         }
                         DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
                             DropdownMenuItem(
@@ -305,7 +305,7 @@ fun ScreenshotsScreen(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text("Sort by")
+                                        Text(stringResource(R.string.sort_by))
                                         Spacer(Modifier.width(16.dp))
                                         Text(
                                             text = sortOption.displayName,
@@ -325,7 +325,7 @@ fun ScreenshotsScreen(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text("Group by")
+                                        Text(stringResource(R.string.group_by))
                                         Spacer(Modifier.width(16.dp))
                                         Text(
                                             text = groupByOption.displayName,
@@ -343,7 +343,7 @@ fun ScreenshotsScreen(
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
                             ) {
                                 Text(
-                                    text = "View",
+                                    text = stringResource(R.string.view),
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
@@ -360,12 +360,12 @@ fun ScreenshotsScreen(
                                 )
                             }
                             GalleryMenuToggle(
-                                label = "Show file names",
+                                label = stringResource(R.string.show_file_names),
                                 checked = showFileNames,
                                 onCheckedChange = viewModel::setShowFileNames
                             )
                             GalleryMenuToggle(
-                                label = "Show tags",
+                                label = stringResource(R.string.show_tags),
                                 checked = showTags,
                                 onCheckedChange = viewModel::setShowTags
                             )
@@ -373,9 +373,9 @@ fun ScreenshotsScreen(
                             DropdownMenuItem(
                                 text = {
                                     Column {
-                                        Text("AI Vision", fontWeight = FontWeight.SemiBold)
+                                        Text(stringResource(R.string.ai_vision), fontWeight = FontWeight.SemiBold)
                                         Text(
-                                            if (aiVisionPendingCount > 0) "$aiVisionPendingCount media waiting for analysis" else "Everything is analyzed",
+                                            if (aiVisionPendingCount > 0) stringResource(R.string.media_waiting_for_analysis, aiVisionPendingCount) else stringResource(R.string.everything_is_analyzed),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -392,11 +392,11 @@ fun ScreenshotsScreen(
                             DropdownMenuItem(
                                 text = {
                                     Column {
-                                        Text("OCR", fontWeight = FontWeight.SemiBold)
+                                        Text(stringResource(R.string.ocr), fontWeight = FontWeight.SemiBold)
                                         Text(
                                             when {
-                                                !ocrEnabled -> "Disabled in Settings"
-                                                ocrPendingCount > 0 -> "$ocrPendingCount media waiting for OCR"
+                                                !ocrEnabled -> stringResource(R.string.ocr_disabled_in_settings)
+                                                ocrPendingCount > 0 -> "stringResource(R.string.media_waiting_for_ocr, ocrPendingCount)"
                                                 else -> "All media has OCR text"
                                             },
                                             style = MaterialTheme.typography.labelSmall,
@@ -414,13 +414,13 @@ fun ScreenshotsScreen(
                             )
                             androidx.compose.material3.HorizontalDivider()
                             DropdownMenuItem(
-                                text = { Text("Batch rename visible") },
+                                text = { Text(stringResource(R.string.batch_rename_visible)) },
                                 leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
                                 onClick = { showMoreMenu = false; showBatchRenameDialog = true },
                                 modifier = Modifier.testTag("btn_batch_rename")
                             )
                             DropdownMenuItem(
-                                text = { Text("Settings") },
+                                text = { Text(stringResource(R.string.settings)) },
                                 leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
                                 onClick = { showMoreMenu = false; onNavigateToSettings() }
                             )
@@ -530,7 +530,7 @@ fun ScreenshotsScreen(
                                     .height(48.dp)
                                     .testTag("btn_grant_media_permission")
                             ) {
-                                Text("Allow", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.allow), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                             IconButton(
                                 onClick = { hidePermissionBanner = true },
@@ -564,7 +564,7 @@ fun ScreenshotsScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = ocrStatusText ?: statusText ?: "Processing…",
+                        text = ocrStatusText ?: statusText ?: stringResource(R.string.processing),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                         maxLines = 1
@@ -608,9 +608,9 @@ fun ScreenshotsScreen(
                             Spacer(modifier = Modifier.height(16.dp))
 
                             Text(
-                                text = if (searchQuery.isNotEmpty()) "No media matching \"$searchQuery\""
-                                else if (selectedFilter != ScreenshotFilter.ALL) "No ${selectedFilter.displayName} found"
-                                else "No photos or videos yet",
+                                text = if (searchQuery.isNotEmpty()) stringResource(R.string.no_media_matching, searchQuery)
+                                else if (selectedFilter != ScreenshotFilter.ALL) stringResource(R.string.no_filter_found, selectedFilter.displayName)
+                                else stringResource(R.string.no_photos_or_videos_yet),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 textAlign = TextAlign.Center
@@ -619,7 +619,7 @@ fun ScreenshotsScreen(
                             Spacer(modifier = Modifier.height(6.dp))
 
                             Text(
-                                text = "Import photos or videos, or sync device media to get started.",
+                                text = stringResource(R.string.import_media_to_get_started),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center
@@ -638,7 +638,7 @@ fun ScreenshotsScreen(
                             ) {
                                 Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Pick Photos or Videos")
+                                Text(stringResource(R.string.pick_photos_or_videos))
                             }
                         }
                     }
@@ -822,7 +822,7 @@ fun ScreenshotsScreen(
                 .size(56.dp)
                 .testTag("fab_import_screenshot")
         ) {
-            Icon(Icons.Default.Add, contentDescription = "Add Media")
+            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_media))
         }
     }
 
@@ -833,7 +833,7 @@ fun ScreenshotsScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(8.dp))
-                    Text("Sort Media")
+                    Text(stringResource(R.string.sort_media))
                 }
             },
             text = {
@@ -869,7 +869,7 @@ fun ScreenshotsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showSortDialog = false }) {
-                    Text("Close")
+                    Text(stringResource(R.string.close))
                 }
             }
         )
@@ -882,7 +882,7 @@ fun ScreenshotsScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.GridView, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(8.dp))
-                    Text("Group Media")
+                    Text(stringResource(R.string.group_media))
                 }
             },
             text = {
@@ -918,7 +918,7 @@ fun ScreenshotsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showGroupDialog = false }) {
-                    Text("Close")
+                    Text(stringResource(R.string.close))
                 }
             }
         )
@@ -927,18 +927,18 @@ fun ScreenshotsScreen(
     if (showBatchRenameDialog) {
         AlertDialog(
             onDismissRequest = { showBatchRenameDialog = false },
-            title = { Text("Batch rename visible items") },
+            title = { Text(stringResource(R.string.batch_rename_visible_items)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(
                         value = renameTemplate,
                         onValueChange = { renameTemplate = it },
                         singleLine = true,
-                        label = { Text("Template") },
-                        supportingText = { Text("{index} {date} {time} {title} {collection} {type}") },
+                        label = { Text(stringResource(R.string.template)) },
+                        supportingText = { Text(stringResource(R.string.rename_template_tokens)) },
                         modifier = Modifier.fillMaxWidth()
                     )
-                    Text("Renames the current filtered/sorted set. Device media uses MediaStore when permitted; imported files are renamed directly.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.rename_template_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
             confirmButton = {
@@ -946,11 +946,11 @@ fun ScreenshotsScreen(
                     viewModel.batchRename(groupedScreenshots.values.flatten(), renameTemplate)
                     showBatchRenameDialog = false
                 }, enabled = groupedScreenshots.values.flatten().isNotEmpty() && renameTemplate.isNotBlank()) {
-                    Text("Rename ${groupedScreenshots.values.sumOf { it.size }}")
+                    Text(stringResource(R.string.rename_count, groupedScreenshots.values.sumOf { it.size }))
                 }
             },
             dismissButton = {
-                androidx.compose.material3.TextButton(onClick = { showBatchRenameDialog = false }) { Text("Cancel") }
+                androidx.compose.material3.TextButton(onClick = { showBatchRenameDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }

@@ -27,12 +27,10 @@ class AppPreferences(private val context: Context) {
         val showFileNames = booleanPreferencesKey("gallery_show_file_names")
         val showTags = booleanPreferencesKey("gallery_show_tags")
         val ocrLanguage = stringPreferencesKey("ocr_language")
-        val fixOcrArtefactsEnabled = booleanPreferencesKey("fix_ocr_artefacts_enabled")
     }
 
     val ocrEnabled: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.ocrEnabled] ?: true }
     val ocrLanguage: Flow<String> = context.appPreferencesDataStore.data.map { it[Keys.ocrLanguage] ?: "eng" }
-    val fixOcrArtefactsEnabled: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.fixOcrArtefactsEnabled] ?: true }
     val linksDetectionEnabled: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.linksDetectionEnabled] ?: true }
     val smartTagsEnabled: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.smartTagsEnabled] ?: true }
     val autoSyncDeviceMedia: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.autoSyncDeviceMedia] ?: true }
@@ -48,7 +46,6 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setOcrEnabled(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.ocrEnabled] = value }
     suspend fun setOcrLanguage(value: String) = context.appPreferencesDataStore.edit { it[Keys.ocrLanguage] = value }
-    suspend fun setFixOcrArtefactsEnabled(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.fixOcrArtefactsEnabled] = value }
     suspend fun setLinksDetectionEnabled(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.linksDetectionEnabled] = value }
     suspend fun setSmartTagsEnabled(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.smartTagsEnabled] = value }
     suspend fun setAutoSyncDeviceMedia(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.autoSyncDeviceMedia] = value }

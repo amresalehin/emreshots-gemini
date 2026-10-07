@@ -48,6 +48,19 @@ jobs:
         run: |
           rm -rf ~/.gradle/caches/9.3.1/transforms/*/transformed/ui-release
 
+      - name: Diagnose invalid no_text_extracted resource
+        shell: bash
+        run: |
+          found=0
+          while IFS= read -r -d '' aar; do
+            if unzip -p "$aar" 'res/values/*.xml' 2>/dev/null | grep -q 'no_text_extracted'; then
+              echo "RESOURCE_MATCH=$aar"
+              unzip -p "$aar" 'res/values/*.xml' 2>/dev/null | grep -n -C 3 'no_text_extracted' || true
+              found=1
+            fi
+          done < <(find "$HOME/.gradle/caches/modules-2/files-2.1" -type f -name '*.aar' -print0)
+          echo "resource_matches=$found"
+
       - name: Prepare bundled offline OCR LLM
         shell: bash
         run: |

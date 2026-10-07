@@ -28,6 +28,10 @@ import com.amresalehin.emreshots.ui.screens.ScreenshotDetailScreen
 import com.amresalehin.emreshots.ui.screens.ScreenshotsScreen
 import com.amresalehin.emreshots.ui.screens.SettingsScreen
 import com.amresalehin.emreshots.ui.screens.ProcessingScreen
+import com.amresalehin.emreshots.ui.screens.OnDeviceVisionScreen
+import com.amresalehin.emreshots.ui.screens.OcrSettingsScreen
+import com.amresalehin.emreshots.ui.screens.BackupRestoreScreen
+import com.amresalehin.emreshots.ui.screens.CollectionsScreen
 import com.amresalehin.emreshots.ui.theme.EmreShotsTheme
 import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 import com.amresalehin.emreshots.service.media.BackgroundSyncScheduler
@@ -80,12 +84,45 @@ class MainActivity : ComponentActivity() {
                                 viewModel = viewModel,
                                 onNavigateBack = { navController.popBackStack() },
                                 onOpenProcessing = { navController.navigate(Screen.Processing.route) },
-                                onOpenAiStudio = { navController.navigate(Screen.AiStudio.route) }
+                                onOpenAiStudio = { navController.navigate(Screen.AiStudio.route) },
+                                onOpenCloudProviders = { navController.navigate(Screen.CloudProviders.route) },
+                                onOpenOnDeviceVision = { navController.navigate(Screen.OnDeviceVision.route) },
+                                onOpenOcr = { navController.navigate(Screen.OcrSettings.route) },
+                                onOpenBackupRestore = { navController.navigate(Screen.BackupRestore.route) },
+                                onOpenCollections = { navController.navigate(Screen.Collections.route) }
                             )
                         }
 
                         composable(Screen.Processing.route) {
                             ProcessingScreen(
+                                viewModel = viewModel,
+                                onNavigateBack = { navController.popBackStack() }
+                            )
+                        }
+
+                        composable(Screen.OnDeviceVision.route) {
+                            OnDeviceVisionScreen(
+                                viewModel = viewModel,
+                                onNavigateBack = { navController.popBackStack() }
+                            )
+                        }
+
+                        composable(Screen.OcrSettings.route) {
+                            OcrSettingsScreen(
+                                viewModel = viewModel,
+                                onNavigateBack = { navController.popBackStack() }
+                            )
+                        }
+
+                        composable(Screen.BackupRestore.route) {
+                            BackupRestoreScreen(
+                                viewModel = viewModel,
+                                onNavigateBack = { navController.popBackStack() }
+                            )
+                        }
+
+                        composable(Screen.Collections.route) {
+                            CollectionsScreen(
                                 viewModel = viewModel,
                                 onNavigateBack = { navController.popBackStack() }
                             )

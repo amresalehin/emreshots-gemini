@@ -153,8 +153,6 @@ fun ScreenshotsScreen(
     val ocrEnabled by viewModel.ocrEnabled.collectAsStateWithLifecycle()
     val showFileNames by viewModel.showFileNames.collectAsStateWithLifecycle()
     val showTags by viewModel.showTags.collectAsStateWithLifecycle()
-    val aiOcrModelOptions by viewModel.aiOcrModelOptions.collectAsStateWithLifecycle()
-    val ocrAiProviderId by viewModel.ocrAiProviderId.collectAsStateWithLifecycle()
 
     var isSearchExpanded by remember { mutableStateOf(false) }
     var hidePermissionBanner by remember { mutableStateOf(false) }
@@ -166,7 +164,6 @@ fun ScreenshotsScreen(
     var showMoreMenu by remember { mutableStateOf(false) }
     var showProcessingMenu by remember { mutableStateOf(false) }
     val searchFocusRequester = remember { FocusRequester() }
-    var showAiOcrDialog by remember { mutableStateOf(false) }
     var showBatchRenameDialog by remember { mutableStateOf(false) }
     var renameTemplate by remember { mutableStateOf("Screenshot_{date}_{index}") }
     var pinchNotification by remember { mutableStateOf<String?>(null) }
@@ -214,7 +211,6 @@ fun ScreenshotsScreen(
     val photoCount = allScreenshots.size - videoCount
     val aiVisionPendingCount = allScreenshots.count { !it.isVideo && !it.aiProcessed }
     val ocrPendingCount = allScreenshots.count { !it.isVideo && it.ocrText.orEmpty().isBlank() }
-    val aiOcrEligibleCount = allScreenshots.count { !it.isVideo && it.ocrText.orEmpty().isNotBlank() && !it.aiProcessed }
     val availableFileTypes = remember(allScreenshots) {
         allScreenshots.mapNotNull { item ->
             item.filePath.substringAfterLast(".").takeIf { it.isNotBlank() }?.lowercase(Locale.ROOT)
@@ -891,16 +887,6 @@ fun ScreenshotsScreen(
                     },
                     modifier = Modifier.testTag("btn_home_ocr")
                 )
-                DropdownMenuItem(
-                    text = {
-                        Column {
-                            Text("AI OCR", fontWeight = FontWeight.SemiBold)
-                            Text(
-                                if (aiOcrEligibleCount > 0) "$aiOcrEligibleCount images ready"
-                                else "Run OCR first",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
                         }
                     },
                     leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
@@ -1087,20 +1073,6 @@ fun ScreenshotsScreen(
         )
     }
 
-    if (showAiOcrDialog) {
-        val eligibleCount = allScreenshots.count { !it.isVideo && it.ocrText.orEmpty().isNotBlank() && !it.aiProcessed }
-        AiOcrEnrichmentDialog(
-            options = aiOcrModelOptions,
-            eligibleCount = eligibleCount,
-            selectedProviderId = ocrAiProviderId,
-            onDismiss = { showAiOcrDialog = false },
-            onStart = { providerId ->
-                viewModel.setOcrAiProviderId(providerId)
-                showAiOcrDialog = false
-                viewModel.batchAiOcrEnrichment(allScreenshots, providerId)
-            },
-        )
-    }
 }
 @Composable
 private fun GalleryMenuToggle(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
@@ -1141,42 +1113,3 @@ private fun GalleryMenuChoiceRow(
     }
 }
 
-@Composable
-private fun AiOcrEnrichmentDialog(
-    options: List<com.amresalehin.emreshots.viewmodel.AiOcrModelOption>,
-    eligibleCount: Int,
-    selectedProviderId: String,
-    onDismiss: () -> Unit,
-    onStart: (String) -> Unit,
-) {
-    var selectedProviderId by remember(options, selectedProviderId) { mutableStateOf(selectedProviderId.ifBlank { options.firstOrNull()?.providerId.orEmpty() }) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("AI OCR enrichment") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("$eligibleCount OCR-ready images can be enriched. OCR text only is sent to the selected AI model.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (options.isEmpty()) {
-                    Text("No configured AI model is available. Add an API key in Settings.", color = MaterialTheme.colorScheme.error)
-                } else {
-                    options.forEach { option ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth().clickable { selectedProviderId = option.providerId }.padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(selected = selectedProviderId == option.providerId, onClick = { selectedProviderId = option.providerId })
-                            Column {
-                                Text(option.modelName, fontWeight = FontWeight.SemiBold)
-                                Text(option.providerName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(onClick = { onStart(selectedProviderId) }, enabled = selectedProviderId.isNotBlank() && eligibleCount > 0) { Text("Enrich") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-    )
-}

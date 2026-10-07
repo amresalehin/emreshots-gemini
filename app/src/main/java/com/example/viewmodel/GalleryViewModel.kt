@@ -120,10 +120,23 @@ class GalleryViewModel(
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
+    private data class GalleryBase(
+        val shots: List<ScreenshotItem>,
+        val cols: List<CollectionItem>,
+        val query: String,
+        val filter: ScreenshotFilter
+    )
+
+    private val galleryBase: StateFlow<GalleryBase> = combine(
+        sortedScreenshots, collections, _searchQuery, _selectedFilter
+    ) { shots, cols, query, filter ->
+        GalleryBase(shots, cols, query, filter)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GalleryBase(emptyList(), emptyList(), "", ScreenshotFilter.ALL))
+
     val uiState: StateFlow<GalleryUiState> = combine(
-        sortedScreenshots, collections, _searchQuery, _selectedFilter, sortOption, groupByOption, viewMode
-    ) { shots, cols, query, filter, sort, group, mode ->
-        GalleryUiState(shots, cols, query, filter, sort, group, mode)
+        galleryBase, sortOption, groupByOption, viewMode
+    ) { base, sort, group, mode ->
+        GalleryUiState(base.shots, base.cols, base.query, base.filter, sort, group, mode)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GalleryUiState())
 
     fun setSearchQuery(query: String) {

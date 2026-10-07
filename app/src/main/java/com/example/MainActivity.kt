@@ -22,6 +22,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.amresalehin.emreshots.ui.navigation.Screen
+import com.amresalehin.emreshots.ui.screens.AiStudioScreen
+import com.amresalehin.emreshots.ui.screens.CloudProvidersScreen
 import com.amresalehin.emreshots.ui.screens.ScreenshotDetailScreen
 import com.amresalehin.emreshots.ui.screens.ScreenshotsScreen
 import com.amresalehin.emreshots.ui.screens.SettingsScreen
@@ -77,7 +79,9 @@ class MainActivity : ComponentActivity() {
                             SettingsScreen(
                                 viewModel = viewModel,
                                 onNavigateBack = { navController.popBackStack() },
-                                onOpenProcessing = { navController.navigate(Screen.Processing.route) }
+                                onOpenProcessing = { navController.navigate(Screen.Processing.route) },
+                                onOpenAiStudio = { navController.navigate(Screen.AiStudio.route) },
+                                onOpenProviders = { navController.navigate(Screen.CloudProviders.route) }
                             )
                         }
 
@@ -88,16 +92,17 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // Backwards compatibility mappings for deep links
                         composable(Screen.AiStudio.route) {
-                            SettingsScreen(
+                            AiStudioScreen(
                                 viewModel = viewModel,
-                                onNavigateBack = { navController.popBackStack() }
+                                onNavigateToProviders = {
+                                    navController.navigate(Screen.CloudProviders.route)
+                                }
                             )
                         }
 
                         composable(Screen.CloudProviders.route) {
-                            SettingsScreen(
+                            CloudProvidersScreen(
                                 viewModel = viewModel,
                                 onNavigateBack = { navController.popBackStack() }
                             )

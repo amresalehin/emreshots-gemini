@@ -110,11 +110,15 @@ fun OnDeviceVisionScreen(
                         Text(stringResource(R.string.inference_mode), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Text(stringResource(R.string.inference_mode_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            listOf("Automatic", "Force local", "Disabled").forEach { option ->
+                            listOf(
+                                "Automatic" to R.string.on_device_mode_automatic,
+                                "FORCE_LOCAL" to R.string.on_device_mode_force_local,
+                                "Disabled" to R.string.on_device_mode_disabled
+                            ).forEach { (value, labelRes) ->
                                 FilterChip(
-                                    selected = mode.equals(option, ignoreCase = true),
-                                    onClick = { viewModel.setOnDeviceVisionMode(option) },
-                                    label = { Text(option) },
+                                    selected = mode.equals(value, ignoreCase = true),
+                                    onClick = { viewModel.setOnDeviceVisionMode(value) },
+                                    label = { Text(stringResource(labelRes)) },
                                     modifier = Modifier.weight(1f)
                                 )
                             }

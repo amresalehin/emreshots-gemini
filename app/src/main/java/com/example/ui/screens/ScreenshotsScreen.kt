@@ -191,6 +191,8 @@ fun ScreenshotsScreen(
 
     val videoCount = allScreenshots.count { it.isVideo }
     val photoCount = allScreenshots.size - videoCount
+    val aiVisionPendingCount = allScreenshots.count { !it.isVideo && !it.aiProcessed }
+    val ocrPendingCount = allScreenshots.count { !it.isVideo && it.ocrText.orEmpty().isBlank() }
     val availableFileTypes = remember(allScreenshots) {
         allScreenshots.mapNotNull { item ->
             item.filePath.substringAfterLast(".").takeIf { it.isNotBlank() }?.lowercase(Locale.ROOT)
@@ -344,16 +346,17 @@ fun ScreenshotsScreen(
                                     Column {
                                         Text("AI Vision", fontWeight = FontWeight.SemiBold)
                                         Text(
-                                            "Open library processing for batch vision analysis",
+                                            if (aiVisionPendingCount > 0) "$aiVisionPendingCount media waiting for analysis" else "Everything is analyzed",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
+                                enabled = !isAnalyzing && aiVisionPendingCount > 0,
                                 onClick = {
                                     showMoreMenu = false
-                                    onNavigateToSettings()
+                                    viewModel.batchAnalyzeScreenshots(allScreenshots.filter { !it.isVideo && !it.aiProcessed })
                                 },
                                 modifier = Modifier.testTag("menu_ai_vision")
                             )
@@ -362,16 +365,21 @@ fun ScreenshotsScreen(
                                     Column {
                                         Text("OCR", fontWeight = FontWeight.SemiBold)
                                         Text(
-                                            "Open library processing for text extraction",
+                                            when {
+                                                !ocrEnabled -> "Disabled in Settings"
+                                                ocrPendingCount > 0 -> "$ocrPendingCount media waiting for OCR"
+                                                else -> "All media has OCR text"
+                                            },
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 },
                                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                                enabled = ocrEnabled && !isExtractingOcr && ocrPendingCount > 0,
                                 onClick = {
                                     showMoreMenu = false
-                                    onNavigateToSettings()
+                                    viewModel.batchExtractOcr(allScreenshots, onlyMissing = true)
                                 },
                                 modifier = Modifier.testTag("menu_ocr")
                             )

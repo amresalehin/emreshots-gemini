@@ -1,8 +1,0 @@
-<resources>
-    <!-- Legacy resource aliases retained for compatibility; Compose uses Color.kt. -->
-    <color name="purple_200">#FFB8B2A8</color>
-    <color name="purple_500">#FF4A4641</color>
-    <color name="purple_700">#FF2D2823</color>
-    <color name="teal_200">#FFA8A29E</color>
-    <color name="teal_700">#FF57534E</color>
-</resources>

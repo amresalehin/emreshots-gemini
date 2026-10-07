@@ -33,13 +33,13 @@ class MediaLibraryCoordinator(
     private val collectionRepository: CollectionRepository,
     private val collections: StateFlow<List<CollectionItem>>,
     private val activeProvider: StateFlow<CustomCloudProvider?>,
+    private val exifDataStore: MutableStateFlow<Map<String, ExifData>>,
     private val exifManager: ExifMetadataManager,
     private val onMessage: (String) -> Unit
 ) {
     private val _pendingWriteIntentSender = MutableStateFlow<android.content.IntentSender?>(null)
     val pendingWriteIntentSender: StateFlow<android.content.IntentSender?> = _pendingWriteIntentSender.asStateFlow()
-    private val _exifDataState = MutableStateFlow<Map<String, ExifData>>(emptyMap())
-    val exifDataState: StateFlow<Map<String, ExifData>> = _exifDataState.asStateFlow()
+    val exifDataState: StateFlow<Map<String, ExifData>> = exifDataStore.asStateFlow()
     private var pendingWriteScreenshot: ScreenshotItem? = null
     private var pendingWriteExifData: ExifData? = null
 
@@ -84,9 +84,9 @@ class MediaLibraryCoordinator(
     fun loadExif(screenshot: ScreenshotItem) {
         scope.launch(Dispatchers.IO) {
             val data = exifManager.readExif(application, screenshot)
-            val current = _exifDataState.value.toMutableMap()
+            val current = exifDataStore.value.toMutableMap()
             current[screenshot.id] = data
-            _exifDataState.value = current
+            exifDataStore.value = current
         }
     }
 
@@ -121,9 +121,9 @@ class MediaLibraryCoordinator(
                 )
                 screenshotRepository.update(updatedScreenshot)
                 val updatedExif = exifManager.readExif(application, updatedScreenshot)
-                val current = _exifDataState.value.toMutableMap()
+                val current = exifDataStore.value.toMutableMap()
                 current[shot.id] = updatedExif
-                _exifDataState.value = current
+                exifDataStore.value = current
                 onMessage = "Write consent granted: EXIF saved to original media!"
             } catch (e: Exception) {
                 // Fallback to safe file write
@@ -167,9 +167,9 @@ class MediaLibraryCoordinator(
                         )
                         screenshotRepository.update(updatedScreenshot)
                         val updatedExif = exifManager.readExif(application, updatedScreenshot)
-                        val current = _exifDataState.value.toMutableMap()
+                        val current = exifDataStore.value.toMutableMap()
                         current[screenshot.id] = updatedExif
-                        _exifDataState.value = current
+                        exifDataStore.value = current
                         onMessage = "EXIF metadata saved directly to device gallery image!"
                         onComplete?.invoke(true)
                         return@launch
@@ -204,9 +204,9 @@ class MediaLibraryCoordinator(
                 screenshotRepository.update(updatedScreenshot)
 
                 val updatedExif = exifManager.readExif(application, updatedScreenshot)
-                val current = _exifDataState.value.toMutableMap()
+                val current = exifDataStore.value.toMutableMap()
                 current[screenshot.id] = updatedExif
-                _exifDataState.value = current
+                exifDataStore.value = current
 
                 onMessage = "EXIF metadata saved directly to image!"
                 onComplete?.invoke(true)
@@ -234,9 +234,9 @@ class MediaLibraryCoordinator(
                 val updatedScreenshot = screenshot.copy(filePath = savedFile.absolutePath)
                 screenshotRepository.update(updatedScreenshot)
 
-                val current = _exifDataState.value.toMutableMap()
+                val current = exifDataStore.value.toMutableMap()
                 current[screenshot.id] = updatedExif
-                _exifDataState.value = current
+                exifDataStore.value = current
                 onMessage = "AI metadata written directly into image EXIF headers!"
             } else {
                 onMessage = "Failed to write AI to EXIF: ${result.exceptionOrNull()?.message}"

@@ -27,7 +27,6 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DocumentScanner
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -77,7 +76,7 @@ fun OcrAiSheet(
     aiOcrModelOptions: List<AiOcrModelOption> = emptyList(),
     selectedOcrProviderId: String = "",
     onSelectOcrProvider: (String) -> Unit = {},
-    onExtractOcr: () -> Unit,
+    onExtractOcr: ((String) -> Unit) -> Unit,
     onFixOcrArtefacts: ((String, (String) -> Unit) -> Unit)? = null,
     onSendOcrToAi: (String, Boolean) -> Unit,
     onWriteToMetadata: (String, String, String, List<String>) -> Unit,
@@ -180,7 +179,7 @@ fun OcrAiSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Button(
-                    onClick = onExtractOcr,
+                    onClick = { onExtractOcr { ocrTextState = it } },
                     enabled = !isExtractingOcr,
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
@@ -314,76 +313,6 @@ fun OcrAiSheet(
                             checkedTrackColor = MaterialTheme.colorScheme.primaryContainer
                         ),
                         modifier = Modifier.testTag("switch_write_metadata")
-                    )
-                }
-            }
-
-            if (aiOcrModelOptions.isNotEmpty()) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text("OCR text enrichment provider", fontWeight = FontWeight.Bold)
-                        Text(
-                            "Only extracted OCR text and metadata are analyzed. The image is never uploaded.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        aiOcrModelOptions.forEach { option ->
-                            val selectionId = "cloud:" + option.providerId
-                            Row(
-                                modifier = Modifier.fillMaxWidth().clickable { onSelectOcrProvider(selectionId) },
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = selectedOcrProviderId == selectionId,
-                                    onClick = { onSelectOcrProvider(selectionId) }
-                                )
-                                Column {
-                                    Text(option.modelName, fontWeight = FontWeight.SemiBold)
-                                    Text(option.providerName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Action: Send OCR to AI
-            Button(
-                onClick = {
-                    onSendOcrToAi(ocrTextState, writeDirectlyToMetadata)
-                },
-                enabled = ocrTextState.isNotBlank() && !isAiProcessing,
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("btn_send_ocr_ai")
-            ) {
-                if (isAiProcessing) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Enriching with selected AI model...", fontSize = 14.sp)
-                } else {
-                    Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = if (writeDirectlyToMetadata) "Selected AI + Write Metadata" else "Enrich with selected AI",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
                     )
                 }
             }

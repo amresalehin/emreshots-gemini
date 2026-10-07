@@ -1,6 +1,7 @@
 package com.amresalehin.emreshots.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -81,7 +82,7 @@ fun AiStudioScreen(
                     onClick = onNavigateBack,
                     modifier = Modifier.testTag("btn_ai_studio_back")
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                 }
             },
             title = {
@@ -141,19 +142,19 @@ fun AiStudioScreen(
                         ) {
                             Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(14.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Switch", fontSize = 11.sp)
+                            Text(stringResource(R.string.switch_provider), fontSize = 11.sp)
                         }
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = activeProvider?.name ?: "No cloud provider configured",
+                        text = activeProvider?.name ?: stringResource(R.string.no_cloud_provider_configured),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = activeProvider?.selectedModel?.let { "Model: " + it } ?: "No cloud model selected",
+                        text = activeProvider?.selectedModel?.let { stringResource(R.string.selected_model, it) } ?: stringResource(R.string.no_cloud_model_selected),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Medium
@@ -168,9 +169,9 @@ fun AiStudioScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Analysis Quality", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.analysis_quality), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                     Text(
-                        "Balance speed and depth of AI captioning.",
+                        stringResource(R.string.analysis_quality_description),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -179,7 +180,7 @@ fun AiStudioScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        listOf("Fast", "Balanced", "Deep").forEach { option ->
+                        listOf(stringResource(R.string.fast), stringResource(R.string.balanced), stringResource(R.string.deep)).forEach { option ->
                             FilterChip(
                                 selected = aiQualityPreset.equals(option, ignoreCase = true),
                                 onClick = { viewModel.setAiQualityPreset(option) },
@@ -220,7 +221,7 @@ fun AiStudioScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Auto-save AI descriptions into image headers",
+                                text = stringResource(R.string.write_exif_directly_description),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -245,13 +246,13 @@ fun AiStudioScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Batch Operations",
+                        text = stringResource(R.string.batch_operations),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Index and extract keywords across multiple media items.",
+                        text = stringResource(R.string.batch_operations_description),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -262,7 +263,7 @@ fun AiStudioScreen(
                         LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(3.dp))
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = statusText ?: "Processing...",
+                            text = statusText ?: stringResource(R.string.processing),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -290,7 +291,7 @@ fun AiStudioScreen(
                                 Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
                             }
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Index ($untaggedCount)", fontSize = 12.sp)
+                            Text(stringResource(R.string.indexed_count, untaggedCount), fontSize = 12.sp)
                         }
 
                         OutlinedButton(
@@ -305,7 +306,7 @@ fun AiStudioScreen(
                         ) {
                             Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Re-index All", fontSize = 12.sp)
+                            Text(stringResource(R.string.reindex_all), fontSize = 12.sp)
                         }
                     }
                 }
@@ -316,8 +317,8 @@ fun AiStudioScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                StatCard("Indexed Media", "$processedCount / ${allScreenshots.size}", Modifier.weight(1f))
-                StatCard("Active Engine", activeProvider?.selectedModel?.substringBefore(':') ?: "Local / none", Modifier.weight(1f))
+                StatCard(stringResource(R.string.indexed_media), "$processedCount / ${allScreenshots.size}", Modifier.weight(1f))
+                StatCard(stringResource(R.string.active_engine), activeProvider?.selectedModel?.substringBefore(':') ?: stringResource(R.string.local_or_none), Modifier.weight(1f))
             }
         }
     }

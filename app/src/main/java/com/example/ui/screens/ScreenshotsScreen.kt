@@ -92,6 +92,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -100,6 +101,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.amresalehin.emreshots.R
 import com.amresalehin.emreshots.data.model.GalleryViewMode
 import com.amresalehin.emreshots.data.model.MediaGroupBy
 import com.amresalehin.emreshots.data.model.MediaSortOption
@@ -226,17 +228,17 @@ fun ScreenshotsScreen(
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = { viewModel.setSearchQuery(it) },
-                            placeholder = { Text("Search screenshots…", fontSize = 14.sp) },
+                            placeholder = { Text(stringResource(R.string.gallery_search_placeholder), fontSize = 14.sp) },
                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
                             trailingIcon = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     if (searchQuery.isNotEmpty()) {
-                                        IconButton(onClick = { viewModel.setSearchQuery("") }, modifier = Modifier.size(36.dp)) {
-                                            Icon(Icons.Default.Clear, contentDescription = "Clear search", modifier = Modifier.size(18.dp))
+                                        IconButton(onClick = { viewModel.setSearchQuery("") }, modifier = Modifier.size(48.dp)) {
+                                            Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear_search), modifier = Modifier.size(18.dp))
                                         }
                                     }
-                                    IconButton(onClick = { isSearchExpanded = false }, modifier = Modifier.size(36.dp)) {
-                                        Icon(Icons.Default.Close, contentDescription = "Close search", modifier = Modifier.size(18.dp))
+                                    IconButton(onClick = { isSearchExpanded = false }, modifier = Modifier.size(48.dp)) {
+                                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close_search), modifier = Modifier.size(18.dp))
                                     }
                                 }
                             },
@@ -533,11 +535,13 @@ fun ScreenshotsScreen(
                             }
                             IconButton(
                                 onClick = { hidePermissionBanner = true },
-                                modifier = Modifier.size(26.dp)
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .testTag("btn_dismiss_media_permission")
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
-                                    contentDescription = "Dismiss",
+                                    contentDescription = stringResource(R.string.dismiss),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(14.dp)
                                 )

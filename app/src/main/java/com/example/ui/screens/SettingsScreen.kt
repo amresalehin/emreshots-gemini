@@ -101,7 +101,7 @@ private fun SettingsDestination(
     Card(
         onClick = { onClick?.invoke() },
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(

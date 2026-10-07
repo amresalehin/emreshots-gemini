@@ -16,7 +16,8 @@ import kotlinx.coroutines.withContext
  */
 class OcrArtefactLlmFixer(
     private val context: Context,
-    val localLlmManager: LocalOcrLlmManager = LocalOcrLlmManager(context)
+    val localLlmManager: LocalOcrLlmManager = LocalOcrLlmManager(context),
+    private val enableLocalLlm: Boolean = true
 ) {
     /**
      * Primary entry point: Processes raw OCR text directly through local AI,
@@ -28,7 +29,7 @@ class OcrArtefactLlmFixer(
         }
 
         // 1. Run inference using the small Local text LLM (pure text, no VLM)
-        val llmResult = localLlmManager.processOcrWithLocalLlm(rawText)
+        val llmResult = if (enableLocalLlm) localLlmManager.processOcrWithLocalLlm(rawText) else null
         if (llmResult != null && llmResult.fixedOcrText.isNotBlank()) {
             val cleanedText = cleanupOcrArtefactsRuleBased(llmResult.fixedOcrText)
             val semanticTags = extractSemanticTags(cleanedText)

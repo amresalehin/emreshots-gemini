@@ -56,6 +56,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -194,14 +195,14 @@ fun ZoomableImageViewer(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
-                                    contentDescription = "Close",
+                                    contentDescription = stringResource(R.string.close),
                                     tint = Color.White
                                 )
                             }
 
                             Column {
                                 Text(
-                                    text = screenshot.title.ifBlank { "Media Viewer" },
+                                    text = screenshot.title.ifBlank { stringResource(R.string.media_viewer) },
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White,
@@ -250,7 +251,7 @@ fun ZoomableImageViewer(
                             ) {
                                 Icon(
                                     imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                    contentDescription = "Favorite",
+                                    contentDescription = stringResource(R.string.favorite),
                                     tint = if (screenshot.isFavorite) DangerRose else MaterialTheme.colorScheme.onSurface
                                 )
                             }
@@ -269,7 +270,7 @@ fun ZoomableImageViewer(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Share,
-                                    contentDescription = "Share",
+                                    contentDescription = stringResource(R.string.share),
                                     tint = Color.White
                                 )
                             }

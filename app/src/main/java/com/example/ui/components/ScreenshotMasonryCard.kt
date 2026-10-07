@@ -178,13 +178,13 @@ fun ScreenshotMasonryCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.AutoAwesome,
-                                contentDescription = "AI Analyzed",
+                                contentDescription = stringResource(R.string.ai_analyzed),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(11.dp)
                             )
                             Spacer(modifier = Modifier.width(3.dp))
                             Text(
-                                text = "AI",
+                                text = stringResource(R.string.ai_label),
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
@@ -203,7 +203,7 @@ fun ScreenshotMasonryCard(
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Default.Alarm,
-                                contentDescription = "Reminder",
+                                contentDescription = stringResource(R.string.reminder),
                                 tint = Color.White,
                                 modifier = Modifier.size(11.dp)
                             )
@@ -286,7 +286,7 @@ fun ScreenshotMasonryCard(
                         if (screenshot.isVideo) {
                             val secs = (screenshot.durationMs / 1000) % 60
                             val mins = (screenshot.durationMs / 1000) / 60
-                            val durStr = if (screenshot.durationMs > 0) String.format("%d:%02d", mins, secs) else "Video"
+                            val durStr = if (screenshot.durationMs > 0) String.format("%d:%02d", mins, secs) else stringResource(R.string.video)
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     imageVector = Icons.Default.PlayArrow,

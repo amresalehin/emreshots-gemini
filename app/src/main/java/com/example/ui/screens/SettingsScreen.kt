@@ -33,7 +33,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
@@ -101,8 +100,7 @@ fun SettingsScreen(
     viewModel: ScreenshotsViewModel,
     onNavigateBack: (() -> Unit)? = null,
     onOpenProcessing: (() -> Unit)? = null,
-    onOpenAiStudio: (() -> Unit)? = null,
-    onOpenProviders: (() -> Unit)? = null
+    onOpenAiStudio: (() -> Unit)? = null
 ) {
     val indexingState by viewModel.indexingState.collectAsStateWithLifecycle()
     val ocrEnabled by viewModel.ocrEnabled.collectAsStateWithLifecycle()
@@ -213,15 +211,6 @@ fun SettingsScreen(
                         onClick = { onOpenAiStudio?.invoke() }
                     )
                     SettingsSimpleDivider()
-                    SettingsRow(
-                        icon = Icons.Default.CloudDone,
-                        title = "Cloud Providers",
-                        subtitle = "Configure endpoints, models, and connection tests",
-                        trailing = {
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        },
-                        onClick = { onOpenProviders?.invoke() }
-                    )
                     SettingsSimpleDivider()
                     SettingsRow(
                         icon = Icons.Default.Refresh,

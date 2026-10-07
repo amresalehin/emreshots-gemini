@@ -25,6 +25,8 @@ class ReminderReceiver : BroadcastReceiver() {
 
         ensureNotificationChannel(context)
 
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
+
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)

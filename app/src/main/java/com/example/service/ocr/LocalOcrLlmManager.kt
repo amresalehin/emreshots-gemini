@@ -3,6 +3,7 @@ package com.amresalehin.emreshots.service.ocr
 import android.content.Context
 import android.net.Uri
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -43,8 +44,9 @@ class LocalOcrLlmManager(
 
     val modelFile: File
         get() {
-            val existing = modelsDir.listFiles()?.firstOrNull { it.name.endsWith(".gguf", ignoreCase = true) && it.length() > 1024 * 1024 }
-            return existing ?: File(modelsDir, defaultModelName)
+            val bundled = File(modelsDir, defaultModelName)
+            if (bundled.exists() && bundled.length() > 80L * 1024L * 1024L) return bundled
+            return modelsDir.listFiles()?.firstOrNull { it.name.endsWith(".gguf", ignoreCase = true) && it.length() > 80L * 1024L * 1024L } ?: bundled
         }
 
     private val _isDownloading = MutableStateFlow(false)

@@ -1,5 +1,7 @@
 package com.amresalehin.emreshots.ui.components
 
+import com.amresalehin.emreshots.R
+
 import androidx.compose.foundation.background
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.clickable

@@ -1,5 +1,7 @@
 package com.amresalehin.emreshots.ui.components
 
+import com.amresalehin.emreshots.R
+
 import com.amresalehin.emreshots.ui.theme.DangerRose
 import android.graphics.Bitmap
 import android.net.Uri
@@ -49,6 +51,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -210,7 +213,7 @@ fun ScreenshotFeedCard(
                         ) {
                             Icon(
                                 imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                contentDescription = "Favorite",
+                                contentDescription = if (screenshot.isFavorite) stringResource(R.string.remove_from_favorites) else stringResource(R.string.add_to_favorites),
                                 tint = if (screenshot.isFavorite) DangerRose else MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(18.dp)
                             )

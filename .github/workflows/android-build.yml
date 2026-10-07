@@ -58,49 +58,38 @@ jobs:
           test "$(stat -c %s "$MODEL")" -gt 80000000
           echo "Bundled OCR LLM verified: $(du -h "$MODEL" | cut -f1)"
 
-      - name: Reproduce resource merge for diagnosis
+      - name: Build and test
         continue-on-error: true
-        shell: bash
-        run: |
-          set -uo pipefail
-          mkdir -p "$RUNNER_TEMP/emreshots-transform-diagnostic"
-          status=0
-          (
-            for i in $(seq 1 1800); do
-              while IFS= read -r -d '' file; do
-                cp "$file" "$RUNNER_TEMP/emreshots-transform-diagnostic/values.xml" || true
-              done < <(find "$HOME/.gradle/caches" -path '*/transformed/ui-release/res/values/values.xml' -type f -print0 2>/dev/null)
-              sleep 0.1
-            done
-          ) &
-          watcher=$!
-          gradle :app:mergeDebugResources --stacktrace || status=$?
-          kill "$watcher" 2>/dev/null || true
-          echo "merge_status=$status"
-          exit 0
+        run: gradle build --stacktrace
 
-      - name: Inspect transformed resource source
+      - name: Inspect failing transformed resources
         if: ${{ always() }}
         shell: bash
         run: |
           set -euo pipefail
-          file="$RUNNER_TEMP/emreshots-transform-diagnostic/values.xml"
-          test -f "$file"
-          echo "TRANSFORMED_RESOURCE_FILE=$file"
-          grep -n -C 8 'no_text_extracted' "$file" || true
-          sed -n '35,60p' "$file"
+          out="$RUNNER_TEMP/emreshots-transform-diagnostic"
+          mkdir -p "$out"
+          found=0
+          while IFS= read -r -d "" file; do
+            if grep -a -q "no_text_extracted" "$file"; then
+              echo "MATCH=$file"
+              sha256sum "$file"
+              cp "$file" "$out/$(basename "$(dirname "$(dirname "$(dirname "$file")")")").xml"
+              grep -a -n -C 5 "no_text_extracted" "$file" || true
+              found=1
+            fi
+          done < <(find "$HOME/.gradle/caches/9.3.1/transforms" -path "*/transformed/ui-release/res/values/values.xml" -type f -print0 2>/dev/null)
+          echo "matching_transforms=$found"
+          find "$HOME/.gradle/caches/9.3.1/transforms" -path "*/transformed/ui-release/res/values/values.xml" -type f -print | sort
 
       - name: Upload transformed resource diagnostic
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: emreshots-transform-resource-diagnostic
-          path: ${{ runner.temp }}/emreshots-transform-diagnostic/values.xml
-          if-no-files-found: error
+          path: ${{ runner.temp }}/emreshots-transform-diagnostic
+          if-no-files-found: ignore
           retention-days: 2
-      - name: Build and test
-        run: gradle build --stacktrace
-
       - name: Assemble installable release APK
         run: gradle :app:assembleRelease --stacktrace
 

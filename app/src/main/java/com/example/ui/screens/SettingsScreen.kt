@@ -210,8 +210,6 @@ fun SettingsScreen(
                         },
                         onClick = { onOpenAiStudio?.invoke() }
                     )
-                    SettingsSimpleDivider()
-                    SettingsSimpleDivider()
                     SettingsRow(
                         icon = Icons.Default.Refresh,
                         title = "Library Processing",

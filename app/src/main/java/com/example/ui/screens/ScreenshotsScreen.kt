@@ -65,7 +65,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -340,6 +339,49 @@ fun ScreenshotsScreen(
                                 leadingIcon = { Icon(Icons.Default.GridView, contentDescription = null) },
                                 onClick = { showMoreMenu = false; showGroupDialog = true },
                                 modifier = Modifier.testTag("btn_group_by_option")
+                            )
+                            androidx.compose.material3.HorizontalDivider()
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        Text("AI Vision", fontWeight = FontWeight.SemiBold)
+                                        Text(
+                                            if (aiVisionPendingCount > 0) "$aiVisionPendingCount media waiting for analysis" else "Everything is analyzed",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
+                                enabled = !isAnalyzing && aiVisionPendingCount > 0,
+                                onClick = {
+                                    showMoreMenu = false
+                                    viewModel.batchAnalyzeScreenshots(allScreenshots.filter { !it.isVideo && !it.aiProcessed })
+                                },
+                                modifier = Modifier.testTag("menu_ai_vision")
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        Text("OCR", fontWeight = FontWeight.SemiBold)
+                                        Text(
+                                            when {
+                                                !ocrEnabled -> "Disabled in Settings"
+                                                ocrPendingCount > 0 -> "$ocrPendingCount media waiting for OCR"
+                                                else -> "All media has OCR text"
+                                            },
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                },
+                                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                                enabled = ocrEnabled && !isExtractingOcr && ocrPendingCount > 0,
+                                onClick = {
+                                    showMoreMenu = false
+                                    viewModel.batchExtractOcr(allScreenshots, onlyMissing = true)
+                                },
+                                modifier = Modifier.testTag("menu_ocr")
                             )
                             androidx.compose.material3.HorizontalDivider()
                             DropdownMenuItem(
@@ -752,106 +794,6 @@ fun ScreenshotsScreen(
                         .align(Alignment.CenterEnd)
                         .navigationBarsPadding()
                         .padding(top = 8.dp, bottom = 80.dp)
-                )
-            }
-        }
-
-        // Quick processing launcher: keep OCR / AI vision discoverable without taking over the gallery.
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .navigationBarsPadding()
-                .padding(end = 16.dp, bottom = 84.dp)
-        ) {
-            DropdownMenu(
-                expanded = showProcessingMenu,
-                onDismissRequest = { showProcessingMenu = false }
-            ) {
-                DropdownMenuItem(
-                    text = {
-                        Column {
-                            Text("AI Vision", fontWeight = FontWeight.SemiBold)
-                            Text(
-                                if (aiVisionPendingCount > 0) "$aiVisionPendingCount images waiting"
-                                else "Everything is analyzed",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    },
-                    leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
-                    trailingIcon = { if (aiVisionPendingCount > 0) Text("$aiVisionPendingCount") },
-                    enabled = !isAnalyzing && aiVisionPendingCount > 0,
-                    onClick = {
-                        showProcessingMenu = false
-                        viewModel.batchAnalyzeScreenshots(allScreenshots.filter { !it.isVideo && !it.aiProcessed })
-                    }
-                )
-                DropdownMenuItem(
-                    text = {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("OCR", fontWeight = FontWeight.SemiBold)
-                                Text(
-                                    if (!ocrEnabled) "Disabled in Settings"
-                                    else if (ocrPendingCount > 0) "$ocrPendingCount images waiting"
-                                    else "All images have OCR text",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (!ocrEnabled) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Spacer(Modifier.width(8.dp))
-                            Switch(
-                                checked = ocrEnabled,
-                                onCheckedChange = { viewModel.setOcrEnabled(it) },
-                                modifier = Modifier.testTag("switch_home_ocr")
-                            )
-                        }
-                    },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = null,
-                            tint = if (ocrEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        )
-                    },
-                    trailingIcon = { if (ocrEnabled && ocrPendingCount > 0) Text("$ocrPendingCount") },
-                    onClick = {
-                        if (!ocrEnabled) {
-                            viewModel.setOcrEnabled(true)
-                        } else if (!isExtractingOcr && ocrPendingCount > 0) {
-                            showProcessingMenu = false
-                            viewModel.batchExtractOcr(allScreenshots, onlyMissing = true)
-                        }
-                    },
-                    modifier = Modifier.testTag("btn_home_ocr")
-                )
-            }
-
-            FloatingActionButton(
-                onClick = { showProcessingMenu = !showProcessingMenu },
-                containerColor = if (showProcessingMenu) {
-                    MaterialTheme.colorScheme.secondaryContainer
-                } else {
-                    MaterialTheme.colorScheme.surfaceContainerHigh
-                },
-                contentColor = if (showProcessingMenu) {
-                    MaterialTheme.colorScheme.onSecondaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
-                shape = CircleShape,
-                modifier = Modifier
-                    .size(46.dp)
-                    .testTag("fab_processing_menu")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AutoAwesome,
-                    contentDescription = "AI and OCR tools"
                 )
             }
         }

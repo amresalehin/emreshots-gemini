@@ -2,11 +2,11 @@ package com.amresalehin.emreshots.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Warm editorial palette: terracotta primary with stone neutrals.
-val PrimaryLight = Color(0xFFC2410C)
+// Near-neutral editorial palette: warm graphite primary with stone neutrals.
+val PrimaryLight = Color(0xFF4A4641)
 val OnPrimaryLight = Color(0xFFFFFFFF)
-val PrimaryContainerLight = Color(0xFFFFEDD5)
-val OnPrimaryContainerLight = Color(0xFF7C2D12)
+val PrimaryContainerLight = Color(0xFFE9E6E2)
+val OnPrimaryContainerLight = Color(0xFF26231F)
 
 val SecondaryLight = Color(0xFF57534E)
 val OnSecondaryLight = Color(0xFFFFFFFF)
@@ -27,11 +27,11 @@ val OnSurfaceVariantLight = Color(0xFF57534E)
 val OutlineLight = Color(0xFFD6D3D1)
 val OutlineVariantLight = Color(0xFFE7E5E4)
 
-// Dark Theme - warm charcoal with restrained accents.
-val PrimaryDark = Color(0xFFFDAF74)
-val OnPrimaryDark = Color(0xFF431407)
-val PrimaryContainerDark = Color(0xFF9A3412)
-val OnPrimaryContainerDark = Color(0xFFFFEDD5)
+// Dark Theme - warm charcoal with restrained neutral accents.
+val PrimaryDark = Color(0xFFD7D1C9)
+val OnPrimaryDark = Color(0xFF2D2823)
+val PrimaryContainerDark = Color(0xFF5A544C)
+val OnPrimaryContainerDark = Color(0xFFF2EDE7)
 
 val SecondaryDark = Color(0xFFA8A29E)
 val OnSecondaryDark = Color(0xFF292524)

@@ -1,5 +1,7 @@
 package com.amresalehin.emreshots.ui.components
 
+import com.amresalehin.emreshots.R
+
 import com.amresalehin.emreshots.ui.theme.DangerRose
 import android.content.Context
 import android.content.Intent

@@ -79,7 +79,7 @@ class LocalOcrLlmManager(
     private fun hasBundledAsset(): Boolean {
         return try {
             val assetFiles = context.assets.list("models") ?: emptyArray()
-            assetFiles.any { it.endsWith(".gguf", ignoreCase = true) }
+            assetFiles.any { it.equals(defaultModelName, ignoreCase = true) }
         } catch (_: Throwable) {
             false
         }
@@ -90,7 +90,7 @@ class LocalOcrLlmManager(
      */
     suspend fun ensureModelReady(): Boolean = withContext(Dispatchers.IO) {
         val target = modelFile
-        if (target.exists() && target.length() > 1024 * 1024) {
+        if (target.exists() && target.length() > 80L * 1024L * 1024L) {
             _isModelInstalled.value = true
             return@withContext true
         }
@@ -98,7 +98,7 @@ class LocalOcrLlmManager(
         // 1. Check if predownloaded/bundled in assets
         try {
             val assetFiles = context.assets.list("models") ?: emptyArray()
-            val bundledName = assetFiles.firstOrNull { it.endsWith(".gguf", ignoreCase = true) }
+            val bundledName = assetFiles.firstOrNull { it.equals(defaultModelName, ignoreCase = true) }
             if (bundledName != null) {
                 _statusMessage.value = "Extracting predownloaded local AI…"
                 val dest = File(modelsDir, bundledName)
@@ -111,7 +111,7 @@ class LocalOcrLlmManager(
                         }
                     }
                 }
-                if (dest.length() > 1024 * 1024) {
+                if (dest.length() > 80L * 1024L * 1024L) {
                     _isModelInstalled.value = true
                     _statusMessage.value = "Predownloaded local AI ready"
                     return@withContext true
@@ -122,7 +122,7 @@ class LocalOcrLlmManager(
         }
 
 
-        val ready = target.exists() && target.length() > 1024 * 1024
+        val ready = target.exists() && target.length() > 80L * 1024L * 1024L
         _isModelInstalled.value = ready
         ready
     }

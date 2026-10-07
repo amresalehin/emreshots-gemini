@@ -103,7 +103,7 @@ fun OnDeviceVisionScreen(
         ) {
             item {
                 Card(
-                    shape = RoundedCornerShape(18.dp),
+                    shape = MaterialTheme.shapes.large,
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -127,7 +127,7 @@ fun OnDeviceVisionScreen(
                 }
             }
             item {
-                Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                Card(shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -139,7 +139,7 @@ fun OnDeviceVisionScreen(
                         OutlinedButton(
                             onClick = { picker.launch(arrayOf("*/*")) },
                             modifier = Modifier.height(48.dp),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = MaterialTheme.shapes.medium
                         ) {
                             Icon(Icons.Default.FileOpen, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
@@ -180,7 +180,7 @@ private fun OnDeviceModelList(
             val installed = model.id in installedIds
             val selected = model.id == selectedModelId
             Card(
-                shape = RoundedCornerShape(12.dp),
+                shape = MaterialTheme.shapes.medium,
                 colors = CardDefaults.cardColors(
                     containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
                 )
@@ -219,7 +219,7 @@ private fun OnDeviceModelList(
                                     }
                                 },
                                 enabled = busyId == null,
-                                shape = RoundedCornerShape(10.dp)
+                                shape = MaterialTheme.shapes.small
                             ) { Text(stringResource(R.string.download)) }
                         }
                     }

@@ -108,7 +108,7 @@ fun CollectionsScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.createCollection(name.trim(), "", "folder", "#C2410C")
+                        viewModel.createCollection(name.trim(), "", "folder", "#4A4641")
                         showCreate = false
                         name = ""
                     },

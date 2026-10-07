@@ -6,6 +6,7 @@ sealed class Screen(val route: String) {
     data object Processing : Screen("processing")
     data object AiStudio : Screen("ai_studio")
     data object CloudProviders : Screen("cloud_providers")
+    data object CloudProvidersFromAiStudio : Screen("cloud_providers_from_ai_studio")
     data object ScreenshotDetail : Screen("screenshot_detail/{screenshotId}") {
         fun createRoute(screenshotId: String) = "screenshot_detail/$screenshotId"
     }

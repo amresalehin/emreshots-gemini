@@ -317,7 +317,7 @@ fun ScreenshotDetailScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("Media item not found", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    title = { Text(stringResource(R.string.media_item_not_found), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     navigationIcon = {
                         IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("btn_detail_back")) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -963,7 +963,7 @@ fun ScreenshotDetailScreen(
                                         IconButton(
                                             onClick = {
                                                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                                clipboard.setPrimaryClip(ClipData.newPlainText("Link", link))
+                                                clipboard.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.link), link))
                                                 viewModel.showMessage("Copied to clipboard!")
                                             },
                                             modifier = Modifier.size(28.dp)
@@ -1109,7 +1109,7 @@ fun ScreenshotDetailScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("Delete")
+                    Text(stringResource(R.string.delete))
                 }
             },
             dismissButton = {

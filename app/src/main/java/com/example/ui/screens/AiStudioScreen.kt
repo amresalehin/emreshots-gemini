@@ -27,6 +27,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -62,6 +63,7 @@ fun AiStudioScreen(
     val isAnalyzing by viewModel.isAnalyzing.collectAsStateWithLifecycle()
     val statusText by viewModel.analysisStatusText.collectAsStateWithLifecycle()
     val autoWriteExif by viewModel.autoWriteExifSetting.collectAsStateWithLifecycle()
+    val aiQualityPreset by viewModel.aiQualityPreset.collectAsStateWithLifecycle()
 
     BackHandler(onBack = onNavigateBack)
 
@@ -156,6 +158,36 @@ fun AiStudioScreen(
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Medium
                     )
+                }
+            }
+
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Analysis Quality", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Balance speed and depth of AI captioning.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf("Fast", "Balanced", "Deep").forEach { option ->
+                            FilterChip(
+                                selected = aiQualityPreset.equals(option, ignoreCase = true),
+                                onClick = { viewModel.setAiQualityPreset(option) },
+                                label = { Text(option) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
                 }
             }
 

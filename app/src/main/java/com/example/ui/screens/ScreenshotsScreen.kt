@@ -3,11 +3,6 @@ package com.amresalehin.emreshots.ui.screens
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -98,7 +93,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
@@ -122,10 +116,8 @@ import com.amresalehin.emreshots.ui.components.ScreenshotListItem
 import com.amresalehin.emreshots.ui.components.ScreenshotMasonryCard
 import com.amresalehin.emreshots.viewmodel.ScreenshotFilter
 import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
-import kotlin.math.hypot
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -153,6 +145,7 @@ fun ScreenshotsScreen(
     val ocrEnabled by viewModel.ocrEnabled.collectAsStateWithLifecycle()
     val showFileNames by viewModel.showFileNames.collectAsStateWithLifecycle()
     val showTags by viewModel.showTags.collectAsStateWithLifecycle()
+    val isSyncingDeviceMedia by viewModel.isSyncingDeviceMedia.collectAsStateWithLifecycle()
 
     var isSearchExpanded by remember { mutableStateOf(false) }
     var hidePermissionBanner by remember { mutableStateOf(false) }
@@ -165,8 +158,7 @@ fun ScreenshotsScreen(
     var showProcessingMenu by remember { mutableStateOf(false) }
     val searchFocusRequester = remember { FocusRequester() }
     var showBatchRenameDialog by remember { mutableStateOf(false) }
-    var renameTemplate by remember { mutableStateOf("Screenshot_{date}_{index}") }
-    var pinchNotification by remember { mutableStateOf<String?>(null) }
+    var renameTemplate by remember { mutableStateOf("Media_{date}_{index}") }
     LaunchedEffect(autoSyncDeviceMedia, hasMediaPermissions) {
         if (autoSyncDeviceMedia && hasMediaPermissions) {
             viewModel.syncDeviceMedia()
@@ -175,13 +167,6 @@ fun ScreenshotsScreen(
 
     LaunchedEffect(isSearchExpanded) {
         if (isSearchExpanded) searchFocusRequester.requestFocus()
-    }
-
-    LaunchedEffect(pinchNotification) {
-        if (pinchNotification != null) {
-            delay(1200)
-            pinchNotification = null
-        }
     }
 
     val gridState = rememberLazyGridState()
@@ -432,6 +417,32 @@ fun ScreenshotsScreen(
                  }
              }
 
+            // Explicit view mode control replaces the undocumented pinch gesture.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("View", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                GalleryViewMode.entries.forEach { mode ->
+                    Surface(
+                        onClick = { viewModel.setViewMode(mode) },
+                        color = if (mode == viewMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = if (mode == viewMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .height(40.dp)
+                            .testTag("gallery_view_mode_" + mode.name.lowercase())
+                    ) {
+                        Box(modifier = Modifier.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+                            Text(mode.displayName, style = MaterialTheme.typography.labelMedium, fontWeight = if (mode == viewMode) FontWeight.SemiBold else FontWeight.Medium)
+                        }
+                    }
+                }
+            }
              // Compact, non-intrusive permission card (only if not granted and not dismissed)
             if (!hasMediaPermissions && !hidePermissionBanner) {
                 Surface(
@@ -473,10 +484,10 @@ fun ScreenshotsScreen(
                                 shape = RoundedCornerShape(12.dp),
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
                                 modifier = Modifier
-                                    .height(28.dp)
+                                    .height(48.dp)
                                     .testTag("btn_grant_media_permission")
                             ) {
-                                Text("Allow", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text("Allow", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                             IconButton(
                                 onClick = { hidePermissionBanner = true },
@@ -517,7 +528,7 @@ fun ScreenshotsScreen(
             }
             // Gallery overview: pinch in for detail-rich feed, pinch out for three-column masonry.
             PullToRefreshBox(
-                isRefreshing = isExtractingOcr || isAnalyzing || statusText != null,
+                isRefreshing = isSyncingDeviceMedia,
                 onRefresh = {
                     if (hasMediaPermissions) viewModel.syncDeviceMedia()
                     else permissionLauncher.launch(DeviceMediaScanner.getRequiredPermissions())
@@ -525,37 +536,6 @@ fun ScreenshotsScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .pointerInput(Unit) {
-                        awaitEachGesture {
-                            awaitFirstDown(requireUnconsumed = false)
-                            var scale = 1f
-                            var changed = false
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                if (event.changes.size >= 2) {
-                                    val a = event.changes[0]
-                                    val b = event.changes[1]
-                                    val previousDistance = hypot(a.previousPosition.x - b.previousPosition.x, a.previousPosition.y - b.previousPosition.y)
-                                    val currentDistance = hypot(a.position.x - b.position.x, a.position.y - b.position.y)
-                                    if (previousDistance > 12f && currentDistance > 12f) {
-                                        scale *= currentDistance / previousDistance
-                                        if (!changed && scale > 1.14f) {
-                                            viewModel.setViewMode(GalleryViewMode.FEED)
-                                            pinchNotification = "Feed view"
-                                            changed = true
-                                        } else if (!changed && scale < 0.86f) {
-                                            viewModel.setViewMode(GalleryViewMode.MASONRY)
-                                            viewModel.setGridColumns(3)
-                                            pinchNotification = "3-column masonry"
-                                            changed = true
-                                        }
-                                        event.changes.forEach { it.consume() }
-                                    }
-                                }
-                                if (event.changes.none { it.pressed }) break
-                            }
-                        }
-                    }
             ) {
                 if (totalDisplayCount == 0) {
                     Box(
@@ -670,8 +650,8 @@ fun ScreenshotsScreen(
                                         screenshot = item,
                                         onClick = { onNavigateToDetail(item.id) },
                                         onToggleFavorite = { viewModel.toggleFavorite(item) },
-                                        showFileName = false,
-                                             showTags = false
+                                        showFileName = showFileNames,
+                                             showTags = showTags
                                     )
                                 }
                             }
@@ -741,22 +721,22 @@ fun ScreenshotsScreen(
                                             screenshot = item,
                                             onClick = { onNavigateToDetail(item.id) },
                                             onToggleFavorite = { viewModel.toggleFavorite(item) },
-                                            showFileName = false,
-                                             showTags = false
+                                            showFileName = showFileNames,
+                                             showTags = showTags
                                         )
                                         GalleryViewMode.LIST -> ScreenshotListItem(
                                             screenshot = item,
                                             onClick = { onNavigateToDetail(item.id) },
                                             onToggleFavorite = { viewModel.toggleFavorite(item) },
-                                            showFileName = false,
-                                             showTags = false
+                                            showFileName = showFileNames,
+                                             showTags = showTags
                                         )
                                         GalleryViewMode.MASONRY -> ScreenshotMasonryCard(
                                         screenshot = item,
                                         onClick = { onNavigateToDetail(item.id) },
                                         onToggleFavorite = { viewModel.toggleFavorite(item) },
-                                        showFileName = false,
-                                             showTags = false
+                                        showFileName = showFileNames,
+                                             showTags = showTags
                                     )
                                     }
                                 }
@@ -775,43 +755,6 @@ fun ScreenshotsScreen(
                         .navigationBarsPadding()
                         .padding(top = 8.dp, bottom = 80.dp)
                 )
-
-                // Animated Pinch Gesture Feedback Pill
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = pinchNotification != null,
-                    enter = fadeIn() + scaleIn(),
-                    exit = fadeOut() + scaleOut(),
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 16.dp)
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.95f),
-                        shadowElevation = 6.dp
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ZoomIn,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = pinchNotification ?: "",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                    }
-                }
-            }
-        }
 
         // Quick processing launcher: keep OCR / AI vision discoverable without taking over the gallery.
         Box(

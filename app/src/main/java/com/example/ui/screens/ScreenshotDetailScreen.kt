@@ -545,9 +545,9 @@ fun ScreenshotDetailScreen(
                     .border(
                         1.dp,
                         MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f),
-                        RoundedCornerShape(22.dp)
+                        MaterialTheme.shapes.extraLarge
                     )
-                    .clip(RoundedCornerShape(22.dp))
+                    .clip(MaterialTheme.shapes.extraLarge)
                     .pointerInput(screenshotId) {
                         var totalDrag = 0f
                         var triggered = false
@@ -570,7 +570,7 @@ fun ScreenshotDetailScreen(
                             }
                         )
                     },
-                shape = RoundedCornerShape(22.dp),
+                shape = MaterialTheme.shapes.extraLarge,
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 tonalElevation = 0.dp
             ) {
@@ -605,7 +605,7 @@ fun ScreenshotDetailScreen(
             if (!hasMediaLocationPermission) {
                 Surface(
                     color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = MaterialTheme.shapes.medium,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 6.dp)
@@ -634,7 +634,7 @@ fun ScreenshotDetailScreen(
                             onClick = {
                                 permissionLauncher.launch(com.amresalehin.emreshots.service.media.DeviceMediaScanner.getRequiredPermissions())
                             },
-                            shape = RoundedCornerShape(12.dp),
+                            shape = MaterialTheme.shapes.medium,
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
                             modifier = Modifier
                                 .height(48.dp)
@@ -674,7 +674,7 @@ fun ScreenshotDetailScreen(
                     Button(
                         onClick = { viewModel.analyzeScreenshot(screenshot, autoWriteExif = false) },
                         enabled = !isAnalyzing,
-                        shape = RoundedCornerShape(16.dp),
+                        shape = MaterialTheme.shapes.large,
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 11.dp),
                         elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp),
                         modifier = Modifier.weight(1f).testTag("btn_analyze_now")
@@ -694,7 +694,7 @@ fun ScreenshotDetailScreen(
 
                     OutlinedButton(
                         onClick = { showOcrSheet = true },
-                        shape = RoundedCornerShape(16.dp),
+                        shape = MaterialTheme.shapes.large,
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 11.dp),
                         modifier = Modifier.weight(1f).testTag("btn_open_ocr_sheet")
                     ) {
@@ -713,7 +713,7 @@ fun ScreenshotDetailScreen(
                                 }
                                 showExifEditor = true
                             },
-                            shape = RoundedCornerShape(16.dp),
+                            shape = MaterialTheme.shapes.large,
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 11.dp),
                             modifier = Modifier.weight(1f).testTag("btn_open_exif_editor")
                         ) {
@@ -836,7 +836,7 @@ fun ScreenshotDetailScreen(
                         screenshot.tags.forEach { tag ->
                             Surface(
                                 color = MaterialTheme.colorScheme.surfaceVariant,
-                                shape = RoundedCornerShape(12.dp)
+                                shape = MaterialTheme.shapes.medium
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -863,7 +863,7 @@ fun ScreenshotDetailScreen(
 
                         Surface(
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = MaterialTheme.shapes.medium,
                             modifier = Modifier.clickable { showAddTagDialog = true }
                         ) {
                             Row(
@@ -910,7 +910,7 @@ fun ScreenshotDetailScreen(
 
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = MaterialTheme.shapes.medium,
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { showOcrSheet = true }
@@ -964,7 +964,7 @@ fun ScreenshotDetailScreen(
                         screenshot.links.forEach { link ->
                             Surface(
                                 color = MaterialTheme.colorScheme.surfaceVariant,
-                                shape = RoundedCornerShape(10.dp),
+                                shape = MaterialTheme.shapes.small,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Row(
@@ -1025,7 +1025,7 @@ fun ScreenshotDetailScreen(
 
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = MaterialTheme.shapes.medium,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(

@@ -903,7 +903,9 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         val localId = selection.removePrefix("local:")
         val cloudId = selection.removePrefix("cloud:")
 
-        // Explicit local mode always wins over the persisted provider selection.
+        var result: AiAnalysisResult? = null
+
+        // Local vision is a first-class producer of the same persisted metadata as cloud vision.
         if ((forceLocal || (selection.isBlank() && !forceCloud)) && file != null) {
             val quality = when (aiQualityPreset.value.lowercase()) {
                 "fast" -> com.amresalehin.emreshots.service.ai.VisionQualityPreset.FAST
@@ -918,10 +920,10 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                     requestedCapabilities = com.amresalehin.emreshots.service.ai.OnDeviceVisionCapability.entries.toSet()
                 ),
                 modePreference = mode,
-                modelPreference = onDeviceVisionModel.value
+                modelPreference = if (selection.startsWith("local:")) localId else onDeviceVisionModel.value
             )
-            if (local.isSuccess || mode.equals("FORCE_LOCAL", ignoreCase = true)) {
-                return AiAnalysisResult(
+            if (local.isSuccess) {
+                result = AiAnalysisResult(
                     title = local.title,
                     description = local.description,
                     tags = local.tags,
@@ -929,14 +931,23 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                     ocrText = null,
                     modelUsed = local.modelUsed,
                     processingTimeMs = local.processingTimeMs,
-                    isSuccess = local.isSuccess,
-                    errorMessage = local.errorMessage
+                    isSuccess = true
+                )
+            } else if (forceLocal) {
+                return AiAnalysisResult(
+                    isSuccess = false,
+                    errorMessage = local.errorMessage ?: "Local vision inference failed.",
+                    modelUsed = local.modelUsed,
+                    processingTimeMs = local.processingTimeMs
                 )
             }
         }
 
-        if (selection.startsWith("local:") && !forceCloud) {
-            if (file == null) return AiAnalysisResult(isSuccess = false, errorMessage = "Local VLM needs access to the image file.")
+        // Explicit local provider selection must never fall through to a cloud provider.
+        if (result == null && selection.startsWith("local:") && !forceCloud) {
+            if (file == null) {
+                return AiAnalysisResult(isSuccess = false, errorMessage = "Local VLM needs access to the image file.")
+            }
             val local = onDeviceVisionService.analyze(
                 request = com.amresalehin.emreshots.service.ai.VisionAnalysisRequest(
                     imagePath = file.absolutePath,
@@ -951,27 +962,54 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                 modePreference = "FORCE_LOCAL",
                 modelPreference = localId
             )
-            return AiAnalysisResult(title = local.title, description = local.description, tags = local.tags, detectedLinks = local.detectedLinks, ocrText = null, modelUsed = local.modelUsed, processingTimeMs = local.processingTimeMs, isSuccess = local.isSuccess, errorMessage = local.errorMessage)
+            if (!local.isSuccess) {
+                return AiAnalysisResult(
+                    isSuccess = false,
+                    errorMessage = local.errorMessage ?: "Local vision inference failed.",
+                    modelUsed = local.modelUsed,
+                    processingTimeMs = local.processingTimeMs
+                )
+            }
+            result = AiAnalysisResult(
+                title = local.title,
+                description = local.description,
+                tags = local.tags,
+                detectedLinks = local.detectedLinks,
+                ocrText = null,
+                modelUsed = local.modelUsed,
+                processingTimeMs = local.processingTimeMs,
+                isSuccess = true
+            )
         }
 
-        val provider = if (selection.startsWith("cloud:")) {
-            providers.value.firstOrNull { it.id == cloudId && it.apiKey.isNotBlank() }
-        } else {
-            activeProvider.value
-        } ?: return AiAnalysisResult(isSuccess = false, errorMessage = "No AI provider configured for Captioning & Tagging. Choose an offline VLM or add a custom endpoint in Settings.")
+        if (result == null) {
+            val provider = if (selection.startsWith("cloud:")) {
+                providers.value.firstOrNull { it.id == cloudId && it.apiKey.isNotBlank() }
+            } else {
+                activeProvider.value
+            } ?: return AiAnalysisResult(
+                isSuccess = false,
+                errorMessage = "No AI provider configured for Captioning & Tagging. Choose an offline VLM or add a custom endpoint in Settings."
+            )
 
-        val result = aiService.analyzeScreenshot(
-            imageFile = file,
-            provider = provider,
-            geminiApiKey = provider.apiKey,
-            qualityPreset = aiQualityPreset.value
+            result = aiService.analyzeScreenshot(
+                imageFile = file,
+                provider = provider,
+                geminiApiKey = provider.apiKey,
+                qualityPreset = aiQualityPreset.value
+            )
+        }
+
+        val finalResult = result ?: return AiAnalysisResult(
+            isSuccess = false,
+            errorMessage = "No vision analysis result was produced."
         )
 
-        if (result.isSuccess) {
-            // Re-read after inference so OCR extracted while the model was running is never lost.
+        if (finalResult.isSuccess) {
+            // Re-read after inference so OCR or other edits made while inference was running are never lost.
             val latestScreenshot = screenshotRepository.getScreenshotSync(screenshot.id) ?: screenshot
             val matchedCol = collections.value.find {
-                it.name.equals(result.suggestedCollection, ignoreCase = true)
+                it.name.equals(finalResult.suggestedCollection, ignoreCase = true)
             }
             val newColIds = if (matchedCol != null && !latestScreenshot.collectionIds.contains(matchedCol.id)) {
                 latestScreenshot.collectionIds + matchedCol.id
@@ -979,14 +1017,15 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                 latestScreenshot.collectionIds
             }
             var updatedScreenshot = latestScreenshot.copy(
-                title = if (result.title.isNotBlank()) result.title else latestScreenshot.title,
-                description = if (result.description.isNotBlank()) result.description else latestScreenshot.description,
+                title = if (finalResult.title.isNotBlank()) finalResult.title else latestScreenshot.title,
+                description = if (finalResult.description.isNotBlank()) finalResult.description else latestScreenshot.description,
+                // Canonical OCR is owned by the Tesseract + local text-LLM pipeline.
                 ocrText = latestScreenshot.ocrText,
-                tags = if (smartTagsEnabled.value) (latestScreenshot.tags + result.tags).distinct() else latestScreenshot.tags,
-                links = if (linksDetectionEnabled.value) (latestScreenshot.links + result.detectedLinks).distinct() else latestScreenshot.links,
+                tags = if (smartTagsEnabled.value) (latestScreenshot.tags + finalResult.tags).distinct() else latestScreenshot.tags,
+                links = if (linksDetectionEnabled.value) (latestScreenshot.links + finalResult.detectedLinks).distinct() else latestScreenshot.links,
                 collectionIds = newColIds,
                 aiProcessed = true,
-                aiModelUsed = result.modelUsed
+                aiModelUsed = finalResult.modelUsed
             )
 
             if (autoWriteExif) {
@@ -996,7 +1035,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                     title = updatedScreenshot.title,
                     description = updatedScreenshot.description,
                     tags = updatedScreenshot.tags,
-                    modelName = result.modelUsed
+                    modelName = finalResult.modelUsed
                 )
                 if (aiExifResult.isSuccess) {
                     val (savedFile, exif) = aiExifResult.getOrThrow()
@@ -1009,9 +1048,9 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
             screenshotRepository.update(updatedScreenshot)
         }
-        return result
-    }
 
+        return finalResult
+    }
     fun analyzeLocalVision(
         screenshot: ScreenshotItem,
         autoWriteExif: Boolean = false,
@@ -1261,16 +1300,25 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             return
         }
 
+        // Batch indexing can run fully offline when local vision is selected/available.
+        // analyzeScreenshotInternal is the single authority for choosing local vs cloud.
         val provider = activeProvider.value
-        if (provider == null) {
-            _snackbarMessage.value = "No AI provider configured. Please set up your endpoint in Settings."
+        val localMode = onDeviceVisionMode.value.equals("FORCE_LOCAL", ignoreCase = true) ||
+                visionCaptionTagProviderId.value.startsWith("local:") ||
+                (visionCaptionTagProviderId.value.isBlank() && onDeviceVisionMode.value.equals("AUTOMATIC", ignoreCase = true))
+        if (provider == null && !localMode) {
+            _snackbarMessage.value = "No AI provider configured. Choose an offline VLM or add a cloud endpoint in Settings."
             return
         }
 
         indexingJob?.cancel()
         indexingJob = viewModelScope.launch(Dispatchers.IO) {
             val total = items.size
-            val modelName = provider.selectedModel.ifBlank { provider.name }
+            val modelName = if (localMode) {
+                onDeviceVisionModel.value.ifBlank { "On-device VLM" }
+            } else {
+                provider?.selectedModel?.ifBlank { provider.name } ?: "Cloud Vision"
+            }
             _indexingState.value = IndexingState(
                 isIndexing = true,
                 current = 0,

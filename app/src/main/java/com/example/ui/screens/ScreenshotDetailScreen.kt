@@ -93,6 +93,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -817,14 +818,19 @@ fun ScreenshotDetailScreen(
                                 ) {
                                     Text(text = "#$tag", style = MaterialTheme.typography.bodySmall)
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Icon(
-                                        Icons.Default.Close,
-                                        contentDescription = "Remove Tag",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    IconButton(
+                                        onClick = { viewModel.removeTag(screenshot, tag) },
                                         modifier = Modifier
-                                            .size(14.dp)
-                                            .clickable { viewModel.removeTag(screenshot, tag) }
-                                    )
+                                            .size(48.dp)
+                                            .testTag("btn_remove_tag_" + tag.hashCode())
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Close,
+                                            contentDescription = stringResource(R.string.remove_tag),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
                                 }
                             }
                         }

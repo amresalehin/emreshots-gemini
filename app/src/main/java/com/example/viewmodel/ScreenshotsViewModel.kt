@@ -10,6 +10,7 @@ import android.content.ContentValues
 import android.provider.MediaStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.amresalehin.emreshots.R
 import com.amresalehin.emreshots.data.local.AppDatabase
 import com.amresalehin.emreshots.data.local.SecureApiKeyStore
 import com.amresalehin.emreshots.data.local.seedInitialData
@@ -141,6 +142,9 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     private val _isAnalyzing = MutableStateFlow(false)
     val isAnalyzing: StateFlow<Boolean> = _isAnalyzing.asStateFlow()
+    private val _lastFailedScreenshotIds = MutableStateFlow<Set<String>>(emptySet())
+    val lastFailedScreenshotIds: StateFlow<Set<String>> = _lastFailedScreenshotIds.asStateFlow()
+
 
     private val _analysisStatusText = MutableStateFlow<String?>(null)
     val analysisStatusText: StateFlow<String?> = _analysisStatusText.asStateFlow()
@@ -387,7 +391,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         val context = getApplication<Application>()
         coil.Coil.imageLoader(context).memoryCache?.clear()
         System.gc()
-        _snackbarMessage.value = "Memory trimmed and garbage collected!"
+        _snackbarMessage.value = context.getString(R.string.memory_cache_cleared)
     }
 
     // Gallery Organization & View Options
@@ -1292,6 +1296,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         }
 
         indexingJob?.cancel()
+        _lastFailedScreenshotIds.value = emptySet()
         indexingJob = viewModelScope.launch(Dispatchers.IO) {
             val total = items.size
             val modelName = if (localMode) {
@@ -1314,6 +1319,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
             var successes = 0
             var failures = 0
+            val failedIds = mutableSetOf<String>()
 
             for ((index, item) in items.withIndex()) {
                 if (!isActive) {
@@ -1333,6 +1339,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                     successes++
                 } else {
                     failures++
+                    failedIds += item.id
                 }
 
                 _indexingState.value = _indexingState.value.copy(
@@ -1342,6 +1349,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                 )
             }
 
+            _lastFailedScreenshotIds.value = failedIds.toSet()
             val wasCancelled = !isActive
             _indexingState.value = _indexingState.value.copy(
                 isIndexing = false,
@@ -1371,6 +1379,15 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     fun batchAnalyzeScreenshots(screenshots: List<ScreenshotItem>, autoWriteExif: Boolean = autoWriteExifSetting.value) {
         startIndexing(targetScreenshots = screenshots, onlyUnindexed = false, autoWriteExif = autoWriteExif)
+    }
+
+    fun retryFailedItems(autoWriteExif: Boolean = autoWriteExifSetting.value) {
+        val failedItems = allScreenshots.value.filter { it.id in _lastFailedScreenshotIds.value }
+        if (failedItems.isEmpty()) {
+            _snackbarMessage.value = getApplication<Application>().getString(R.string.no_failed_items_to_retry)
+            return
+        }
+        startIndexing(targetScreenshots = failedItems, onlyUnindexed = false, autoWriteExif = autoWriteExif)
     }
 
     fun toggleFavorite(screenshot: ScreenshotItem) {

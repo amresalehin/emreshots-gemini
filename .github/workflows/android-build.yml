@@ -45,7 +45,17 @@ jobs:
         with:
           gradle-version: "9.3.1"
       - name: Prepare bundled offline OCR LLM
-        run: gradle :app:prepareBundledLocalOcrModel --stacktrace
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p app/src/main/assets/models
+          MODEL="app/src/main/assets/models/SmolLM2-135M-Instruct-Q2_K.gguf"
+          URL="https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q2_K.gguf"
+          SHA256="741ad12b64088fedc17c33aacb22e48be1972ef36a39f03666dd68bd15614fb9"
+          curl -fL --retry 4 --retry-all-errors --connect-timeout 30 --max-time 900 -o "$MODEL" "$URL"
+          echo "$SHA256  $MODEL" | sha256sum -c -
+          test "$(stat -c %s "$MODEL")" -gt 80000000
+          echo "Bundled OCR LLM verified: $(du -h "$MODEL" | cut -f1)"
 
       - name: Build and test
         run: gradle build --stacktrace

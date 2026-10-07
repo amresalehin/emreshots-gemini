@@ -1385,7 +1385,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         var updated = screenshot.copy(
             title = if (result.title.isNotBlank()) result.title else screenshot.title,
             description = if (result.description.isNotBlank()) result.description else screenshot.description,
-            ocrText = ocrText,
+            ocrText = result.ocrText?.takeIf { it.isNotBlank() } ?: ocrText,
             tags = (screenshot.tags + result.tags).distinct(),
             links = (screenshot.links + result.detectedLinks).distinct(),
             collectionIds = newColIds,

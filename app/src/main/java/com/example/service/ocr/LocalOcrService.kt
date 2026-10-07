@@ -96,6 +96,11 @@ class LocalOcrService(
                     baseApi.setImage(bitmap)
                     baseApi.utF8Text.orEmpty().trim()
                 }
+                if (rawText.isBlank()) {
+                    // Tesseract can legitimately return an empty page on difficult camera photos;
+                    // give ML Kit a chance instead of treating an empty OCR result as success.
+                    return recognizeWithMlKit(file)
+                }
                 Result.success(rawText)
             } finally {
                 baseApi.stop()

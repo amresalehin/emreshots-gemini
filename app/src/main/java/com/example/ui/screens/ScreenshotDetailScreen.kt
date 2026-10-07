@@ -579,7 +579,7 @@ fun ScreenshotDetailScreen(
                                 contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
                             ) {
                                 Text(
-                                    text = if (!screenshot.ocrText.isNullOrBlank()) "Inspect & Send to AI" else "Extract Text",
+                                    text = if (!screenshot.ocrText.isNullOrBlank()) "View OCR" else "Extract Text",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -605,7 +605,7 @@ fun ScreenshotDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    text = "Tap to inspect, send to AI, or save to EXIF metadata",
+                                    text = "Tap to inspect the OCR result or save it to EXIF metadata",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.primary
                                 )

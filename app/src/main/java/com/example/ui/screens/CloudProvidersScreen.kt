@@ -48,7 +48,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -90,8 +89,7 @@ import java.util.UUID
 @Composable
 fun CloudProvidersScreen(
     viewModel: ScreenshotsViewModel,
-    onNavigateBack: (() -> Unit)? = null,
-    onBackToAiStudio: (() -> Unit)? = null
+    onNavigateBack: (() -> Unit)? = null
 ) {
     if (onNavigateBack != null) {
         BackHandler(onBack = onNavigateBack)
@@ -126,25 +124,6 @@ fun CloudProvidersScreen(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
             )
-
-            if (onBackToAiStudio != null) {
-                FilledTonalButton(
-                    onClick = onBackToAiStudio,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .testTag("btn_back_to_ai_studio"),
-                    contentPadding = PaddingValues(vertical = 12.dp)
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.back_to_ai_studio))
-                }
-            }
 
             LazyColumn(
                 modifier = Modifier

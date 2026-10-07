@@ -33,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -59,6 +60,8 @@ fun ProcessingScreen(
     val state = viewModel.indexingState.collectAsStateWithLifecycle().value
     val isAnalyzing = viewModel.isAnalyzing.collectAsStateWithLifecycle().value
     val status = viewModel.analysisStatusText.collectAsStateWithLifecycle().value
+    val smartTagsEnabled = viewModel.smartTagsEnabled.collectAsStateWithLifecycle().value
+    val autoSyncDeviceMedia = viewModel.autoSyncDeviceMedia.collectAsStateWithLifecycle().value
 
     val remaining = if (state.total > 0) (state.total - state.current).coerceAtLeast(0) else screenshots.count { !it.aiProcessed }
     val failedIds = viewModel.lastFailedScreenshotIds.collectAsStateWithLifecycle().value
@@ -141,6 +144,42 @@ fun ProcessingScreen(
                     OutlinedButton(onClick = { showRetryInfo = true }, enabled = failed > 0 && !state.isIndexing, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.retry_failed))
                         Text(stringResource(R.string.retry_failed))
+                    }
+                }
+            }
+
+            item {
+                Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Enrichment & Sync", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Smart Tags", fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    "Keep AI-generated tags when enriching media.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = smartTagsEnabled,
+                                onCheckedChange = viewModel::setSmartTagsEnabled
+                            )
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Automatic Media Sync", fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    "Keep the library synchronized with device media.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = autoSyncDeviceMedia,
+                                onCheckedChange = viewModel::setAutoSyncDeviceMedia
+                            )
+                        }
                     }
                 }
             }

@@ -195,7 +195,7 @@ fun OcrLanguageManagerSheet(
                 ) {
                     Icon(Icons.Default.FileOpen, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.import), style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.import_action), style = MaterialTheme.typography.labelMedium)
                 }
             }
 

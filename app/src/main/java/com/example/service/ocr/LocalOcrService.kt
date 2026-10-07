@@ -3,7 +3,11 @@ package com.amresalehin.emreshots.service.ocr
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 import android.graphics.Matrix
+import android.graphics.Paint
 import android.net.Uri
 import androidx.exifinterface.media.ExifInterface
 import com.google.mlkit.vision.common.InputImage
@@ -17,6 +21,7 @@ import java.io.File
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.math.max
+import kotlin.math.roundToInt
 
 /**
  * Fully on-device OCR powered by the powerful Tesseract OCR engine (supporting 25+ global languages)
@@ -63,25 +68,40 @@ class LocalOcrService(
             val bitmap = decodeOptimizedBitmap(file)
                 ?: return Result.failure(IllegalArgumentException("Could not decode image for OCR."))
 
+            val lowQuality = minOf(bitmap.width, bitmap.height) < 720 || maxOf(bitmap.width, bitmap.height) < 1280
+            val enhancedBitmap = if (lowQuality) prepareLowQualityBitmap(bitmap) else null
+
             val baseApi = TessBaseAPI()
             val initSuccess = baseApi.init(tessDataManager.dataPath, effectiveCode)
             if (!initSuccess) {
                 baseApi.recycle()
-                bitmap.recycle()
+                enhancedBitmap?.recycle()
+                if (!bitmap.isRecycled) bitmap.recycle()
                 // Graceful fallback to ML Kit if initialization fails
                 return recognizeWithMlKit(file)
             }
 
             try {
-                baseApi.setImage(bitmap)
-                val rawText = baseApi.utF8Text.orEmpty().trim()
+                // Low-resolution camera photos benefit substantially from rescaling and
+                // grayscale/contrast normalization before Tesseract sees the pixels.
+                val primaryBitmap = enhancedBitmap ?: bitmap
+                baseApi.setImage(primaryBitmap)
+                val primaryText = baseApi.utF8Text.orEmpty().trim()
+
+                // If preprocessing produced no useful text, retry the original pixels before
+                // falling back to ML Kit. This preserves accuracy for unusual colour layouts.
+                val rawText = if (primaryText.length >= 3 || enhancedBitmap == null) {
+                    primaryText
+                } else {
+                    baseApi.setImage(bitmap)
+                    baseApi.utF8Text.orEmpty().trim()
+                }
                 Result.success(rawText)
             } finally {
                 baseApi.stop()
                 baseApi.recycle()
-                if (!bitmap.isRecycled) {
-                    bitmap.recycle()
-                }
+                if (enhancedBitmap != null && !enhancedBitmap.isRecycled) enhancedBitmap.recycle()
+                if (!bitmap.isRecycled) bitmap.recycle()
             }
         } catch (t: Throwable) {
             // If Tesseract throws an error (e.g. native lib issue in tests), fallback to ML Kit
@@ -106,6 +126,42 @@ class LocalOcrService(
         } catch (t: Throwable) {
             Result.failure(t)
         }
+    }
+
+    /**
+     * Preprocess genuinely low-resolution photos for OCR. Tesseract documentation recommends
+     * rescaling and image-quality preprocessing when character edges are too small/noisy.
+     */
+    private fun prepareLowQualityBitmap(source: Bitmap): Bitmap {
+        val maxDimension = maxOf(source.width, source.height)
+        val targetMax = 1800
+        val scale = if (maxDimension < targetMax) targetMax.toFloat() / maxDimension else 1f
+        val width = (source.width * scale).roundToInt().coerceAtLeast(source.width)
+        val height = (source.height * scale).roundToInt().coerceAtLeast(source.height)
+
+        val scaled = if (width != source.width || height != source.height) {
+            Bitmap.createScaledBitmap(source, width, height, true)
+        } else {
+            source.copy(Bitmap.Config.ARGB_8888, false)
+        }
+
+        val enhanced = Bitmap.createBitmap(scaled.width, scaled.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(enhanced)
+        val matrix = ColorMatrix().apply {
+            setSaturation(0f)
+            postConcat(ColorMatrix(floatArrayOf(
+                1.35f, 0f, 0f, 0f, -45f,
+                0f, 1.35f, 0f, 0f, -45f,
+                0f, 0f, 1.35f, 0f, -45f,
+                0f, 0f, 0f, 1f, 0f
+            )))
+        }
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
+            colorFilter = ColorMatrixColorFilter(matrix)
+        }
+        canvas.drawBitmap(scaled, 0f, 0f, paint)
+        if (scaled !== source && !scaled.isRecycled) scaled.recycle()
+        return enhanced
     }
 
     private fun decodeOptimizedBitmap(file: File): Bitmap? {

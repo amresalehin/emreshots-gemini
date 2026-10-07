@@ -111,7 +111,7 @@ fun AiStudioScreen(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
                 ),
-                shape = RoundedCornerShape(16.dp),
+                shape = MaterialTheme.shapes.large,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -136,7 +136,7 @@ fun AiStudioScreen(
 
                         OutlinedButton(
                             onClick = onNavigateToProviders,
-                            shape = RoundedCornerShape(16.dp),
+                            shape = MaterialTheme.shapes.large,
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                             modifier = Modifier
                                 .height(32.dp)
@@ -167,7 +167,7 @@ fun AiStudioScreen(
 
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                shape = RoundedCornerShape(16.dp),
+                shape = MaterialTheme.shapes.large,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -197,7 +197,7 @@ fun AiStudioScreen(
             // EXIF Direct Integration Switch
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                shape = RoundedCornerShape(16.dp),
+                shape = MaterialTheme.shapes.large,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -243,7 +243,7 @@ fun AiStudioScreen(
             // Batch Processing Action
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                shape = RoundedCornerShape(16.dp),
+                shape = MaterialTheme.shapes.large,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -282,7 +282,7 @@ fun AiStudioScreen(
                                 viewModel.batchAnalyzeScreenshots(untagged, autoWriteExif)
                             },
                             enabled = !isAnalyzing && untaggedCount > 0,
-                            shape = RoundedCornerShape(14.dp),
+                            shape = MaterialTheme.shapes.medium,
                             modifier = Modifier
                                 .weight(1f)
                                 .testTag("btn_batch_untagged")
@@ -301,7 +301,7 @@ fun AiStudioScreen(
                                 viewModel.batchAnalyzeScreenshots(allScreenshots, autoWriteExif)
                             },
                             enabled = !isAnalyzing && allScreenshots.isNotEmpty(),
-                            shape = RoundedCornerShape(14.dp),
+                            shape = MaterialTheme.shapes.medium,
                             modifier = Modifier
                                 .weight(1f)
                                 .testTag("btn_batch_all")
@@ -330,7 +330,7 @@ fun AiStudioScreen(
 fun StatCard(label: String, value: String, modifier: Modifier = Modifier) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = RoundedCornerShape(14.dp),
+        shape = MaterialTheme.shapes.medium,
         modifier = modifier
     ) {
         Column(modifier = Modifier.padding(14.dp)) {

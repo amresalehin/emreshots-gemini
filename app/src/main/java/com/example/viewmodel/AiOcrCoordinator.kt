@@ -51,6 +51,14 @@ class AiOcrCoordinator(
     private val ocrArtefactLlmFixer: OcrArtefactLlmFixer,
     private val onMessage: (String) -> Unit
 ) {
+    private val _snackbarMessage = object {
+        var value: String? = null
+            set(newValue) {
+                field = newValue
+                if (!newValue.isNullOrBlank()) onMessage(newValue)
+            }
+    }
+
     private val onDeviceVisionService = OnDeviceVisionService(application)
     private val visionAnalysisMutex = Mutex()
     private val _isAnalyzing = MutableStateFlow(false)

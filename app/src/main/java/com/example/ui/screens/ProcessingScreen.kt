@@ -43,8 +43,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.amresalehin.emreshots.R
 import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,7 +61,8 @@ fun ProcessingScreen(
     val status = viewModel.analysisStatusText.collectAsStateWithLifecycle().value
 
     val remaining = if (state.total > 0) (state.total - state.current).coerceAtLeast(0) else screenshots.count { !it.aiProcessed }
-    val failed = state.failureCount
+    val failedIds = viewModel.lastFailedScreenshotIds.collectAsStateWithLifecycle().value
+    val failed = failedIds.size
     val completed = state.successCount
     val progress = if (state.total > 0) state.progress else if (screenshots.isEmpty()) 0f else screenshots.count { it.aiProcessed }.toFloat() / screenshots.size.toFloat()
     var showRetryInfo by remember { mutableStateOf(false) }
@@ -89,7 +92,7 @@ fun ProcessingScreen(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                 ) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("MEDIA INTELLIGENCE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(R.string.processing_ai_analysis), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                         Text(if (state.isIndexing) "Analyzing your library…" else "Your library is ready for analysis", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                         Text(if (state.total > 0) "$completed completed · $failed failed · $remaining remaining" else "${screenshots.count { it.aiProcessed }} analyzed · $remaining remaining", style = MaterialTheme.typography.bodyMedium)
                         LinearProgressIndicator(
@@ -107,15 +110,15 @@ fun ProcessingScreen(
                     Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                Icon(Icons.Default.AutoAwesome, contentDescription = stringResource(R.string.ai_analysis), tint = MaterialTheme.colorScheme.primary)
                                 Spacer(Modifier.weight(1f))
                                 Text(state.currentModel.ifBlank { "AI" }, style = MaterialTheme.typography.labelMedium)
                             }
                             Text(state.currentItemTitle.ifBlank { "Preparing…" }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             Text("Item ${state.current.coerceAtLeast(0)} of ${state.total}", style = MaterialTheme.typography.bodySmall)
                             OutlinedButton(onClick = { viewModel.cancelIndexing() }) {
-                                Icon(Icons.Default.Close, contentDescription = null)
-                                Text("Cancel")
+                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cancel))
+                                Text(stringResource(R.string.cancel))
                             }
                         }
                     }
@@ -126,8 +129,8 @@ fun ProcessingScreen(
                     if (!state.isIndexing) {
                         val unprocessed = screenshots.filter { !it.aiProcessed }
                         Button(onClick = { viewModel.batchAnalyzeScreenshots(unprocessed) }, enabled = unprocessed.isNotEmpty(), modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = null)
-                            Text("Process pending")
+                            Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.process_pending))
+                            Text(stringResource(R.string.process_pending))
                         }
                     } else {
                         OutlinedButton(onClick = { viewModel.cancelIndexing() }, modifier = Modifier.weight(1f)) {
@@ -136,8 +139,8 @@ fun ProcessingScreen(
                         }
                     }
                     OutlinedButton(onClick = { showRetryInfo = true }, enabled = failed > 0 && !state.isIndexing, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Default.Refresh, contentDescription = null)
-                        Text("Retry failed")
+                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.retry_failed))
+                        Text(stringResource(R.string.retry_failed))
                     }
                 }
             }
@@ -151,7 +154,7 @@ fun ProcessingScreen(
                         if (!state.isIndexing && state.total > 0 && state.progress >= 1f) {
                             Text("Last run finished. Successful results are already stored in the library.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                Icon(Icons.Default.CheckCircle, contentDescription = stringResource(R.string.processing_complete), tint = MaterialTheme.colorScheme.primary)
                                 Spacer(Modifier.width(8.dp))
                                 Text("Processing complete", fontWeight = FontWeight.SemiBold)
                             }
@@ -166,14 +169,13 @@ fun ProcessingScreen(
     if (showRetryInfo) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { showRetryInfo = false },
-            title = { Text("Retry failed") },
-            text = { Text("Retrying starts all media that still needs analysis.") },
+            title = { Text(stringResource(R.string.retry_failed)) },
+            text = { Text(stringResource(R.string.retry_failed_description)) },
             confirmButton = {
                 Button(onClick = {
                     showRetryInfo = false
-                    val pendingItems = screenshots.filter { !it.aiProcessed }
-                    viewModel.batchAnalyzeScreenshots(pendingItems)
-                }) { Text("Retry pending") }
+                    viewModel.retryFailedItems()
+                }) { Text(stringResource(R.string.retry_failed)) }
             },
             dismissButton = {
                 androidx.compose.material3.TextButton(onClick = { showRetryInfo = false }) { Text("Close") }

@@ -26,7 +26,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -253,7 +252,7 @@ fun ProviderCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(MaterialTheme.shapes.large)
             .clickable(onClick = onActivate)
             .testTag("card_provider_${provider.id}"),
         colors = CardDefaults.cardColors(
@@ -265,7 +264,7 @@ fun ProviderCard(
             if (isActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
             else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
         ),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         elevation = CardDefaults.cardElevation(defaultElevation = if (isActive) 3.dp else 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -621,7 +620,7 @@ fun ProviderEditDialog(
                     if (fetchStatusText != null) {
                         Surface(
                             color = if (fetchStatusSuccess) SuccessEmerald.copy(alpha = 0.12f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
-                            shape = RoundedCornerShape(8.dp),
+                            shape = MaterialTheme.shapes.small,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
@@ -647,7 +646,7 @@ fun ProviderEditDialog(
                     if (testStatusText != null) {
                         Surface(
                             color = if (testStatusSuccess) Color(0xFF10B981).copy(alpha = 0.12f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
-                            shape = RoundedCornerShape(8.dp),
+                            shape = MaterialTheme.shapes.small,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(

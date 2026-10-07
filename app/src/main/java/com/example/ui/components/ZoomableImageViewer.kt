@@ -250,7 +250,7 @@ fun ZoomableImageViewer(
                                 Icon(
                                     imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                     contentDescription = "Favorite",
-                                    tint = if (screenshot.isFavorite) Color(0xFFF43F5E) else Color.White
+                                    tint = if (screenshot.isFavorite) DangerRose else MaterialTheme.colorScheme.onSurface
                                 )
                             }
 

@@ -29,18 +29,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CloudDone
-import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.AlertDialog
@@ -104,8 +105,6 @@ fun SettingsScreen(
     onOpenProviders: (() -> Unit)? = null
 ) {
     val allScreenshots by viewModel.allScreenshots.collectAsStateWithLifecycle()
-    val activeProvider by viewModel.activeProvider.collectAsStateWithLifecycle()
-    val isAnalyzing by viewModel.isAnalyzing.collectAsStateWithLifecycle()
     val indexingState by viewModel.indexingState.collectAsStateWithLifecycle()
     val ocrEnabled by viewModel.ocrEnabled.collectAsStateWithLifecycle()
     val ocrLanguage by viewModel.ocrLanguage.collectAsStateWithLifecycle()
@@ -114,27 +113,22 @@ fun SettingsScreen(
     val linksDetectionEnabled by viewModel.linksDetectionEnabled.collectAsStateWithLifecycle()
     val smartTagsEnabled by viewModel.smartTagsEnabled.collectAsStateWithLifecycle()
     val autoWriteExifSetting by viewModel.autoWriteExifSetting.collectAsStateWithLifecycle()
-    val duplicateGroups by viewModel.duplicateGroups.collectAsStateWithLifecycle()
-    val isScanningDuplicates by viewModel.isScanningDuplicates.collectAsStateWithLifecycle()
     val aiQualityPreset by viewModel.aiQualityPreset.collectAsStateWithLifecycle()
     val onDeviceVisionMode by viewModel.onDeviceVisionMode.collectAsStateWithLifecycle()
     val onDeviceVisionModel by viewModel.onDeviceVisionModel.collectAsStateWithLifecycle()
     val autoSyncDeviceMedia by viewModel.autoSyncDeviceMedia.collectAsStateWithLifecycle()
+    val collections by viewModel.collections.collectAsStateWithLifecycle()
     val lastBackupInfo by viewModel.lastBackupInfo.collectAsStateWithLifecycle()
 
-    var showEditDialog by remember { mutableStateOf(false) }
-    var editingProvider by remember { mutableStateOf<CustomCloudProvider?>(null) }
     var showRestoreModeDialog by remember { mutableStateOf(false) }
     var pendingRestoreUri by remember { mutableStateOf<Uri?>(null) }
-    var showReprocessConfirm by remember { mutableStateOf(false) }
     var showLanguageManagerSheet by remember { mutableStateOf(false) }
+    var showCreateCollectionDialog by remember { mutableStateOf(false) }
+    var newCollectionName by remember { mutableStateOf("") }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val visionService = remember(context) { OnDeviceVisionService(context) }
 
-    val total = allScreenshots.size
-    val processed = allScreenshots.count { it.aiProcessed }
-    val pending = (total - processed).coerceAtLeast(0)
 
     val tessDataPickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -242,34 +236,9 @@ fun SettingsScreen(
                 }
             }
 
-            // Card 1: Cloud AI & Quality
+            // AI policy; credentials and endpoints live only in Cloud Providers.
             item {
-                SettingsSimpleCard(title = "Cloud AI Provider") {
-                    SettingsRow(
-                        icon = Icons.Default.CloudUpload,
-                        title = activeProvider?.name ?: "Configure Provider",
-                        subtitle = activeProvider?.let { "${it.selectedModel} · ${it.baseUrl}" } ?: "Gemini, Ollama, Groq or custom endpoint",
-                        trailing = {
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = if (activeProvider != null) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
-                            ) {
-                                Text(
-                                    if (activeProvider != null) "Connected" else "Set up",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (activeProvider != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                )
-                            }
-                        },
-                        onClick = {
-                            editingProvider = activeProvider
-                            showEditDialog = true
-                        }
-                    )
-
-                    SettingsSimpleDivider()
-
+                SettingsSimpleCard(title = "AI Analysis") {
                     Column(modifier = Modifier.padding(vertical = 8.dp)) {
                         Text("Analysis Quality", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                         Text("Balances speed and depth of AI captioning", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -282,7 +251,6 @@ fun SettingsScreen(
                     }
                 }
             }
-
             // Card 2: On-Device Vision & GGUF Models
             item {
                 SettingsSimpleCard(title = "On-Device Vision (GGUF)") {
@@ -334,49 +302,46 @@ fun SettingsScreen(
                 }
             }
 
-            // Card 3: Features & Metadata Toggles
+            // OCR and link recognition settings.
             item {
-                SettingsSimpleCard(title = "Metadata Enrichment") {
+                SettingsSimpleCard(title = "OCR & Text") {
                     SettingsToggleRow(
                         icon = Icons.Default.TextFields,
                         title = "OCR Text Extraction",
-                        subtitle = if (ocrEnabled) {
-                            val currentLangName = TessLanguage.findByCode(ocrLanguage).englishName
-                            "Extract text locally with Tesseract ($currentLangName) and automatic local AI cleanup"
-                        } else "Recognize on-screen text",
+                        subtitle = if (ocrEnabled) "Extract text locally with Tesseract" else "Recognize on-screen text",
                         checked = ocrEnabled,
                         onCheckedChange = { viewModel.setOcrEnabled(it) }
                     )
-
                     if (ocrEnabled) {
                         SettingsSimpleDivider()
                         val activeLang = TessLanguage.findByCode(ocrLanguage)
                         SettingsRow(
                             icon = Icons.Default.Translate,
-                            title = "OCR Language: ${activeLang.displayName}",
-                            subtitle = "${installedOcrLanguages.size} language pack${if (installedOcrLanguages.size != 1) "s" else ""} installed · Tap to manage or download",
+                            title = "OCR Language: " + activeLang.displayName,
+                            subtitle = installedOcrLanguages.size.toString() + " language packs installed · Tap to manage or download",
                             trailing = {
                                 FilledTonalButton(
                                     onClick = { showLanguageManagerSheet = true },
                                     shape = RoundedCornerShape(10.dp),
                                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                                ) {
-                                    Text("Manage", style = MaterialTheme.typography.labelMedium)
-                                }
+                                ) { Text("Manage", style = MaterialTheme.typography.labelMedium) }
                             },
                             onClick = { showLanguageManagerSheet = true }
                         )
-
                     }
                     SettingsSimpleDivider()
                     SettingsToggleRow(
                         icon = Icons.Default.Language,
                         title = "Link & URL Detection",
-                        subtitle = "Extract web links from text",
+                        subtitle = "Extract web links from recognized text",
                         checked = linksDetectionEnabled,
                         onCheckedChange = { viewModel.setLinksDetectionEnabled(it) }
                     )
-                    SettingsSimpleDivider()
+                }
+            }
+
+            item {
+                SettingsSimpleCard(title = "Enrichment & Sync") {
                     SettingsToggleRow(
                         icon = Icons.Default.Psychology,
                         title = "Smart Tags",
@@ -400,53 +365,58 @@ fun SettingsScreen(
                         checked = autoWriteExifSetting,
                         onCheckedChange = { viewModel.setAutoWriteExifSetting(it) }
                     )
+                }
+            }
 
-                    SettingsSimpleDivider()
-
-                    // Backup & Restore
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = { backupExportLauncher.launch("emreshots-backup.json") },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
+            item {
+                SettingsSimpleCard(title = "Backup & Restore") {
+                    lastBackupInfo?.let {
+                        Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 6.dp))
+                        SettingsSimpleDivider()
+                    }
+                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { backupExportLauncher.launch("emreshots-backup.json") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
                             Icon(Icons.Default.Backup, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
                             Text("Export JSON")
                         }
-                        OutlinedButton(
-                            onClick = { backupRestoreLauncher.launch(arrayOf("application/json", "*/*")) },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
+                        OutlinedButton(onClick = { backupRestoreLauncher.launch(arrayOf("application/json", "*/*")) }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
                             Icon(Icons.Default.CloudDone, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
                             Text("Restore JSON")
                         }
                     }
-
-                    SettingsSimpleDivider()
-
-                    // Library Reprocess
-                    SettingsRow(
-                        icon = Icons.Default.Replay,
-                        title = "Reprocess Library",
-                        subtitle = if (pending > 0) "$pending items pending analysis" else "All $total items up to date",
-                        trailing = {
-                            TextButton(onClick = { showReprocessConfirm = true }, enabled = !isAnalyzing && total > 0) {
-                                Text("Reprocess")
-                            }
-                        },
-                        onClick = { showReprocessConfirm = true }
-                    )
                 }
             }
 
+            item {
+                SettingsSimpleCard(title = "Collections") {
+                    if (collections.isEmpty()) {
+                        Text("No collections yet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 10.dp))
+                    } else {
+                        collections.forEachIndexed { index, collection ->
+                            if (index > 0) SettingsSimpleDivider()
+                            SettingsRow(
+                                icon = Icons.Default.Collections,
+                                title = collection.name,
+                                subtitle = collection.description.ifBlank { "Available for organizing media" },
+                                trailing = {
+                                    IconButton(onClick = { viewModel.deleteCollection(collection.id) }, modifier = Modifier.testTag("btn_delete_collection_" + collection.id)) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Delete " + collection.name, tint = MaterialTheme.colorScheme.error)
+                                    }
+                                },
+                                onClick = { }
+                            )
+                        }
+                    }
+                    SettingsSimpleDivider()
+                    OutlinedButton(onClick = { showCreateCollectionDialog = true }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), shape = RoundedCornerShape(12.dp)) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Create collection")
+                    }
+                }
+            }
             // Simple App Footer
             item {
                 Text(
@@ -487,43 +457,70 @@ fun SettingsScreen(
             title = { Text("Restore Backup") },
             text = { Text("Choose how to apply this backup.") },
             confirmButton = {
-                Button(onClick = {
-                    val uri = pendingRestoreUri
-                    showRestoreModeDialog = false
-                    pendingRestoreUri = null
-                    if (uri != null) viewModel.restoreFromUri(uri, RestoreMode.MERGE)
-                }) { Text("Merge backup") }
-            },
-            dismissButton = {
-                Button(
-                    onClick = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = {
                         val uri = pendingRestoreUri
                         showRestoreModeDialog = false
                         pendingRestoreUri = null
-                        if (uri != null) viewModel.restoreFromUri(uri, RestoreMode.REPLACE)
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                ) { Text("Replace all") }
+                        if (uri != null) viewModel.restoreFromUri(uri, RestoreMode.MERGE)
+                    }) { Text("Merge backup") }
+                    Button(
+                        onClick = {
+                            val uri = pendingRestoreUri
+                            showRestoreModeDialog = false
+                            pendingRestoreUri = null
+                            if (uri != null) viewModel.restoreFromUri(uri, RestoreMode.REPLACE)
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    ) { Text("Replace all") }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRestoreModeDialog = false; pendingRestoreUri = null }) { Text("Cancel") }
             }
         )
     }
 
-    if (showEditDialog) {
-        ProviderEditDialog(
-            initial = editingProvider,
-            onDismiss = { showEditDialog = false },
-            onSave = { saved ->
-                viewModel.saveProvider(saved)
-                showEditDialog = false
+    if (showCreateCollectionDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showCreateCollectionDialog = false
+                newCollectionName = ""
             },
-            onFetchModels = { prov, onResult -> viewModel.fetchProviderModels(prov, onResult) },
-            onTest = { prov, onResult -> viewModel.testProviderConnection(prov, onResult) }
+            title = { Text("Create collection") },
+            text = {
+                OutlinedTextField(
+                    value = newCollectionName,
+                    onValueChange = { newCollectionName = it },
+                    label = { Text("Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val name = newCollectionName.trim()
+                        if (name.isNotBlank()) {
+                            viewModel.createCollection(name, "", "folder", "#22C55E")
+                            showCreateCollectionDialog = false
+                            newCollectionName = ""
+                        }
+                    },
+                    enabled = newCollectionName.isNotBlank()
+                ) { Text("Create") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showCreateCollectionDialog = false
+                    newCollectionName = ""
+                }) { Text("Cancel") }
+            }
         )
     }
-
     if (showLanguageManagerSheet) {
         OcrLanguageManagerSheet(
             activeLanguageCode = ocrLanguage,
@@ -716,7 +713,7 @@ private fun GgufModelsSimpleList(
     Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 4.dp)) {
         Text("Available GGUF Models", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
 
-        allModels.take(4).forEach { model ->
+        allModels.forEach { model ->
             val isInstalled = model.id in installedIds
             val isSelected = model.id == selectedModelId
 

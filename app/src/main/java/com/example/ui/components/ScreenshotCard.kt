@@ -1,5 +1,7 @@
 package com.amresalehin.emreshots.ui.components
 
+import com.amresalehin.emreshots.R
+
 import com.amresalehin.emreshots.ui.theme.DangerRose
 import android.graphics.Bitmap
 import android.net.Uri
@@ -46,6 +48,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -208,7 +211,7 @@ fun ScreenshotCard(
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Default.Favorite,
-                                contentDescription = "Favorite",
+                                contentDescription = if (screenshot.isFavorite) stringResource(R.string.remove_from_favorites) else stringResource(R.string.add_to_favorites),
                                 tint = Color(0xFFF43F5E),
                                 modifier = Modifier.size(16.dp)
                             )
@@ -223,7 +226,7 @@ fun ScreenshotCard(
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Default.FavoriteBorder,
-                                contentDescription = "Add to Favorites",
+                                contentDescription = stringResource(R.string.add_to_favorites),
                                 tint = Color.White.copy(alpha = 0.96f),
                                 modifier = Modifier.size(16.dp)
                             )

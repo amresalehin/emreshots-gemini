@@ -38,7 +38,7 @@ class LocalOcrLlmManager(
     val modelsDir: File
         get() = File(context.filesDir, "models").apply { if (!exists()) mkdirs() }
 
-    val defaultModelName = "smollm2-135m-q2.gguf"
+    val defaultModelName = "SmolLM2-135M-Instruct-Q2_K.gguf"
     val defaultDownloadUrl = "https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q2_K.gguf"
 
     val modelFile: File
@@ -71,19 +71,7 @@ class LocalOcrLlmManager(
 
     private fun isInstalledOnDisk(): Boolean {
         val file = modelFile
-        if (file.exists() && file.length() > 1024 * 1024) return true
-
-        // Also check if vision directory has any text GGUF
-        val visionDir = File(context.filesDir, "models/ondevice-vision")
-        if (visionDir.exists()) {
-            val found = visionDir.walkTopDown().firstOrNull {
-                it.isFile && it.name.endsWith(".gguf", ignoreCase = true) &&
-                        !it.name.startsWith("mmproj", ignoreCase = true) &&
-                        it.length() > 1024 * 1024
-            }
-            if (found != null) return true
-        }
-        return false
+        return file.exists() && file.length() > 80L * 1024L * 1024L
     }
 
     private fun hasBundledAsset(): Boolean {
@@ -131,19 +119,6 @@ class LocalOcrLlmManager(
             // Asset extraction failed or not found
         }
 
-        // 2. Discover from vision model cache if present
-        val visionDir = File(context.filesDir, "models/ondevice-vision")
-        if (visionDir.exists()) {
-            val found = visionDir.walkTopDown().firstOrNull {
-                it.isFile && it.name.endsWith(".gguf", ignoreCase = true) &&
-                        !it.name.startsWith("mmproj", ignoreCase = true) &&
-                        it.length() > 1024 * 1024
-            }
-            if (found != null) {
-                _isModelInstalled.value = true
-                return@withContext true
-            }
-        }
 
         val ready = target.exists() && target.length() > 1024 * 1024
         _isModelInstalled.value = ready
@@ -156,7 +131,7 @@ class LocalOcrLlmManager(
     suspend fun downloadModel(onProgress: ((Float) -> Unit)? = null): Boolean = withContext(Dispatchers.IO) {
         if (_isDownloading.value) return@withContext false
         _isDownloading.value = true
-        _statusMessage.value = "Downloading small local AI (84MB)…"
+        _statusMessage.value = "Downloading small local AI (~88 MB)…"
         val tempFile = File(modelsDir, "$defaultModelName.tmp")
 
         try {
@@ -251,6 +226,7 @@ class LocalOcrLlmManager(
 
             if (loadedEvent !is LlamaHelper.LLMEvent.Loaded || !loaded) {
                 helper.release()
+                scope.cancel()
                 return@withContext null
             }
 
@@ -276,6 +252,7 @@ $rawText
 
             helper.abort()
             helper.release()
+            scope.cancel()
 
             if (resultEvent is LlamaHelper.LLMEvent.Done) {
                 val full = resultEvent.fullText.trim()
@@ -311,7 +288,7 @@ $rawText
                 val title = json.optString("title").takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
                 return LocalOcrAiResult(
                     fixedOcrText = fixed,
-                    tags = tags.distinct(),
+                    tags = tags.distinct().take(6),
                     title = title
                 )
             } catch (_: Throwable) {

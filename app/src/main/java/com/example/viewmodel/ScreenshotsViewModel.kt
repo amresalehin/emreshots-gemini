@@ -500,12 +500,12 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                     onComplete?.invoke(0)
                     return@launch
                 }
-                _analysisStatusText.value = "Syncing gallery…"
+                _snackbarMessage.value = "Syncing gallery…"
                 runCatching { mediaSyncManager.synchronize() }
                     .onSuccess { result -> onComplete?.invoke(result.added) }
                     .onFailure { _snackbarMessage.value = "Gallery sync failed: " + (it.message ?: "Unknown error") }
             } finally {
-                _analysisStatusText.value = null
+                
                 _isSyncingDeviceMedia.value = false
             }
         }

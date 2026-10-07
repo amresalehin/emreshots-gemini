@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
@@ -43,11 +45,9 @@ class LocalOcrLlmManager(
     val defaultDownloadUrl = "https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q2_K.gguf"
 
     val modelFile: File
-        get() {
-            val bundled = File(modelsDir, defaultModelName)
-            if (bundled.exists() && bundled.length() > 80L * 1024L * 1024L) return bundled
-            return modelsDir.listFiles()?.firstOrNull { it.name.endsWith(".gguf", ignoreCase = true) && it.length() > 80L * 1024L * 1024L } ?: bundled
-        }
+        get() = File(modelsDir, defaultModelName)
+
+    private val inferenceMutex = Mutex()
 
     private val _isDownloading = MutableStateFlow(false)
     val isDownloading: StateFlow<Boolean> = _isDownloading.asStateFlow()
@@ -73,7 +73,7 @@ class LocalOcrLlmManager(
 
     private fun isInstalledOnDisk(): Boolean {
         val file = modelFile
-        return file.exists() && file.length() > 80L * 1024L * 1024L
+        return file.exists() && file.length() > 80L * 1024L * 1024L && isValidGguf(file)
     }
 
     private fun hasBundledAsset(): Boolean {
@@ -90,7 +90,7 @@ class LocalOcrLlmManager(
      */
     suspend fun ensureModelReady(): Boolean = withContext(Dispatchers.IO) {
         val target = modelFile
-        if (target.exists() && target.length() > 80L * 1024L * 1024L) {
+        if (target.exists() && target.length() > 80L * 1024L * 1024L && isValidGguf(target)) {
             _isModelInstalled.value = true
             return@withContext true
         }
@@ -111,7 +111,7 @@ class LocalOcrLlmManager(
                         }
                     }
                 }
-                if (dest.length() > 80L * 1024L * 1024L) {
+                if (dest.length() > 80L * 1024L * 1024L && isValidGguf(dest)) {
                     _isModelInstalled.value = true
                     _statusMessage.value = "Predownloaded local AI ready"
                     return@withContext true
@@ -122,7 +122,7 @@ class LocalOcrLlmManager(
         }
 
 
-        val ready = target.exists() && target.length() > 80L * 1024L * 1024L
+        val ready = target.exists() && target.length() > 80L * 1024L * 1024L && isValidGguf(target)
         _isModelInstalled.value = ready
         ready
     }
@@ -207,32 +207,42 @@ class LocalOcrLlmManager(
      * Runs text cleaning & tag generation using the small local text LLM.
      * Returns structured result (fixed OCR text + categorization tags + title).
      */
-    suspend fun processOcrWithLocalLlm(rawText: String): LocalOcrAiResult? = withContext(Dispatchers.IO) {
-        if (rawText.isBlank() || rawText.length < 3) return@withContext null
-        if (!ensureModelReady()) return@withContext null
+    suspend fun processOcrWithLocalLlm(rawText: String): LocalOcrAiResult? =
+        withContext(Dispatchers.IO) {
+            if (rawText.isBlank() || rawText.length < 3) return@withContext null
+            if (!ensureModelReady()) return@withContext null
 
-        return@withContext try {
-            val events = MutableSharedFlow<LlamaHelper.LLMEvent>(extraBufferCapacity = 32)
-            val scope = kotlinx.coroutines.CoroutineScope(Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
-            val helper = LlamaHelper(context.contentResolver, scope, events)
+            // llama.cpp is native code. Serialize loads/inference and never substitute an
+            // arbitrary GGUF from the shared models directory into this text-only runtime.
+            inferenceMutex.withLock {
+                var helper: LlamaHelper? = null
+                var scope: kotlinx.coroutines.CoroutineScope? = null
+                try {
+                    val events = MutableSharedFlow<LlamaHelper.LLMEvent>(extraBufferCapacity = 32)
+                    val inferenceScope = kotlinx.coroutines.CoroutineScope(
+                        Dispatchers.IO + kotlinx.coroutines.SupervisorJob()
+                    )
+                    scope = inferenceScope
+                    val llama = LlamaHelper(context.contentResolver, inferenceScope, events)
+                    helper = llama
 
-            var loaded = false
-            // mmproj is null: purely text-only model inference, NO VLM overhead!
-            helper.load(Uri.fromFile(modelFile).toString(), 2048, null) {
-                loaded = it > 0
-            }
+                    var loaded = false
+                    llama.load(Uri.fromFile(modelFile).toString(), 2048, null) {
+                        loaded = it > 0
+                    }
 
-            val loadedEvent = withTimeoutOrNull(30000) {
-                events.first { e -> e is LlamaHelper.LLMEvent.Loaded || e is LlamaHelper.LLMEvent.Error }
-            }
+                    val loadedEvent = withTimeoutOrNull(30000) {
+                        events.first { event ->
+                            event is LlamaHelper.LLMEvent.Loaded || event is LlamaHelper.LLMEvent.Error
+                        }
+                    }
 
-            if (loadedEvent !is LlamaHelper.LLMEvent.Loaded || !loaded) {
-                helper.release()
-                scope.cancel()
-                return@withContext null
-            }
+                    if (loadedEvent !is LlamaHelper.LLMEvent.Loaded || !loaded) {
+                        return@withLock null
+                    }
 
-            val prompt = """
+                    val promptText = rawText.take(7000)
+                    val prompt = """
 You are an on-device screenshot AI assistant like PixelShot.
 Analyze this extracted OCR text:
 1. Fix OCR scanning typos, hyphenations across line-breaks, spacing before punctuation, and broken URLs.
@@ -243,25 +253,47 @@ Respond ONLY in JSON format:
 {"fixedText": "cleaned text transcript", "tags": ["tag1", "tag2"], "title": "short title"}
 
 Text:
-$rawText
+$promptText
 """.trimIndent()
 
-            helper.predict(prompt, "", false)
+                    llama.predict(prompt, "", false)
 
-            val resultEvent = withTimeoutOrNull(25000) {
-                events.first { it is LlamaHelper.LLMEvent.Done || it is LlamaHelper.LLMEvent.Error }
+                    val resultEvent = withTimeoutOrNull(25000) {
+                        events.first { event ->
+                            event is LlamaHelper.LLMEvent.Done || event is LlamaHelper.LLMEvent.Error
+                        }
+                    }
+
+                    if (resultEvent is LlamaHelper.LLMEvent.Done) {
+                        parseLlmJson(resultEvent.fullText.trim(), rawText)
+                    } else {
+                        null
+                    }
+                } catch (_: Throwable) {
+                    // Native/model failures must never take down the OCR pipeline. The caller
+                    // falls back to deterministic OCR cleanup and tag extraction.
+                    null
+                } finally {
+                    try { helper?.abort() } catch (_: Throwable) {}
+                    try { helper?.release() } catch (_: Throwable) {}
+                    try { scope?.cancel() } catch (_: Throwable) {}
+                }
             }
+        }
 
-            helper.abort()
-            helper.release()
-            scope.cancel()
-
-            if (resultEvent is LlamaHelper.LLMEvent.Done) {
-                val full = resultEvent.fullText.trim()
-                parseLlmJson(full, rawText)
-            } else null
+    private fun isValidGguf(file: File): Boolean {
+        return try {
+            if (!file.isFile || file.length() < 16L) return false
+            file.inputStream().use { input ->
+                val magic = ByteArray(4)
+                input.read(magic) == 4 &&
+                    magic[0] == 'G'.code.toByte() &&
+                    magic[1] == 'G'.code.toByte() &&
+                    magic[2] == 'U'.code.toByte() &&
+                    magic[3] == 'F'.code.toByte()
+            }
         } catch (_: Throwable) {
-            null
+            false
         }
     }
 

@@ -978,7 +978,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             }
 
             // Re-read after inference so OCR extracted while the model was running is never lost.
-            val latestScreenshot = screenshotRepository.getByIdSync(screenshot.id) ?: screenshot
+            val latestScreenshot = screenshotRepository.getScreenshotSync(screenshot.id) ?: screenshot
             var updatedScreenshot = latestScreenshot.copy(
                 title = if (result.title.isNotBlank()) result.title else latestScreenshot.title,
                 description = if (result.description.isNotBlank()) result.description else latestScreenshot.description,

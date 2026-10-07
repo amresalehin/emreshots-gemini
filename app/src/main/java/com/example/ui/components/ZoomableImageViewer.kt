@@ -228,7 +228,7 @@ fun ZoomableImageViewer(
                             // Zoom reset button if zoomed in
                             if (scale > 1.1f) {
                                 Surface(
-                                    shape = RoundedCornerShape(14.dp),
+                                    shape = MaterialTheme.shapes.medium,
                                     color = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.padding(end = 4.dp)
                                 ) {
@@ -307,7 +307,7 @@ fun ZoomableImageViewer(
                         ) {
                             if (screenshot.aiProcessed) {
                                 Surface(
-                                    shape = RoundedCornerShape(12.dp),
+                                    shape = MaterialTheme.shapes.medium,
                                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
                                 ) {
                                     Row(
@@ -334,7 +334,7 @@ fun ZoomableImageViewer(
                             if (screenshot.fileSize > 0) {
                                 val mb = screenshot.fileSize.toDouble() / (1024 * 1024)
                                 Surface(
-                                    shape = RoundedCornerShape(12.dp),
+                                    shape = MaterialTheme.shapes.medium,
                                     color = Color.White.copy(alpha = 0.15f)
                                 ) {
                                     Text(
@@ -348,7 +348,7 @@ fun ZoomableImageViewer(
 
                             if (exifData.cameraModel != null) {
                                 Surface(
-                                    shape = RoundedCornerShape(12.dp),
+                                    shape = MaterialTheme.shapes.medium,
                                     color = Color.White.copy(alpha = 0.15f)
                                 ) {
                                     Text(

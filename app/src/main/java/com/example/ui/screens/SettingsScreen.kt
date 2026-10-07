@@ -106,7 +106,6 @@ fun SettingsScreen(
     val isAnalyzing by viewModel.isAnalyzing.collectAsStateWithLifecycle()
     val indexingState by viewModel.indexingState.collectAsStateWithLifecycle()
     val ocrEnabled by viewModel.ocrEnabled.collectAsStateWithLifecycle()
-    val ocrEngine by viewModel.ocrEngine.collectAsStateWithLifecycle()
     val ocrLanguage by viewModel.ocrLanguage.collectAsStateWithLifecycle()
     val installedOcrLanguages by viewModel.installedOcrLanguages.collectAsStateWithLifecycle()
     val ocrDownloadProgress by viewModel.ocrLanguageDownloadProgress.collectAsStateWithLifecycle()
@@ -306,35 +305,13 @@ fun SettingsScreen(
                         title = "OCR Text Extraction",
                         subtitle = if (ocrEnabled) {
                             val currentLangName = TessLanguage.findByCode(ocrLanguage).englishName
-                            val engineName = if (ocrEngine == "tesseract") "Tesseract ($currentLangName)" else "ML Kit"
-                            "Extract text locally using $engineName"
+                            "Extract text locally with Tesseract ($currentLangName) and automatic local AI cleanup"
                         } else "Recognize on-screen text",
                         checked = ocrEnabled,
                         onCheckedChange = { viewModel.setOcrEnabled(it) }
                     )
 
                     if (ocrEnabled) {
-                        SettingsSimpleDivider()
-
-                        // OCR Engine Selector
-                        Column(modifier = Modifier.padding(vertical = 6.dp)) {
-                            Text("OCR Engine", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                            Text(
-                                if (ocrEngine == "tesseract") "Powerful Tess engine · 25+ languages · 100% offline"
-                                else "ML Kit · Fast Latin script engine",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            QualitySegmentedChoice(
-                                options = listOf("Tesseract", "ML Kit"),
-                                selected = if (ocrEngine == "tesseract") "Tesseract" else "ML Kit",
-                                onSelected = { choice ->
-                                    viewModel.setOcrEngine(if (choice == "Tesseract") "tesseract" else "mlkit")
-                                }
-                            )
-                        }
-
                         SettingsSimpleDivider()
                         val activeLang = TessLanguage.findByCode(ocrLanguage)
                         SettingsRow(

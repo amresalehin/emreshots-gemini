@@ -5,6 +5,8 @@ import com.amresalehin.emreshots.R
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.Manifest
+import android.os.Build
 import android.content.Intent
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
@@ -125,6 +127,9 @@ fun ScreenshotDetailScreen(
     onNavigateToScreenshot: (String) -> Unit
 ) {
     val context = LocalContext.current
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { }
     val allScreenshots by viewModel.allScreenshots.collectAsStateWithLifecycle()
     val isAnalyzing by viewModel.isAnalyzing.collectAsStateWithLifecycle()
     val exifDataMap by viewModel.exifDataState.collectAsStateWithLifecycle()
@@ -275,9 +280,9 @@ fun ScreenshotDetailScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         if (screenshot.reminderTime != null) {
-                            "Current: " + SimpleDateFormat("EEE, MMM d · h:mm a", Locale.getDefault()).format(Date(screenshot.reminderTime))
+                            stringResource(R.string.reminder_current) + " " + SimpleDateFormat("EEE, MMM d · h:mm a", Locale.getDefault()).format(Date(screenshot.reminderTime))
                         } else {
-                            "Choose a reminder time for this media item."
+                            stringResource(R.string.reminder_choose_time)
                         },
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -291,6 +296,7 @@ fun ScreenshotDetailScreen(
                                 set(Calendar.MILLISECOND, 0)
                             }
                             viewModel.setReminder(screenshot, calendar.timeInMillis, "Review: " + screenshot.title)
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                             showReminderDialog = false
                         },
                         modifier = Modifier.fillMaxWidth()
@@ -323,6 +329,7 @@ fun ScreenshotDetailScreen(
                                                 set(Calendar.MILLISECOND, 0)
                                             }
                                             viewModel.setReminder(screenshot, picked.timeInMillis, "Review: " + screenshot.title)
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                                             showReminderDialog = false
                                         },
                                         initial.get(Calendar.HOUR_OF_DAY),
@@ -355,7 +362,7 @@ fun ScreenshotDetailScreen(
             TopAppBar(
                 title = {
                     Text(
-                        if (screenshot.isVideo) "Video" else "Photo",
+                        if (screenshot.isVideo) stringResource(R.string.video) else stringResource(R.string.photo),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -418,7 +425,7 @@ fun ScreenshotDetailScreen(
                                     showOverflowMenu = false
                                     val uri = screenshot.uriString?.let(Uri::parse)
                                     if (uri == null) {
-                                        viewModel.showMessage("Sharing is unavailable for this item.")
+                                        viewModel.showMessage(stringResource(R.string.sharing_unavailable_for_item))
                                     } else {
                                         runCatching {
                                             val type = context.contentResolver.getType(uri)
@@ -428,9 +435,9 @@ fun ScreenshotDetailScreen(
                                                 putExtra(Intent.EXTRA_STREAM, uri)
                                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                             }
-                                            context.startActivity(Intent.createChooser(intent, "Share media"))
+                                            context.startActivity(Intent.createChooser(intent, context.getString(R.string.share_media)))
                                         }.onFailure {
-                                            viewModel.showMessage("Unable to share this item.")
+                                            viewModel.showMessage(stringResource(R.string.unable_to_share_item))
                                         }
                                     }
                                 },
@@ -746,7 +753,7 @@ fun ScreenshotDetailScreen(
                             )
                         } else {
                             Text(
-                                text = if (screenshot.isVideo) "VIDEO" else "PHOTO",
+                                text = if (screenshot.isVideo) stringResource(R.string.video).uppercase(Locale.ROOT) else stringResource(R.string.photo).uppercase(Locale.ROOT),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.Bold,

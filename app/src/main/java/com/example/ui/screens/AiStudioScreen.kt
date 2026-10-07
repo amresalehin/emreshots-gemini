@@ -10,11 +10,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CloudDone
@@ -52,14 +54,16 @@ import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 @Composable
 fun AiStudioScreen(
     viewModel: ScreenshotsViewModel,
+    onNavigateBack: () -> Unit,
     onNavigateToProviders: () -> Unit
 ) {
     val allScreenshots by viewModel.allScreenshots.collectAsStateWithLifecycle()
     val activeProvider by viewModel.activeProvider.collectAsStateWithLifecycle()
     val isAnalyzing by viewModel.isAnalyzing.collectAsStateWithLifecycle()
     val statusText by viewModel.analysisStatusText.collectAsStateWithLifecycle()
+    val autoWriteExif by viewModel.autoWriteExifSetting.collectAsStateWithLifecycle()
 
-    var autoWriteExif by remember { mutableStateOf(true) }
+    BackHandler(onBack = onNavigateBack)
 
     val untaggedCount = allScreenshots.count { it.tags.isEmpty() || !it.aiProcessed }
     val processedCount = allScreenshots.count { it.aiProcessed }
@@ -70,6 +74,14 @@ fun AiStudioScreen(
             .verticalScroll(rememberScrollState())
     ) {
         TopAppBar(
+            navigationIcon = {
+                androidx.compose.material3.IconButton(
+                    onClick = onNavigateBack,
+                    modifier = Modifier.testTag("btn_ai_studio_back")
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+            },
             title = {
                 Text(
                     text = "AI Studio",
@@ -187,7 +199,7 @@ fun AiStudioScreen(
 
                     Switch(
                         checked = autoWriteExif,
-                        onCheckedChange = { autoWriteExif = it },
+                        onCheckedChange = { viewModel.setAutoWriteExifSetting(it) },
                         modifier = Modifier.testTag("switch_auto_write_exif")
                     )
                 }

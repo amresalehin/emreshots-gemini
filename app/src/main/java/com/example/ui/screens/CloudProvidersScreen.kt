@@ -3,6 +3,7 @@ package com.amresalehin.emreshots.ui.screens
 import com.amresalehin.emreshots.ui.theme.SuccessEmerald
 import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -115,7 +116,7 @@ fun CloudProvidersScreen(
                 navigationIcon = {
                     if (onNavigateBack != null) {
                         IconButton(onClick = onNavigateBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                         }
                     }
                 },
@@ -139,7 +140,7 @@ fun CloudProvidersScreen(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Back to AI Studio")
+                    Text(stringResource(R.string.back_to_ai_studio))
                 }
             }
 
@@ -234,7 +235,7 @@ fun CloudProvidersScreen(
                 .size(56.dp)
                 .testTag("fab_add_provider")
         ) {
-            Icon(Icons.Default.Add, contentDescription = "Add Provider")
+            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_provider))
         }
     }
 
@@ -322,11 +323,11 @@ fun ProviderCard(
                         onClick = onEdit,
                         modifier = Modifier.testTag("btn_edit_prov_${provider.id}")
                     ) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit), tint = MaterialTheme.colorScheme.primary)
                     }
                     if (!provider.isDefaultGemini) {
                         IconButton(onClick = onDelete) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete), tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
@@ -387,11 +388,11 @@ fun ProviderCard(
                     if (isTesting) {
                         CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Testing...")
+                        Text(stringResource(R.string.testing))
                     } else {
                         Icon(Icons.Default.NetworkCheck, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Test Ping")
+                        Text(stringResource(R.string.test_ping))
                     }
                 }
             }
@@ -432,7 +433,7 @@ fun ProviderEditDialog(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.CloudQueue, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(if (initial == null) "Add AI Provider" else "Edit AI Provider")
+                Text(stringResource(if (initial == null) R.string.add_ai_provider else R.string.edit_ai_provider))
             }
         },
         text = {
@@ -443,7 +444,7 @@ fun ProviderEditDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 // Preset Quick Fill Chips
-                Text("Quick Presets (Tap to Configure):", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.quick_presets), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -455,7 +456,7 @@ fun ProviderEditDialog(
                             baseUrl = "https://generativelanguage.googleapis.com"
                             selectedModel = "gemini-2.5-flash"
                         },
-                        label = { Text("Google Gemini") }
+                        label = { Text(stringResource(R.string.google_gemini)) }
                     )
                     InputChip(
                         selected = name.contains("OpenAI", ignoreCase = true) || baseUrl.contains("openai.com"),
@@ -464,7 +465,7 @@ fun ProviderEditDialog(
                             baseUrl = "https://api.openai.com/v1"
                             selectedModel = "gpt-4o-mini"
                         },
-                        label = { Text("OpenAI") }
+                        label = { Text(stringResource(R.string.openai)) }
                     )
                     InputChip(
                         selected = name.contains("Groq", ignoreCase = true),
@@ -473,7 +474,7 @@ fun ProviderEditDialog(
                             baseUrl = "https://api.groq.com/openai/v1"
                             selectedModel = "llama-3.2-11b-vision-preview"
                         },
-                        label = { Text("Groq Cloud") }
+                        label = { Text(stringResource(R.string.groq_cloud)) }
                     )
                     InputChip(
                         selected = name.contains("OpenRouter", ignoreCase = true),
@@ -482,7 +483,7 @@ fun ProviderEditDialog(
                             baseUrl = "https://openrouter.ai/api/v1"
                             selectedModel = "google/gemini-2.5-flash"
                         },
-                        label = { Text("OpenRouter") }
+                        label = { Text(stringResource(R.string.openrouter)) }
                     )
                     InputChip(
                         selected = name.contains("Ollama", ignoreCase = true) || baseUrl.contains("11434"),
@@ -491,7 +492,7 @@ fun ProviderEditDialog(
                             baseUrl = "http://10.0.2.2:11434"
                             selectedModel = "llama3.2-vision"
                         },
-                        label = { Text("Ollama Local") }
+                        label = { Text(stringResource(R.string.ollama_local)) }
                     )
                     InputChip(
                         selected = name.contains("Anthropic", ignoreCase = true),
@@ -500,7 +501,7 @@ fun ProviderEditDialog(
                             baseUrl = "https://api.anthropic.com"
                             selectedModel = "claude-3-5-sonnet-20241022"
                         },
-                        label = { Text("Anthropic") }
+                        label = { Text(stringResource(R.string.anthropic)) }
                     )
                 }
 
@@ -509,7 +510,7 @@ fun ProviderEditDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Provider Name") },
+                    label = { Text(stringResource(R.string.provider_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().testTag("input_provider_name")
                 )
@@ -517,7 +518,7 @@ fun ProviderEditDialog(
                 OutlinedTextField(
                     value = baseUrl,
                     onValueChange = { baseUrl = it },
-                    label = { Text("Base URL (e.g. https://generativelanguage.googleapis.com)") },
+                    label = { Text(stringResource(R.string.base_url_hint)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().testTag("input_provider_url")
                 )
@@ -525,7 +526,7 @@ fun ProviderEditDialog(
                 OutlinedTextField(
                     value = apiKey,
                     onValueChange = { apiKey = it },
-                    label = { Text("API Key / Bearer Token") },
+                    label = { Text(stringResource(R.string.api_key_or_bearer_token)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().testTag("input_provider_key")
                 )
@@ -533,7 +534,7 @@ fun ProviderEditDialog(
                 OutlinedTextField(
                     value = selectedModel,
                     onValueChange = { selectedModel = it },
-                    label = { Text("Selected Model Identifier") },
+                    label = { Text(stringResource(R.string.selected_model_identifier)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().testTag("input_provider_model")
                 )
@@ -577,7 +578,7 @@ fun ProviderEditDialog(
                             Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                         }
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Fetch Models")
+                        Text(stringResource(R.string.fetch_models))
                     }
 
                     OutlinedButton(
@@ -607,7 +608,7 @@ fun ProviderEditDialog(
                             Icon(Icons.Default.NetworkCheck, contentDescription = null, modifier = Modifier.size(16.dp))
                         }
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Test Ping")
+                        Text(stringResource(R.string.test_ping))
                     }
                 }
 
@@ -675,7 +676,7 @@ fun ProviderEditDialog(
                             OutlinedTextField(
                                 value = modelSearchQuery,
                                 onValueChange = { modelSearchQuery = it },
-                                placeholder = { Text("Search models...", fontSize = 12.sp) },
+                                placeholder = { Text(stringResource(R.string.search_models), fontSize = 12.sp) },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth().height(48.dp)
                             )
@@ -723,7 +724,7 @@ fun ProviderEditDialog(
                 OutlinedTextField(
                     value = headersJson,
                     onValueChange = { headersJson = it },
-                    label = { Text("Custom HTTP Headers (JSON)") },
+                    label = { Text(stringResource(R.string.custom_http_headers)) },
                     minLines = 2,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -754,12 +755,12 @@ fun ProviderEditDialog(
                 },
                 modifier = Modifier.testTag("btn_save_provider")
             ) {
-                Text("Save Provider")
+                Text(stringResource(R.string.save_provider))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )

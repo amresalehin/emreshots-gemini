@@ -57,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -131,7 +132,7 @@ fun OcrAiSheet(
                 }
 
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Default.Close, contentDescription = "Close")
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                 }
             }
 
@@ -161,11 +162,11 @@ fun OcrAiSheet(
                             strokeWidth = 2.dp
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Extracting Text...", fontSize = 13.sp)
+                        Text(stringResource(R.string.extracting_text), fontSize = 13.sp)
                     } else {
                         Icon(Icons.Default.DocumentScanner, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(if (ocrTextState.isBlank()) "Local OCR" else "Re-scan Local OCR", fontSize = 13.sp)
+                        Text(if (ocrTextState.isBlank()) stringResource(R.string.local_ocr) else stringResource(R.string.rescan_local_ocr), fontSize = 13.sp)
                     }
                 }
 
@@ -173,14 +174,14 @@ fun OcrAiSheet(
                     OutlinedButton(
                         onClick = {
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            clipboard.setPrimaryClip(ClipData.newPlainText("OCR Text", ocrTextState))
+                            clipboard.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.ocr_clipboard_label), ocrTextState))
                         },
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.testTag("btn_copy_ocr")
                     ) {
                         Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Copy", fontSize = 13.sp)
+                        Text(stringResource(R.string.copy), fontSize = 13.sp)
                     }
                 }
             }
@@ -188,7 +189,7 @@ fun OcrAiSheet(
             // OCR Text Field
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = "Extracted Text (${ocrTextState.length} characters)",
+                    text = stringResource(R.string.extracted_text_characters, ocrTextState.length),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -197,7 +198,7 @@ fun OcrAiSheet(
                 OutlinedTextField(
                     value = ocrTextState,
                     onValueChange = { ocrTextState = it },
-                    placeholder = { Text("No text extracted yet. Tap 'Extract OCR Text' to transcribe text from this image.") },
+                    placeholder = { Text(stringResource(R.string.no_text_extracted)) },
                     minLines = 4,
                     maxLines = 8,
                     shape = RoundedCornerShape(12.dp),
@@ -277,7 +278,7 @@ fun OcrAiSheet(
                 ) {
                     Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Save Current OCR & Insights to Metadata")
+                    Text(stringResource(R.string.save_ocr_and_insights))
                 }
             }
 

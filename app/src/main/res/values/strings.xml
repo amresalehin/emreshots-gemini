@@ -89,6 +89,9 @@
     <string name="remaining_count">Remaining: %1$d</string>
     <string name="last_run_finished">Last run finished. Successful results are already stored in the library.</string>
     <string name="settings_title">Settings</string>
+    <string name="ai_studio">AI Studio</string>
+    <string name="cloud_providers">Cloud Providers</string>
+    <string name="library_processing">Library Processing</string>
     <string name="workspace">Workspace</string>
     <string name="workspace_description">Detailed controls live on the screens that own them.</string>
     <string name="on_device_vision">On-Device Vision</string>

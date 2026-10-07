@@ -62,20 +62,25 @@ jobs:
         continue-on-error: true
         run: gradle :app:mergeDebugResources --stacktrace
 
-      - name: Inspect generated ui-release resource
+      - name: Inspect merged resource source
+        if: \${{ always() }}
         shell: bash
         run: |
           set -euo pipefail
-          found=0
-          while IFS= read -r -d '' file; do
-            if grep -q 'no_text_extracted' "$file" 2>/dev/null; then
-              echo "GENERATED_RESOURCE=$file"
-              sed -n '35,55p' "$file"
-              found=1
-            fi
-          done < <(find "$HOME/.gradle/caches" "$GITHUB_WORKSPACE/app/build" -path '*/transformed/ui-release/res/values/values.xml' -type f -print0 2>/dev/null)
-          echo "generated_matches=$found"
+          file="app/build/intermediates/incremental/debug/mergeDebugResources/merged.dir/values/values.xml"
+          test -f "$file"
+          echo "MERGED_RESOURCE_FILE=$file"
+          grep -n -C 8 'no_text_extracted' "$file" || true
+          sed -n '35,55p' "$file"
 
+      - name: Upload merged resource diagnostic
+        if: \${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: emreshots-resource-diagnostic
+          path: app/build/intermediates/incremental/debug/mergeDebugResources/merged.dir/values/values.xml
+          if-no-files-found: error
+          retention-days: 2
       - name: Build and test
         run: gradle build --stacktrace
 

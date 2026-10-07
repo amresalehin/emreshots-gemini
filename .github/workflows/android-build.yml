@@ -44,6 +44,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: "9.3.1"
+      - name: Prepare bundled offline OCR LLM
+        run: gradle :app:prepareBundledLocalOcrModel --stacktrace
 
       - name: Build and test
         run: gradle build --stacktrace

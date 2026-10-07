@@ -104,7 +104,6 @@ fun SettingsScreen(
     onOpenAiStudio: (() -> Unit)? = null,
     onOpenProviders: (() -> Unit)? = null
 ) {
-    val allScreenshots by viewModel.allScreenshots.collectAsStateWithLifecycle()
     val indexingState by viewModel.indexingState.collectAsStateWithLifecycle()
     val ocrEnabled by viewModel.ocrEnabled.collectAsStateWithLifecycle()
     val ocrLanguage by viewModel.ocrLanguage.collectAsStateWithLifecycle()
@@ -430,25 +429,6 @@ fun SettingsScreen(
                 )
             }
         }
-    }
-
-    if (showReprocessConfirm) {
-        AlertDialog(
-            onDismissRequest = { showReprocessConfirm = false },
-            title = { Text("Reprocess Library?") },
-            text = { Text("This will run AI analysis again for all $total items in your library.") },
-            confirmButton = {
-                Button(onClick = {
-                    showReprocessConfirm = false
-                    viewModel.batchAnalyzeScreenshots(allScreenshots, autoWriteExifSetting)
-                }) {
-                    Text("Reprocess all")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showReprocessConfirm = false }) { Text("Cancel") }
-            }
-        )
     }
 
     if (showRestoreModeDialog && pendingRestoreUri != null) {

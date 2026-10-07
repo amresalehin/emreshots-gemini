@@ -185,7 +185,7 @@ fun ScreenshotMasonryCard(
                             Spacer(modifier = Modifier.width(3.dp))
                             Text(
                                 text = stringResource(R.string.ai_label),
-                                fontSize = 9.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )

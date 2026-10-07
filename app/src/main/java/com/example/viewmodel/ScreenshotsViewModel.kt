@@ -17,9 +17,6 @@ import com.amresalehin.emreshots.data.local.seedInitialData
 import com.amresalehin.emreshots.data.model.CollectionItem
 import com.amresalehin.emreshots.data.model.CustomCloudProvider
 import com.amresalehin.emreshots.data.model.ExifData
-import com.amresalehin.emreshots.data.model.GalleryViewMode
-import com.amresalehin.emreshots.data.model.MediaGroupBy
-import com.amresalehin.emreshots.data.model.MediaSortOption
 import com.amresalehin.emreshots.data.model.ScreenshotItem
 import com.amresalehin.emreshots.data.repository.CollectionRepository
 import com.amresalehin.emreshots.data.repository.ProviderRepository
@@ -60,11 +57,9 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
-import java.util.regex.Pattern
 
 data class IndexingState(
     val isIndexing: Boolean = false,
@@ -77,17 +72,6 @@ data class IndexingState(
     val failureCount: Int = 0,
     val isCancelled: Boolean = false
 )
-
-enum class ScreenshotFilter(val displayName: String) {
-    ALL("All"),
-    PHOTOS("Photos"),
-    VIDEOS("Videos"),
-    SCREENSHOTS("Screenshots"),
-    AI_PROCESSED("AI Processed"),
-    HAS_LINKS("With Links"),
-    FAVORITES("Favorites"),
-    REMINDERS("Reminders")
-}
 
 class ScreenshotsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -116,11 +100,10 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     private var pendingWriteScreenshot: ScreenshotItem? = null
     private var pendingWriteExifData: ExifData? = null
 
-    val allScreenshots: StateFlow<List<ScreenshotItem>> = screenshotRepository.allScreenshots
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    private val galleryViewModel = GalleryViewModel(application, screenshotRepository, collectionRepository)
 
-    val collections: StateFlow<List<CollectionItem>> = collectionRepository.allCollections
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val allScreenshots: StateFlow<List<ScreenshotItem>> = galleryViewModel.allScreenshots
+    val collections: StateFlow<List<CollectionItem>> = galleryViewModel.collections
 
     private val secureApiKeyStore = SecureApiKeyStore(application)
 
@@ -135,11 +118,8 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    private val _searchQuery = MutableStateFlow("")
-    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
-
-    private val _selectedFilter = MutableStateFlow(ScreenshotFilter.ALL)
-    val selectedFilter: StateFlow<ScreenshotFilter> = _selectedFilter.asStateFlow()
+    val searchQuery: StateFlow<String> = galleryViewModel.searchQuery
+    val selectedFilter: StateFlow<ScreenshotFilter> = galleryViewModel.selectedFilter
 
     private val _isAnalyzing = MutableStateFlow(false)
     val isAnalyzing: StateFlow<Boolean> = _isAnalyzing.asStateFlow()
@@ -487,7 +467,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             }
         }
     }
-    fun setSearchQuery(query: String) { _searchQuery.value = query }
+    fun setSearchQuery(query: String) { galleryViewModel.setSearchQuery(query) }
 
     fun batchRename(items: List<ScreenshotItem>, template: String) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -526,13 +506,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         return file.exists() && runCatching { file.renameTo(File(file.parentFile, newDisplayName)) }.getOrDefault(false)
     }
 
-    fun setFilter(filter: ScreenshotFilter) {
-        if (_selectedFilter.value == filter) {
-            _selectedFilter.value = ScreenshotFilter.ALL
-        } else {
-            _selectedFilter.value = filter
-        }
-    }
+    fun setFilter(filter: ScreenshotFilter) { galleryViewModel.setFilter(filter) }
 
     fun clearSnackbar() {
         _snackbarMessage.value = null

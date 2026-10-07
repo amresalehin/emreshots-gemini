@@ -94,24 +94,17 @@ class TessOcrMultiLanguageTest {
     }
 
     @Test
-    fun testOcrEngineAndLanguageViewModelControls() {
-        assertEquals("tesseract", viewModel.ocrEngine.value)
+    fun testTessLanguageSelectionUsesLanguageCodes() {
         assertEquals("eng", viewModel.ocrLanguage.value)
 
-        // Change engine to ML Kit
-        viewModel.setOcrEngine("mlkit")
-        assertEquals("mlkit", viewModel.ocrEngine.value)
-
-        // Switch back to Tesseract
-        viewModel.setOcrEngine("tesseract")
-        assertEquals("tesseract", viewModel.ocrEngine.value)
-
-        // Change language to Turkish
+        // OCR is intentionally Tesseract-only; language selection controls traineddata.
         viewModel.setOcrLanguage("tur")
         assertEquals("tur", viewModel.ocrLanguage.value)
 
-        // Change language to Spanish
         viewModel.setOcrLanguage("spa")
         assertEquals("spa", viewModel.ocrLanguage.value)
+
+        viewModel.setOcrLanguage("eng+ben+hin")
+        assertEquals("eng+ben+hin", viewModel.ocrLanguage.value)
     }
 }

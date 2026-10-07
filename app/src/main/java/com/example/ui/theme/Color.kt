@@ -8,15 +8,15 @@ val OnPrimaryLight = Color(0xFFFFFFFF)
 val PrimaryContainerLight = Color(0xFFEEF2FF)
 val OnPrimaryContainerLight = Color(0xFF312E81)
 
-val SecondaryLight = Color(0xFF0284C7) // Sky Blue
+val SecondaryLight = PrimaryLight
 val OnSecondaryLight = Color(0xFFFFFFFF)
-val SecondaryContainerLight = Color(0xFFE0F2FE)
-val OnSecondaryContainerLight = Color(0xFF0369A1)
+val SecondaryContainerLight = PrimaryContainerLight
+val OnSecondaryContainerLight = OnPrimaryContainerLight
 
-val TertiaryLight = Color(0xFF8B5CF6) // Violet
+val TertiaryLight = PrimaryLight
 val OnTertiaryLight = Color(0xFFFFFFFF)
-val TertiaryContainerLight = Color(0xFFF3E8FF)
-val OnTertiaryContainerLight = Color(0xFF581C87)
+val TertiaryContainerLight = PrimaryContainerLight
+val OnTertiaryContainerLight = OnPrimaryContainerLight
 
 val BackgroundLight = Color(0xFFF8FAFC)
 val OnBackgroundLight = Color(0xFF0F172A)
@@ -33,15 +33,15 @@ val OnPrimaryDark = Color(0xFF0F172A)
 val PrimaryContainerDark = Color(0xFF3730A3)
 val OnPrimaryContainerDark = Color(0xFFEEF2FF)
 
-val SecondaryDark = Color(0xFF38BDF8)
-val OnSecondaryDark = Color(0xFF082F49)
-val SecondaryContainerDark = Color(0xFF0369A1)
-val OnSecondaryContainerDark = Color(0xFFE0F2FE)
+val SecondaryDark = PrimaryDark
+val OnSecondaryDark = OnPrimaryDark
+val SecondaryContainerDark = PrimaryContainerDark
+val OnSecondaryContainerDark = OnPrimaryContainerDark
 
-val TertiaryDark = Color(0xFFA78BFA)
+val TertiaryDark = PrimaryDark
 val OnTertiaryDark = Color(0xFF2E1065)
-val TertiaryContainerDark = Color(0xFF5B21B6)
-val OnTertiaryContainerDark = Color(0xFFF3E8FF)
+val TertiaryContainerDark = PrimaryContainerDark
+val OnTertiaryContainerDark = OnPrimaryContainerDark
 
 val BackgroundDark = Color(0xFF0B0F19) // Obsidian
 val OnBackgroundDark = Color(0xFFF8FAFC)

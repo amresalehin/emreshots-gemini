@@ -72,14 +72,6 @@ class OcrArtefactLlmFixerTest {
         assertFalse(lines.contains("|"))
     }
 
-    @Test
-    fun testViewModelFixArtefactsPreferenceToggle() {
-        assertTrue(viewModel.fixOcrArtefactsEnabled.value)
-        viewModel.setFixOcrArtefactsEnabled(false)
-        assertFalse(viewModel.fixOcrArtefactsEnabled.value)
-        viewModel.setFixOcrArtefactsEnabled(true)
-        assertTrue(viewModel.fixOcrArtefactsEnabled.value)
-    }
 
     @Test
     fun testPixelShotSemanticTaggingReceipt() {

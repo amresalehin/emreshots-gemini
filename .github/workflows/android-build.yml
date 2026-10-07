@@ -61,18 +61,19 @@ jobs:
       - name: Resolve debug runtime dependencies for resource audit
         run: gradle :app:dependencies --configuration debugRuntimeClasspath
 
-      - name: Diagnose malformed AAR resource
+      - name: Diagnose transformed resource origin
         shell: bash
         run: |
-          found=0
-          while IFS= read -r -d '' aar; do
-            if unzip -p "$aar" 'res/values/*.xml' 2>/dev/null | grep -q 'no_text_extracted'; then
-              echo "RESOURCE_MATCH=$aar"
-              unzip -p "$aar" 'res/values/*.xml' 2>/dev/null | grep -n -C 3 'no_text_extracted' || true
-              found=1
-            fi
-          done < <(find "$HOME/.gradle/caches/modules-2/files-2.1" -type f -name '*.aar' -print0)
-          echo "resource_matches=$found"
+          set -euo pipefail
+          matches=$(grep -R -a -l 'no_text_extracted' "$HOME/.gradle/caches/9.3.1" 2>/dev/null | head -20 || true)
+          if [[ -z "$matches" ]]; then
+            echo "No transformed-cache file contains no_text_extracted"
+          else
+            while IFS= read -r file; do
+              echo "RESOURCE_MATCH=$file"
+              grep -a -n -C 3 'no_text_extracted' "$file" || true
+            done <<< "$matches"
+          fi
 
       - name: Build and test
         run: gradle build --stacktrace

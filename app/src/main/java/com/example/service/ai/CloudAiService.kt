@@ -1034,8 +1034,9 @@ Return ONLY a valid JSON object with the following fields:
   "links": ["any phone numbers, URLs, addresses, or emails found in the text"],
   "suggestedCollection": "One matching category from: Work & Receipts, Code & Dev, Design Inspiration, Travel & Tickets, Social & Chat, or Personal",
   "exifUserComment": "OCR Analysis: Concise summary suitable for embedding directly into image EXIF metadata",
-  "ocrText": ${JSONObject.quote(ocrText)}
+  "ocrText": "The corrected OCR transcript. Preserve all meaningful text, but fix obvious OCR character errors, broken words, spacing, hyphenation, and URLs."
 }
+The "ocrText" field MUST contain your corrected transcript, not the original OCR verbatim.
 Do not include any prose outside the JSON.
 """.trimIndent()
 

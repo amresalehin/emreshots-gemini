@@ -113,10 +113,10 @@ fun ScreenshotCard(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(MaterialTheme.shapes.large)
             .clickable(onClick = onClick)
             .testTag("screenshot_card_${screenshot.id}"),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceVariant,
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
         tonalElevation = 2.dp

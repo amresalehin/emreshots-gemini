@@ -52,6 +52,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
@@ -177,6 +179,8 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     private val _autoWriteExifSetting = MutableStateFlow(false)
     val autoWriteExifSetting: StateFlow<Boolean> = _autoWriteExifSetting.asStateFlow()
     private val onDeviceVisionService = com.amresalehin.emreshots.service.ai.OnDeviceVisionService(application)
+    // Serialize vision writes so local and cloud VLM runs cannot race each other.
+    private val visionAnalysisMutex = Mutex()
     private val _onDeviceVisionMode = MutableStateFlow("Automatic")
     val onDeviceVisionMode: StateFlow<String> = _onDeviceVisionMode.asStateFlow()
     private val _onDeviceVisionModel = MutableStateFlow("auto")
@@ -883,16 +887,24 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     private suspend fun analyzeScreenshotInternal(
         screenshot: ScreenshotItem,
         autoWriteExif: Boolean,
-        forcedMode: String? = null
-    ): AiAnalysisResult {
+        forcedMode: String? = null,
+        forcedProviderSelection: String? = null
+    ): AiAnalysisResult = visionAnalysisMutex.withLock {
         val mode = forcedMode ?: onDeviceVisionMode.value
+        val forceLocal = mode.equals("FORCE_LOCAL", ignoreCase = true)
+        val forceCloud = mode.equals("DISABLED", ignoreCase = true)
         val file = resolveImageFile(screenshot)
 
         if (mode.equals("FORCE_LOCAL", ignoreCase = true) && file == null) {
             return AiAnalysisResult(isSuccess = false, errorMessage = "Local-only analysis could not access the screenshot.")
         }
 
-        if (visionCaptionTagProviderId.value.isBlank() && !mode.equals("DISABLED", ignoreCase = true) && file != null) {
+        val selection = forcedProviderSelection ?: visionCaptionTagProviderId.value
+        val localId = selection.removePrefix("local:")
+        val cloudId = selection.removePrefix("cloud:")
+
+        // Explicit local mode always wins over the persisted provider selection.
+        if ((forceLocal || (selection.isBlank() && !forceCloud)) && file != null) {
             val quality = when (aiQualityPreset.value.lowercase()) {
                 "fast" -> com.amresalehin.emreshots.service.ai.VisionQualityPreset.FAST
                 "deep" -> com.amresalehin.emreshots.service.ai.VisionQualityPreset.DEEP
@@ -923,11 +935,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             }
         }
 
-        val selection = visionCaptionTagProviderId.value
-        val localId = selection.removePrefix("local:")
-        val cloudId = selection.removePrefix("cloud:")
-
-        if (selection.startsWith("local:")) {
+        if (selection.startsWith("local:") && !forceCloud) {
             if (file == null) return AiAnalysisResult(isSuccess = false, errorMessage = "Local VLM needs access to the image file.")
             val local = onDeviceVisionService.analyze(
                 request = com.amresalehin.emreshots.service.ai.VisionAnalysisRequest(
@@ -963,16 +971,18 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             val matchedCol = collections.value.find {
                 it.name.equals(result.suggestedCollection, ignoreCase = true)
             }
-            val newColIds = if (matchedCol != null && !screenshot.collectionIds.contains(matchedCol.id)) {
-                screenshot.collectionIds + matchedCol.id
+            val newColIds = if (matchedCol != null && !latestScreenshot.collectionIds.contains(matchedCol.id)) {
+                latestScreenshot.collectionIds + matchedCol.id
             } else {
-                screenshot.collectionIds
+                latestScreenshot.collectionIds
             }
 
-            var updatedScreenshot = screenshot.copy(
-                title = if (result.title.isNotBlank()) result.title else screenshot.title,
-                description = if (result.description.isNotBlank()) result.description else screenshot.description,
-                ocrText = screenshot.ocrText,
+            // Re-read after inference so OCR extracted while the model was running is never lost.
+            val latestScreenshot = screenshotRepository.getByIdSync(screenshot.id) ?: screenshot
+            var updatedScreenshot = latestScreenshot.copy(
+                title = if (result.title.isNotBlank()) result.title else latestScreenshot.title,
+                description = if (result.description.isNotBlank()) result.description else latestScreenshot.description,
+                ocrText = latestScreenshot.ocrText,
                 tags = if (smartTagsEnabled.value) (screenshot.tags + result.tags).distinct() else screenshot.tags,
                 links = if (linksDetectionEnabled.value) (screenshot.links + result.detectedLinks).distinct() else screenshot.links,
                 collectionIds = newColIds,
@@ -1014,7 +1024,8 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             val result = analyzeScreenshotInternal(
                 screenshot = screenshot,
                 autoWriteExif = autoWriteExif,
-                forcedMode = "FORCE_LOCAL"
+                forcedMode = "FORCE_LOCAL",
+                forcedProviderSelection = "local:" + onDeviceVisionModel.value
             )
             _isAnalyzing.value = false
             _analysisStatusText.value = null
@@ -1043,7 +1054,8 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             val result = analyzeScreenshotInternal(
                 screenshot = screenshot,
                 autoWriteExif = autoWriteExif,
-                forcedMode = "DISABLED"
+                forcedMode = "DISABLED",
+                forcedProviderSelection = "cloud:" + provider.id
             )
             _isAnalyzing.value = false
             _analysisStatusText.value = null

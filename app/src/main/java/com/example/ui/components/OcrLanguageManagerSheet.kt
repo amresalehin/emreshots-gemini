@@ -1,6 +1,7 @@
 package com.amresalehin.emreshots.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -137,7 +138,7 @@ fun OcrLanguageManagerSheet(
                     }
                 }
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Default.Close, contentDescription = "Close")
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                 }
             }
 
@@ -150,12 +151,12 @@ fun OcrLanguageManagerSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("ocr_language_search_input"),
-                placeholder = { Text("Search by language or code (e.g. Spanish, tur, 日本語)…") },
+                placeholder = { Text(stringResource(R.string.language_search_placeholder)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
                         IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Default.Close, contentDescription = "Clear")
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.clear_search))
                         }
                     }
                 },
@@ -175,12 +176,12 @@ fun OcrLanguageManagerSheet(
                     FilterChip(
                         selected = !filterInstalledOnly,
                         onClick = { filterInstalledOnly = false },
-                        label = { Text("All (${allLanguages.size})") }
+                        label = { Text(stringResource(R.string.all_languages, allLanguages.size)) }
                     )
                     FilterChip(
                         selected = filterInstalledOnly,
                         onClick = { filterInstalledOnly = true },
-                        label = { Text("Installed (${installedLanguageCodes.size})") }
+                        label = { Text(stringResource(R.string.installed_languages, installedLanguageCodes.size)) }
                     )
                 }
 
@@ -192,7 +193,7 @@ fun OcrLanguageManagerSheet(
                 ) {
                     Icon(Icons.Default.FileOpen, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Import", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.import), style = MaterialTheme.typography.labelMedium)
                 }
             }
 
@@ -345,12 +346,12 @@ private fun LanguageItemCard(
                                 onClick = onSelect,
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                             ) {
-                                Text("Select")
+                                Text(stringResource(R.string.select))
                             }
                         } else {
                             Icon(
                                 Icons.Default.Check,
-                                contentDescription = "Active",
+                                contentDescription = stringResource(R.string.active),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -362,7 +363,7 @@ private fun LanguageItemCard(
                             ) {
                                 Icon(
                                     Icons.Default.Delete,
-                                    contentDescription = "Delete language pack",
+                                    contentDescription = stringResource(R.string.delete_language_pack),
                                     tint = MaterialTheme.colorScheme.outline,
                                     modifier = Modifier.size(18.dp)
                                 )
@@ -378,7 +379,7 @@ private fun LanguageItemCard(
                     ) {
                         Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Get", style = MaterialTheme.typography.labelMedium)
+                        Text(stringResource(R.string.get), style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }

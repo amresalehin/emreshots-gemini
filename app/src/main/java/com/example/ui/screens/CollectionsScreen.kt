@@ -2,6 +2,7 @@ package com.amresalehin.emreshots.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -54,10 +55,10 @@ fun CollectionsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Collections", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.collections), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -85,7 +86,7 @@ fun CollectionsScreen(
                             )
                         }
                         IconButton(onClick = { viewModel.deleteCollection(collection.id) }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete " + collection.name, tint = MaterialTheme.colorScheme.error)
+                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete) + " " + collection.name, tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
@@ -93,7 +94,7 @@ fun CollectionsScreen(
             Button(onClick = { showCreate = true }, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Default.Add, contentDescription = null)
                 Spacer(Modifier.width(6.dp))
-                Text("Create collection")
+                Text(stringResource(R.string.create_collection))
             }
         }
     }
@@ -101,9 +102,9 @@ fun CollectionsScreen(
     if (showCreate) {
         AlertDialog(
             onDismissRequest = { showCreate = false; name = "" },
-            title = { Text("Create collection") },
+            title = { Text(stringResource(R.string.create_collection)) },
             text = {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") }, singleLine = true)
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text(stringResource(R.string.name)) }, singleLine = true)
             },
             confirmButton = {
                 Button(
@@ -113,10 +114,10 @@ fun CollectionsScreen(
                         name = ""
                     },
                     enabled = name.isNotBlank()
-                ) { Text("Create") }
+                ) { Text(stringResource(R.string.create_collection)) }
             },
             dismissButton = {
-                TextButton(onClick = { showCreate = false; name = "" }) { Text("Cancel") }
+                TextButton(onClick = { showCreate = false; name = "" }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }

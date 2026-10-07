@@ -1,5 +1,7 @@
 package com.amresalehin.emreshots.ui.screens
 
+import com.amresalehin.emreshots.R
+
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts

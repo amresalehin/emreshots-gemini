@@ -145,7 +145,7 @@ object BackupRestoreManager {
                         name = obj.optString("name", "Restored Collection"),
                         description = obj.optString("description", ""),
                         iconName = obj.optString("iconName", "folder"),
-                        colorHex = obj.optString("colorHex", "#6366F1"),
+                        colorHex = obj.optString("colorHex", "#C2410C"),
                         createdAt = obj.optLong("createdAt", System.currentTimeMillis())
                     )
                 )

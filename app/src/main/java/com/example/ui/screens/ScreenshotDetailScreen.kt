@@ -847,7 +847,7 @@ fun ScreenshotDetailScreen(
             aiOcrModelOptions = aiOcrModelOptions,
             selectedOcrProviderId = ocrEnrichmentProviderId,
             onSelectOcrProvider = viewModel::setOcrEnrichmentProviderId,
-            onExtractOcr = { viewModel.extractOcr(screenshot) },
+            onExtractOcr = { onText -> viewModel.extractOcr(screenshot) { fixed -> if (!fixed.isNullOrBlank()) onText(fixed) } },
             onFixOcrArtefacts = { _, callback -> viewModel.fixScreenshotOcrArtefacts(screenshot) { callback(it) } },
             onSendOcrToAi = { text, writeMetadata ->
                 viewModel.sendOcrToAi(screenshot, text, writeMetadata)

@@ -58,22 +58,23 @@ jobs:
           test "$(stat -c %s "$MODEL")" -gt 80000000
           echo "Bundled OCR LLM verified: $(du -h "$MODEL" | cut -f1)"
 
-      - name: Resolve debug runtime dependencies for resource audit
-        run: gradle :app:dependencies --configuration debugRuntimeClasspath
+      - name: Reproduce resource merge for diagnosis
+        continue-on-error: true
+        run: gradle :app:mergeDebugResources --stacktrace
 
-      - name: Diagnose transformed resource origin
+      - name: Inspect generated ui-release resource
         shell: bash
         run: |
           set -euo pipefail
-          matches=$(grep -R -a -l 'no_text_extracted' "$HOME/.gradle/caches/9.3.1" 2>/dev/null | head -20 || true)
-          if [[ -z "$matches" ]]; then
-            echo "No transformed-cache file contains no_text_extracted"
-          else
-            while IFS= read -r file; do
-              echo "RESOURCE_MATCH=$file"
-              grep -a -n -C 3 'no_text_extracted' "$file" || true
-            done <<< "$matches"
-          fi
+          found=0
+          while IFS= read -r -d '' file; do
+            if grep -q 'no_text_extracted' "$file" 2>/dev/null; then
+              echo "GENERATED_RESOURCE=$file"
+              sed -n '35,55p' "$file"
+              found=1
+            fi
+          done < <(find "$HOME/.gradle/caches" "$GITHUB_WORKSPACE/app/build" -path '*/transformed/ui-release/res/values/values.xml' -type f -print0 2>/dev/null)
+          echo "generated_matches=$found"
 
       - name: Build and test
         run: gradle build --stacktrace

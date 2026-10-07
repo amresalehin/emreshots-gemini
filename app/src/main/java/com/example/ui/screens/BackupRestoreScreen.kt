@@ -85,7 +85,7 @@ fun BackupRestoreScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Card(
-                shape = RoundedCornerShape(18.dp),
+                shape = MaterialTheme.shapes.large,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

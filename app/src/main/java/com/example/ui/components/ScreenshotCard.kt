@@ -66,6 +66,8 @@ fun ScreenshotCard(
     screenshot: ScreenshotItem,
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit,
+    showFileName: Boolean = true,
+    showTags: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -229,6 +231,44 @@ fun ScreenshotCard(
                                 contentDescription = stringResource(R.string.add_to_favorites),
                                 tint = Color.White.copy(alpha = 0.96f),
                                 modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Bottom metadata overlay respects the gallery visibility toggles.
+            if (showFileName || (showTags && screenshot.tags.isNotEmpty())) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f))
+                            )
+                        )
+                        .padding(horizontal = 8.dp, vertical = 8.dp)
+                ) {
+                    Column {
+                        if (showFileName && screenshot.title.isNotBlank()) {
+                            Text(
+                                text = screenshot.title,
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        if (showTags && screenshot.tags.isNotEmpty()) {
+                            Text(
+                                text = "#\${screenshot.tags.first()}",
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }

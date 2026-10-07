@@ -754,6 +754,7 @@ fun ScreenshotsScreen(
                         .padding(top = 8.dp, bottom = 80.dp)
                 )
             }
+        }
 
         // Quick processing launcher: keep OCR / AI vision discoverable without taking over the gallery.
         Box(

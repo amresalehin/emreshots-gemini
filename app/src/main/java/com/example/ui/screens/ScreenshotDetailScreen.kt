@@ -573,19 +573,6 @@ fun ScreenshotDetailScreen(
                         )
 
                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            if (!screenshot.ocrText.isNullOrBlank()) {
-                                TextButton(
-                                    onClick = { viewModel.fixScreenshotOcrArtefacts(screenshot) },
-                                    enabled = !isFixingArtefacts,
-                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        text = if (isFixingArtefacts) "Fixing…" else "Fix Artefacts",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
                             }
                             TextButton(
                                 onClick = { showOcrSheet = true },

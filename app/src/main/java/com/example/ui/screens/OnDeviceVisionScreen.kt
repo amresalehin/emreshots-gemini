@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -83,10 +84,10 @@ fun OnDeviceVisionScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("On-Device Vision", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.on_device_vision), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -104,8 +105,8 @@ fun OnDeviceVisionScreen(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("Inference Mode", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text("Choose when local GGUF models may run.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.inference_mode), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.inference_mode_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             listOf("Automatic", "Force local", "Disabled").forEach { option ->
                                 FilterChip(
@@ -126,8 +127,8 @@ fun OnDeviceVisionScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Custom GGUF Model", fontWeight = FontWeight.SemiBold)
-                            Text("Import a local vision model.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.custom_gguf_model), fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.custom_gguf_model_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         OutlinedButton(
                             onClick = { picker.launch(arrayOf("*/*")) },
@@ -136,7 +137,7 @@ fun OnDeviceVisionScreen(
                         ) {
                             Icon(Icons.Default.FileOpen, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Import")
+                            Text(stringResource(R.string.import))
                         }
                     }
                 }
@@ -168,7 +169,7 @@ private fun OnDeviceModelList(
     LaunchedEffect(Unit) { refresh() }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Available GGUF Models", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.available_gguf_models), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         models.forEach { model ->
             val installed = model.id in installedIds
             val selected = model.id == selectedModelId
@@ -190,7 +191,7 @@ private fun OnDeviceModelList(
                         }
                         if (installed) {
                             OutlinedButton(onClick = { onSelect(model.id) }, enabled = busyId == null) {
-                                Text(if (selected) "Active" else "Select")
+                                Text(if (selected) stringResource(R.string.active) else stringResource(R.string.select))
                             }
                         } else if (model.artifacts.isNotEmpty()) {
                             Button(
@@ -213,7 +214,7 @@ private fun OnDeviceModelList(
                                 },
                                 enabled = busyId == null,
                                 shape = RoundedCornerShape(10.dp)
-                            ) { Text("Download") }
+                            ) { Text(stringResource(R.string.download)) }
                         }
                     }
                     if (busyId == model.id) {

@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -75,10 +76,10 @@ fun OcrSettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("OCR & Text", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.ocr_and_text), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -94,8 +95,8 @@ fun OcrSettingsScreen(
                     Icon(Icons.Default.TextFields, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("OCR Text Extraction", fontWeight = FontWeight.SemiBold)
-                        Text("Extract text locally with Tesseract.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.ocr_text_extraction), fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.ocr_text_extraction_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(checked = enabled, onCheckedChange = viewModel::setOcrEnabled)
                 }
@@ -108,18 +109,18 @@ fun OcrSettingsScreen(
                             Spacer(Modifier.width(10.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 val active = TessLanguage.findByCode(language)
-                                Text("Language: " + active.displayName, fontWeight = FontWeight.SemiBold)
-                                Text(installed.size.toString() + " language packs installed", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(R.string.language_name, active.displayName), fontWeight = FontWeight.SemiBold)
+                                Text(stringResource(R.string.language_packs_installed, installed.size), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             FilledTonalButton(onClick = { showLanguageSheet = true }, modifier = Modifier.height(48.dp)) {
-                                Text("Manage")
+                                Text(stringResource(R.string.manage))
                             }
                         }
                         FilledTonalButton(
                             onClick = { customPicker.launch(arrayOf("*/*")) },
                             modifier = Modifier.fillMaxWidth().height(48.dp)
                         ) {
-                            Text("Import custom language pack")
+                            Text(stringResource(R.string.import_custom_language_pack))
                         }
                     }
                 }
@@ -127,8 +128,8 @@ fun OcrSettingsScreen(
             Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                 Row(modifier = Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Link & URL Detection", fontWeight = FontWeight.SemiBold)
-                        Text("Extract web links from recognized text.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.link_and_url_detection), fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.link_and_url_detection_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(checked = linksEnabled, onCheckedChange = viewModel::setLinksDetectionEnabled)
                 }

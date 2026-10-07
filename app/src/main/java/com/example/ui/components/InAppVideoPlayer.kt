@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -83,7 +84,7 @@ fun InAppVideoPlayer(
                 .background(Color.Black),
             contentAlignment = Alignment.Center
         ) {
-            Text("Video source not accessible", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
+            Text(stringResource(R.string.video_source_not_accessible), color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
         }
         return
     }
@@ -217,7 +218,7 @@ private fun VideoPlayerSurface(
                 ) {
                     Icon(
                         imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeMute else Icons.AutoMirrored.Filled.VolumeUp,
-                        contentDescription = if (isMuted) "Unmute" else "Mute",
+                        contentDescription = if (isMuted) stringResource(R.string.unmute) else stringResource(R.string.mute),
                         tint = Color.White
                     )
                 }
@@ -238,7 +239,7 @@ private fun VideoPlayerSurface(
                         },
                         modifier = Modifier.size(46.dp)
                     ) {
-                        Icon(Icons.Default.Replay10, contentDescription = "Rewind 10 seconds", tint = Color.White, modifier = Modifier.size(30.dp))
+                        Icon(Icons.Default.Replay10, contentDescription = stringResource(R.string.rewind_10_seconds), tint = Color.White, modifier = Modifier.size(30.dp))
                     }
 
                     Surface(
@@ -270,7 +271,7 @@ private fun VideoPlayerSurface(
                                     isPlaying -> Icons.Default.Pause
                                     else -> Icons.Default.PlayArrow
                                 },
-                                contentDescription = if (isPlaying) "Pause" else "Play",
+                                contentDescription = if (isPlaying) stringResource(R.string.pause) else stringResource(R.string.play),
                                 tint = Color.White,
                                 modifier = Modifier.size(34.dp)
                             )
@@ -288,7 +289,7 @@ private fun VideoPlayerSurface(
                         },
                         modifier = Modifier.size(46.dp)
                     ) {
-                        Icon(Icons.Default.Forward10, contentDescription = "Forward 10 seconds", tint = Color.White, modifier = Modifier.size(30.dp))
+                        Icon(Icons.Default.Forward10, contentDescription = stringResource(R.string.forward_10_seconds), tint = Color.White, modifier = Modifier.size(30.dp))
                     }
                 }
 

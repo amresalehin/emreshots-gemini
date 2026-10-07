@@ -121,10 +121,12 @@ import java.util.Locale
 fun ScreenshotsScreen(
     viewModel: ScreenshotsViewModel,
     onNavigateToDetail: (String) -> Unit,
-    onNavigateToSettings: () -> Unit = {}
+    onNavigateToSettings: () -> Unit = {},
+    initialCollectionId: String? = null
 ) {
     val context = LocalContext.current
     val allScreenshots by viewModel.allScreenshots.collectAsStateWithLifecycle()
+    val collections by viewModel.collections.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val selectedFilter by viewModel.selectedFilter.collectAsStateWithLifecycle()
     val isAnalyzing by viewModel.isAnalyzing.collectAsStateWithLifecycle()
@@ -151,6 +153,8 @@ fun ScreenshotsScreen(
     var showFolderMenu by remember { mutableStateOf(false) }
     var selectedMediaType by remember { mutableStateOf<String?>(null) }
     var selectedFolder by remember { mutableStateOf<String?>(null) }
+    var selectedCollectionId by remember(initialCollectionId) { mutableStateOf(initialCollectionId) }
+    var showCollectionMenu by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
     val searchFocusRequester = remember { FocusRequester() }
     var showBatchRenameDialog by remember { mutableStateOf(false) }
@@ -206,7 +210,8 @@ fun ScreenshotsScreen(
         items.filter { item ->
             val typeMatch = selectedMediaType == null || item.filePath.substringAfterLast(".").equals(selectedMediaType, ignoreCase = true)
             val folderMatch = selectedFolder == null || item.filePath.substringBeforeLast("/", "").substringAfterLast("/", "").equals(selectedFolder, ignoreCase = true)
-            typeMatch && folderMatch
+            val collectionMatch = selectedCollectionId == null || item.collectionIds.contains(selectedCollectionId)
+            typeMatch && folderMatch && collectionMatch
         }
     }.filterValues { it.isNotEmpty() }
     val totalDisplayCount = displayGroups.values.sumOf { it.size }
@@ -466,6 +471,63 @@ fun ScreenshotsScreen(
                         modifier = Modifier.testTag("filter_chip_${filter.name.lowercase()}")
                     )
                 }
+                Box {
+                    val selectedCollectionName = collections.firstOrNull { it.id == selectedCollectionId }?.name
+                    FilterChip(
+                        selected = selectedCollectionId != null,
+                        onClick = { showCollectionMenu = true },
+                        label = {
+                            Text(
+                                selectedCollectionName ?: stringResource(R.string.collection),
+                                fontSize = 12.sp,
+                                fontWeight = if (selectedCollectionId != null) FontWeight.SemiBold else FontWeight.Normal,
+                                maxLines = 1
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Default.Collections, contentDescription = null, modifier = Modifier.size(16.dp))
+                        },
+                        trailingIcon = {
+                            Text("▾", fontSize = 12.sp)
+                        },
+                        shape = MaterialTheme.shapes.large,
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        border = null,
+                        modifier = Modifier.testTag("filter_chip_collection")
+                    )
+                    DropdownMenu(
+                        expanded = showCollectionMenu,
+                        onDismissRequest = { showCollectionMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.all_collections)) },
+                            trailingIcon = { if (selectedCollectionId == null) Text("✓") },
+                            onClick = {
+                                selectedCollectionId = null
+                                showCollectionMenu = false
+                            }
+                        )
+                        if (collections.isNotEmpty()) {
+                            androidx.compose.material3.HorizontalDivider()
+                            collections.take(24).forEach { collection ->
+                                DropdownMenuItem(
+                                    text = { Text(collection.name, maxLines = 1) },
+                                    trailingIcon = { if (selectedCollectionId == collection.id) Text("✓") },
+                                    onClick = {
+                                        selectedCollectionId = collection.id
+                                        showCollectionMenu = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
                 availableFileTypes.forEach { type ->
                     val isSelected = selectedMediaType == type
                     FilterChip(

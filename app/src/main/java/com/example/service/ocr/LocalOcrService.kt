@@ -8,24 +8,19 @@ import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Matrix
 import android.graphics.Paint
-import android.net.Uri
 import androidx.exifinterface.media.ExifInterface
-import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.text.TextRecognition
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.googlecode.tesseract.android.TessBaseAPI
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.File
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 import kotlin.math.max
 import kotlin.math.roundToInt
 
 /**
- * Fully on-device OCR powered by the powerful Tesseract OCR engine (supporting 25+ global languages)
- * and ML Kit. All processing is strictly local and private without network dependency during recognition.
+ * Fully on-device OCR powered exclusively by Tesseract and traineddata language packs.
+ *
+ * OCR never selects an alternate engine: the selected Tesseract language(s) are used directly,
+ * then the extracted text is passed to the local text-only LLM enrichment pipeline.
  */
 class LocalOcrService(
     private val context: Context,
@@ -33,18 +28,12 @@ class LocalOcrService(
 ) {
     suspend fun recognize(
         file: File,
-        engine: String = "tesseract",
         languageCode: String = "eng"
     ): Result<String> = withContext(Dispatchers.IO) {
         if (!file.exists() || !file.canRead()) {
             return@withContext Result.failure(IllegalArgumentException("OCR image is not readable."))
         }
 
-        if (engine.equals("mlkit", ignoreCase = true)) {
-            return@withContext recognizeWithMlKit(file)
-        }
-
-        // Tesseract engine
         recognizeWithTesseract(file, languageCode)
     }
 
@@ -52,23 +41,22 @@ class LocalOcrService(
         return try {
             tessDataManager.ensureBundledData()
 
-            // Resolve effective language code(s)
-            val requestedCodes = languageCode.split("+").map { it.trim() }.filter { it.isNotEmpty() }
+            val requestedCodes = languageCode.split("+")
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
             val availableCodes = requestedCodes.filter { tessDataManager.isLanguageInstalled(it) }
             val effectiveCode = when {
                 availableCodes.isNotEmpty() -> availableCodes.joinToString("+")
                 tessDataManager.isLanguageInstalled("eng") -> "eng"
                 tessDataManager.getInstalledLanguages().isNotEmpty() -> tessDataManager.getInstalledLanguages().first()
-                else -> {
-                    // Fall back to ML Kit if no Tesseract models are present yet
-                    return recognizeWithMlKit(file)
-                }
+                else -> return Result.failure(IllegalStateException("No Tesseract traineddata language pack is installed."))
             }
 
             val bitmap = decodeOptimizedBitmap(file)
                 ?: return Result.failure(IllegalArgumentException("Could not decode image for OCR."))
 
-            val lowQuality = minOf(bitmap.width, bitmap.height) < 720 || maxOf(bitmap.width, bitmap.height) < 1280
+            val lowQuality = minOf(bitmap.width, bitmap.height) < 720 ||
+                maxOf(bitmap.width, bitmap.height) < 1280
             val enhancedBitmap = if (lowQuality) prepareLowQualityBitmap(bitmap) else null
 
             val baseApi = TessBaseAPI()
@@ -77,19 +65,15 @@ class LocalOcrService(
                 baseApi.recycle()
                 enhancedBitmap?.recycle()
                 if (!bitmap.isRecycled) bitmap.recycle()
-                // Graceful fallback to ML Kit if initialization fails
-                return recognizeWithMlKit(file)
+                return Result.failure(IllegalStateException("Tesseract could not initialize language data: $effectiveCode"))
             }
 
             val rawText = try {
-                // Low-resolution camera photos benefit substantially from rescaling and
-                // grayscale/contrast normalization before Tesseract sees the pixels.
                 val primaryBitmap = enhancedBitmap ?: bitmap
                 baseApi.setImage(primaryBitmap)
                 val primaryText = baseApi.utF8Text.orEmpty().trim()
 
-                // If preprocessing produced no useful text, retry the original pixels before
-                // falling back to ML Kit. This preserves accuracy for unusual colour layouts.
+                // For difficult low-resolution photos, retry the original pixels before giving up.
                 if (primaryText.length >= 3 || enhancedBitmap == null) {
                     primaryText
                 } else {
@@ -104,31 +88,9 @@ class LocalOcrService(
             }
 
             if (rawText.isBlank()) {
-                // Tesseract can legitimately return an empty page on difficult camera photos;
-                // give ML Kit a chance instead of treating an empty OCR result as success.
-                recognizeWithMlKit(file)
+                Result.failure(IllegalStateException("Tesseract found no readable text."))
             } else {
                 Result.success(rawText)
-            }
-        } catch (t: Throwable) {
-            // If Tesseract throws an error (e.g. native lib issue in tests), fallback to ML Kit
-            try {
-                recognizeWithMlKit(file)
-            } catch (_: Throwable) {
-                Result.failure(t)
-            }
-        }
-    }
-
-    private suspend fun recognizeWithMlKit(file: File): Result<String> {
-        return try {
-            val image = InputImage.fromFilePath(context, Uri.fromFile(file))
-            val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-            try {
-                val result = recognizer.process(image).await()
-                Result.success(result.text.trim())
-            } finally {
-                recognizer.close()
             }
         } catch (t: Throwable) {
             Result.failure(t)
@@ -136,8 +98,8 @@ class LocalOcrService(
     }
 
     /**
-     * Preprocess genuinely low-resolution photos for OCR. Tesseract documentation recommends
-     * rescaling and image-quality preprocessing when character edges are too small/noisy.
+     * Preprocess genuinely low-resolution photos for OCR. Rescaling and grayscale/contrast
+     * normalization improve character edges without introducing a second OCR engine.
      */
     private fun prepareLowQualityBitmap(source: Bitmap): Bitmap {
         val maxDimension = maxOf(source.width, source.height)
@@ -180,8 +142,6 @@ class LocalOcrService(
             val height = boundsOptions.outHeight
             if (width <= 0 || height <= 0) return null
 
-            // Downsample only if image is excessively large (> 3000px on max dimension)
-            // while preserving sufficient sharpness for OCR character edges.
             val maxDimension = max(width, height)
             var sampleSize = 1
             while (maxDimension / sampleSize > 3072) {
@@ -195,7 +155,6 @@ class LocalOcrService(
 
             var bitmap = BitmapFactory.decodeFile(file.absolutePath, decodeOptions) ?: return null
 
-            // Correct EXIF orientation if needed
             val exif = ExifInterface(file.absolutePath)
             val orientation = exif.getAttributeInt(
                 ExifInterface.TAG_ORIENTATION,
@@ -225,16 +184,3 @@ class LocalOcrService(
         }
     }
 }
-
-private suspend fun <T> com.google.android.gms.tasks.Task<T>.await(): T =
-    suspendCancellableCoroutine { continuation ->
-        addOnSuccessListener { value ->
-            if (continuation.isActive) continuation.resume(value)
-        }
-        addOnFailureListener { error ->
-            if (continuation.isActive) continuation.resumeWithException(error)
-        }
-        addOnCanceledListener {
-            continuation.cancel()
-        }
-    }

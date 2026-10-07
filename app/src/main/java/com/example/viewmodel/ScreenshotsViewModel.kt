@@ -968,6 +968,8 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         )
 
         if (result.isSuccess) {
+            // Re-read after inference so OCR extracted while the model was running is never lost.
+            val latestScreenshot = screenshotRepository.getScreenshotSync(screenshot.id) ?: screenshot
             val matchedCol = collections.value.find {
                 it.name.equals(result.suggestedCollection, ignoreCase = true)
             }
@@ -976,15 +978,12 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             } else {
                 latestScreenshot.collectionIds
             }
-
-            // Re-read after inference so OCR extracted while the model was running is never lost.
-            val latestScreenshot = screenshotRepository.getScreenshotSync(screenshot.id) ?: screenshot
             var updatedScreenshot = latestScreenshot.copy(
                 title = if (result.title.isNotBlank()) result.title else latestScreenshot.title,
                 description = if (result.description.isNotBlank()) result.description else latestScreenshot.description,
                 ocrText = latestScreenshot.ocrText,
-                tags = if (smartTagsEnabled.value) (screenshot.tags + result.tags).distinct() else screenshot.tags,
-                links = if (linksDetectionEnabled.value) (screenshot.links + result.detectedLinks).distinct() else screenshot.links,
+                tags = if (smartTagsEnabled.value) (latestScreenshot.tags + result.tags).distinct() else latestScreenshot.tags,
+                links = if (linksDetectionEnabled.value) (latestScreenshot.links + result.detectedLinks).distinct() else latestScreenshot.links,
                 collectionIds = newColIds,
                 aiProcessed = true,
                 aiModelUsed = result.modelUsed

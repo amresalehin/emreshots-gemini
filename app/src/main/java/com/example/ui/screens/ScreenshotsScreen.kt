@@ -152,7 +152,6 @@ fun ScreenshotsScreen(
     var selectedMediaType by remember { mutableStateOf<String?>(null) }
     var selectedFolder by remember { mutableStateOf<String?>(null) }
     var showMoreMenu by remember { mutableStateOf(false) }
-    var showProcessingMenu by remember { mutableStateOf(false) }
     val searchFocusRequester = remember { FocusRequester() }
     var showBatchRenameDialog by remember { mutableStateOf(false) }
     var renameTemplate by remember { mutableStateOf("Media_{date}_{index}") }

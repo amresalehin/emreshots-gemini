@@ -1,5 +1,7 @@
 package com.amresalehin.emreshots.ui.screens
 
+import com.amresalehin.emreshots.R
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.res.stringResource
@@ -77,13 +79,13 @@ fun SettingsScreen(
             Text(stringResource(R.string.workspace), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             Text(stringResource(R.string.workspace_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-            SettingsDestination(Icons.Default.AutoAwesome, "AI Studio", "AI analysis quality and direct EXIF writing", onOpenAiStudio)
-            SettingsDestination(Icons.Default.CloudDone, "Cloud Providers", "Endpoints, credentials, models, and connection tests", onOpenCloudProviders)
-            SettingsDestination(Icons.Default.AutoAwesome, "On-Device Vision", "Local GGUF mode, model selection, and imports", onOpenOnDeviceVision)
-            SettingsDestination(Icons.Default.TextFields, "OCR & Text", "OCR extraction, language packs, and link detection", onOpenOcr)
-            SettingsDestination(Icons.Default.Refresh, "Library Processing", "Indexing, retries, smart tags, and media sync", onOpenProcessing)
-            SettingsDestination(Icons.Default.Backup, "Backup & Restore", "Export and restore library data", onOpenBackupRestore)
-            SettingsDestination(Icons.Default.Collections, "Collections", "Create and remove media collections", onOpenCollections)
+            SettingsDestination(Icons.Default.AutoAwesome, stringResource(R.string.ai_studio), "AI analysis quality and direct EXIF writing", onOpenAiStudio)
+            SettingsDestination(Icons.Default.CloudDone, stringResource(R.string.cloud_providers), "Endpoints, credentials, models, and connection tests", onOpenCloudProviders)
+            SettingsDestination(Icons.Default.AutoAwesome, stringResource(R.string.on_device_vision), "Local GGUF mode, model selection, and imports", onOpenOnDeviceVision)
+            SettingsDestination(Icons.Default.TextFields, stringResource(R.string.ocr_and_text), "OCR extraction, language packs, and link detection", onOpenOcr)
+            SettingsDestination(Icons.Default.Refresh, stringResource(R.string.library_processing), "Indexing, retries, smart tags, and media sync", onOpenProcessing)
+            SettingsDestination(Icons.Default.Backup, stringResource(R.string.backup_and_restore), "Export and restore library data", onOpenBackupRestore)
+            SettingsDestination(Icons.Default.Collections, stringResource(R.string.collections), "Create and remove media collections", onOpenCollections)
         }
     }
 }

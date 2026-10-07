@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DocumentScanner
@@ -58,6 +59,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -192,6 +194,34 @@ fun ScreenshotDetailScreen(
         }
     }
 
+    if (screenshot == null) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(stringResource(R.string.media_item_not_found), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("btn_detail_back")) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
+                )
+            }
+        ) { padding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(stringResource(R.string.media_item_not_found))
+            }
+        }
+        return
+    }
+
     if (showCollectionsDialog) {
         AlertDialog(
             onDismissRequest = { showCollectionsDialog = false },
@@ -311,34 +341,6 @@ fun ScreenshotDetailScreen(
                 TextButton(onClick = { showReminderDialog = false }) { Text(stringResource(R.string.cancel)) }
             },
         )
-    }
-
-    // EXIF Editor Modal    if (screenshot == null) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text(stringResource(R.string.media_item_not_found), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                    navigationIcon = {
-                        IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("btn_detail_back")) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
-                )
-            }
-        ) { padding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(stringResource(R.string.media_item_not_found))
-            }
-        }
-        return
     }
 
     val imageFile = File(screenshot.filePath)
@@ -467,8 +469,6 @@ fun ScreenshotDetailScreen(
                                     }
                                 )
                             }
-                        }
-
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.collections)) },
                             leadingIcon = { Icon(Icons.Default.Collections, contentDescription = null) },
@@ -500,6 +500,9 @@ fun ScreenshotDetailScreen(
                                 },
                                 modifier = Modifier.testTag("menu_detail_remove_reminder")
                             )
+
+                        }
+
                         }
                     }
                 },

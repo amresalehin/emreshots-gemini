@@ -54,6 +54,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -134,7 +136,7 @@ fun CloudProvidersScreen(
                 item {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = MaterialTheme.shapes.large,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -318,7 +320,7 @@ fun ProviderCard(
 
             Surface(
                 color = MaterialTheme.colorScheme.surface,
-                shape = RoundedCornerShape(8.dp),
+                shape = MaterialTheme.shapes.small,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(10.dp)) {
@@ -381,7 +383,7 @@ fun ProviderCard(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ProviderEditDialog(
     initial: CustomCloudProvider?,
@@ -408,341 +410,376 @@ fun ProviderEditDialog(
     var suggestedModels by remember { mutableStateOf<List<String>>(emptyList()) }
     var modelSearchQuery by remember { mutableStateOf("") }
 
-    AlertDialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.CloudQueue, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(if (initial == null) R.string.add_ai_provider else R.string.edit_ai_provider))
-            }
-        },
-        text = {
-            Column(
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.92f)
+                .navigationBarsPadding()
+        ) {
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.CloudQueue,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    stringResource(if (initial == null) R.string.add_ai_provider else R.string.edit_ai_provider),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Preset Quick Fill Chips
-                Text(stringResource(R.string.quick_presets), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    InputChip(
-                        selected = name.contains("Gemini", ignoreCase = true) || baseUrl.contains("generativelanguage"),
-                        onClick = {
-                            name = "Google Gemini"
-                            baseUrl = "https://generativelanguage.googleapis.com"
-                            selectedModel = "gemini-2.5-flash"
-                        },
-                        label = { Text(stringResource(R.string.google_gemini)) }
+                    // Preset Quick Fill Chips
+                    Text(stringResource(R.string.quick_presets), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        InputChip(
+                            selected = name.contains("Gemini", ignoreCase = true) || baseUrl.contains("generativelanguage"),
+                            onClick = {
+                                name = "Google Gemini"
+                                baseUrl = "https://generativelanguage.googleapis.com"
+                                selectedModel = "gemini-2.5-flash"
+                            },
+                            label = { Text(stringResource(R.string.google_gemini)) }
+                        )
+                        InputChip(
+                            selected = name.contains("OpenAI", ignoreCase = true) || baseUrl.contains("openai.com"),
+                            onClick = {
+                                name = "OpenAI"
+                                baseUrl = "https://api.openai.com/v1"
+                                selectedModel = "gpt-4o-mini"
+                            },
+                            label = { Text(stringResource(R.string.openai)) }
+                        )
+                        InputChip(
+                            selected = name.contains("Groq", ignoreCase = true),
+                            onClick = {
+                                name = "Groq Cloud"
+                                baseUrl = "https://api.groq.com/openai/v1"
+                                selectedModel = "llama-3.2-11b-vision-preview"
+                            },
+                            label = { Text(stringResource(R.string.groq_cloud)) }
+                        )
+                        InputChip(
+                            selected = name.contains("OpenRouter", ignoreCase = true),
+                            onClick = {
+                                name = "OpenRouter"
+                                baseUrl = "https://openrouter.ai/api/v1"
+                                selectedModel = "google/gemini-2.5-flash"
+                            },
+                            label = { Text(stringResource(R.string.openrouter)) }
+                        )
+                        InputChip(
+                            selected = name.contains("Ollama", ignoreCase = true) || baseUrl.contains("11434"),
+                            onClick = {
+                                name = "Ollama Local"
+                                baseUrl = "http://10.0.2.2:11434"
+                                selectedModel = "llama3.2-vision"
+                            },
+                            label = { Text(stringResource(R.string.ollama_local)) }
+                        )
+                        InputChip(
+                            selected = name.contains("Anthropic", ignoreCase = true),
+                            onClick = {
+                                name = "Anthropic Claude"
+                                baseUrl = "https://api.anthropic.com"
+                                selectedModel = "claude-3-5-sonnet-20241022"
+                            },
+                            label = { Text(stringResource(R.string.anthropic)) }
+                        )
+                    }
+                
+                    HorizontalDivider()
+                
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text(stringResource(R.string.provider_name)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().testTag("input_provider_name")
                     )
-                    InputChip(
-                        selected = name.contains("OpenAI", ignoreCase = true) || baseUrl.contains("openai.com"),
-                        onClick = {
-                            name = "OpenAI"
-                            baseUrl = "https://api.openai.com/v1"
-                            selectedModel = "gpt-4o-mini"
-                        },
-                        label = { Text(stringResource(R.string.openai)) }
+                
+                    OutlinedTextField(
+                        value = baseUrl,
+                        onValueChange = { baseUrl = it },
+                        label = { Text(stringResource(R.string.base_url_hint)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().testTag("input_provider_url")
                     )
-                    InputChip(
-                        selected = name.contains("Groq", ignoreCase = true),
-                        onClick = {
-                            name = "Groq Cloud"
-                            baseUrl = "https://api.groq.com/openai/v1"
-                            selectedModel = "llama-3.2-11b-vision-preview"
-                        },
-                        label = { Text(stringResource(R.string.groq_cloud)) }
+                
+                    OutlinedTextField(
+                        value = apiKey,
+                        onValueChange = { apiKey = it },
+                        label = { Text(stringResource(R.string.api_key_or_bearer_token)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().testTag("input_provider_key")
                     )
-                    InputChip(
-                        selected = name.contains("OpenRouter", ignoreCase = true),
-                        onClick = {
-                            name = "OpenRouter"
-                            baseUrl = "https://openrouter.ai/api/v1"
-                            selectedModel = "google/gemini-2.5-flash"
-                        },
-                        label = { Text(stringResource(R.string.openrouter)) }
+                
+                    OutlinedTextField(
+                        value = selectedModel,
+                        onValueChange = { selectedModel = it },
+                        label = { Text(stringResource(R.string.selected_model_identifier)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().testTag("input_provider_model")
                     )
-                    InputChip(
-                        selected = name.contains("Ollama", ignoreCase = true) || baseUrl.contains("11434"),
-                        onClick = {
-                            name = "Ollama Local"
-                            baseUrl = "http://10.0.2.2:11434"
-                            selectedModel = "llama3.2-vision"
-                        },
-                        label = { Text(stringResource(R.string.ollama_local)) }
-                    )
-                    InputChip(
-                        selected = name.contains("Anthropic", ignoreCase = true),
-                        onClick = {
-                            name = "Anthropic Claude"
-                            baseUrl = "https://api.anthropic.com"
-                            selectedModel = "claude-3-5-sonnet-20241022"
-                        },
-                        label = { Text(stringResource(R.string.anthropic)) }
-                    )
-                }
-
-                HorizontalDivider()
-
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text(stringResource(R.string.provider_name)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().testTag("input_provider_name")
-                )
-
-                OutlinedTextField(
-                    value = baseUrl,
-                    onValueChange = { baseUrl = it },
-                    label = { Text(stringResource(R.string.base_url_hint)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().testTag("input_provider_url")
-                )
-
-                OutlinedTextField(
-                    value = apiKey,
-                    onValueChange = { apiKey = it },
-                    label = { Text(stringResource(R.string.api_key_or_bearer_token)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().testTag("input_provider_key")
-                )
-
-                OutlinedTextField(
-                    value = selectedModel,
-                    onValueChange = { selectedModel = it },
-                    label = { Text(stringResource(R.string.selected_model_identifier)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().testTag("input_provider_model")
-                )
-
-                // Fetch Available Models & Test Connection
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = {
-                            isFetchingModels = true
-                            fetchStatusText = null
-                            val temp = CustomCloudProvider(
-                                id = initial?.id ?: UUID.randomUUID().toString(),
-                                name = name.trim(),
-                                baseUrl = baseUrl.trim(),
-                                apiKey = apiKey.trim(),
-                                selectedModel = selectedModel.trim(),
-                                customHeadersJson = headersJson.trim()
+                
+                    // Fetch Available Models & Test Connection
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                isFetchingModels = true
+                                fetchStatusText = null
+                                val temp = CustomCloudProvider(
+                                    id = initial?.id ?: UUID.randomUUID().toString(),
+                                    name = name.trim(),
+                                    baseUrl = baseUrl.trim(),
+                                    apiKey = apiKey.trim(),
+                                    selectedModel = selectedModel.trim(),
+                                    customHeadersJson = headersJson.trim()
+                                )
+                                onFetchModels(temp) { result ->
+                                    isFetchingModels = false
+                                    fetchStatusText = result.message
+                                    fetchStatusSuccess = result.isSuccess
+                                    if (result.isSuccess && result.models.isNotEmpty()) {
+                                        discoveredModels = result.models
+                                        suggestedModels = emptyList()
+                                    } else {
+                                        discoveredModels = emptyList()
+                                        suggestedModels = result.suggestedModels
+                                    }
+                                }
+                            },
+                            enabled = !isFetchingModels && baseUrl.isNotBlank(),
+                            modifier = Modifier.weight(1f).testTag("btn_fetch_models")
+                        ) {
+                            if (isFetchingModels) {
+                                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                            } else {
+                                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(stringResource(R.string.fetch_models))
+                        }
+                
+                        OutlinedButton(
+                            onClick = {
+                                isTesting = true
+                                testStatusText = null
+                                val temp = CustomCloudProvider(
+                                    id = initial?.id ?: UUID.randomUUID().toString(),
+                                    name = name.trim(),
+                                    baseUrl = baseUrl.trim(),
+                                    apiKey = apiKey.trim(),
+                                    selectedModel = selectedModel.trim(),
+                                    customHeadersJson = headersJson.trim()
+                                )
+                                onTest(temp) { result ->
+                                    isTesting = false
+                                    testStatusText = result.message
+                                    testStatusSuccess = result.isSuccess
+                                }
+                            },
+                            enabled = !isTesting && baseUrl.isNotBlank(),
+                            modifier = Modifier.weight(1f).testTag("btn_test_dialog_conn")
+                        ) {
+                            if (isTesting) {
+                                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                            } else {
+                                Icon(Icons.Default.NetworkCheck, contentDescription = null, modifier = Modifier.size(16.dp))
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(stringResource(R.string.test_ping))
+                        }
+                    }
+                
+                    if (fetchStatusText != null) {
+                        Surface(
+                            color = if (fetchStatusSuccess) SuccessEmerald.copy(alpha = 0.12f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = if (fetchStatusSuccess) Icons.Default.CheckCircle else Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = if (fetchStatusSuccess) SuccessEmerald else MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = fetchStatusText ?: "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (fetchStatusSuccess) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                        }
+                    }
+                
+                    if (testStatusText != null) {
+                        Surface(
+                            color = if (testStatusSuccess) Color(0xFF10B981).copy(alpha = 0.12f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = if (testStatusSuccess) Icons.Default.CheckCircle else Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = if (testStatusSuccess) Color(0xFF10B981) else MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = testStatusText ?: "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (testStatusSuccess) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                        }
+                    }
+                
+                    if (discoveredModels.isNotEmpty()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = "Discovered ${discoveredModels.size} Models (tap to select):",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold
                             )
-                            onFetchModels(temp) { result ->
-                                isFetchingModels = false
-                                fetchStatusText = result.message
-                                fetchStatusSuccess = result.isSuccess
-                                if (result.isSuccess && result.models.isNotEmpty()) {
-                                    discoveredModels = result.models
-                                    suggestedModels = emptyList()
-                                } else {
-                                    discoveredModels = emptyList()
-                                    suggestedModels = result.suggestedModels
+                
+                            if (discoveredModels.size > 8) {
+                                OutlinedTextField(
+                                    value = modelSearchQuery,
+                                    onValueChange = { modelSearchQuery = it },
+                                    placeholder = { Text(stringResource(R.string.search_models), fontSize = 12.sp) },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                                )
+                            }
+                
+                            val filteredModels = if (modelSearchQuery.isBlank()) discoveredModels else {
+                                discoveredModels.filter { it.contains(modelSearchQuery.trim(), ignoreCase = true) }
+                            }
+                
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                filteredModels.take(12).forEach { m ->
+                                    InputChip(
+                                        selected = selectedModel == m,
+                                        onClick = { selectedModel = m },
+                                        label = { Text(m, fontSize = 11.sp) }
+                                    )
                                 }
                             }
-                        },
-                        enabled = !isFetchingModels && baseUrl.isNotBlank(),
-                        modifier = Modifier.weight(1f).testTag("btn_fetch_models")
-                    ) {
-                        if (isFetchingModels) {
-                            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                         }
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(stringResource(R.string.fetch_models))
-                    }
-
-                    OutlinedButton(
-                        onClick = {
-                            isTesting = true
-                            testStatusText = null
-                            val temp = CustomCloudProvider(
-                                id = initial?.id ?: UUID.randomUUID().toString(),
-                                name = name.trim(),
-                                baseUrl = baseUrl.trim(),
-                                apiKey = apiKey.trim(),
-                                selectedModel = selectedModel.trim(),
-                                customHeadersJson = headersJson.trim()
-                            )
-                            onTest(temp) { result ->
-                                isTesting = false
-                                testStatusText = result.message
-                                testStatusSuccess = result.isSuccess
-                            }
-                        },
-                        enabled = !isTesting && baseUrl.isNotBlank(),
-                        modifier = Modifier.weight(1f).testTag("btn_test_dialog_conn")
-                    ) {
-                        if (isTesting) {
-                            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.Default.NetworkCheck, contentDescription = null, modifier = Modifier.size(16.dp))
-                        }
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(stringResource(R.string.test_ping))
-                    }
-                }
-
-                if (fetchStatusText != null) {
-                    Surface(
-                        color = if (fetchStatusSuccess) SuccessEmerald.copy(alpha = 0.12f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = if (fetchStatusSuccess) Icons.Default.CheckCircle else Icons.Default.Warning,
-                                contentDescription = null,
-                                tint = if (fetchStatusSuccess) SuccessEmerald else MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
+                    } else if (suggestedModels.isNotEmpty()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
-                                text = fetchStatusText ?: "",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (fetchStatusSuccess) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onErrorContainer
+                                text = "Recommended Models (tap to select):",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold
                             )
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                suggestedModels.forEach { m ->
+                                    InputChip(
+                                        selected = selectedModel == m,
+                                        onClick = { selectedModel = m },
+                                        label = { Text(m, fontSize = 11.sp) }
+                                    )
+                                }
+                            }
                         }
                     }
-                }
-
-                if (testStatusText != null) {
-                    Surface(
-                        color = if (testStatusSuccess) Color(0xFF10B981).copy(alpha = 0.12f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
-                        shape = RoundedCornerShape(8.dp),
+                
+                    OutlinedTextField(
+                        value = headersJson,
+                        onValueChange = { headersJson = it },
+                        label = { Text(stringResource(R.string.custom_http_headers)) },
+                        minLines = 2,
                         modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = if (testStatusSuccess) Icons.Default.CheckCircle else Icons.Default.Warning,
-                                contentDescription = null,
-                                tint = if (testStatusSuccess) Color(0xFF10B981) else MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = testStatusText ?: "",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (testStatusSuccess) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onErrorContainer
-                            )
-                        }
-                    }
-                }
-
-                if (discoveredModels.isNotEmpty()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            text = "Discovered ${discoveredModels.size} Models (tap to select):",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        if (discoveredModels.size > 8) {
-                            OutlinedTextField(
-                                value = modelSearchQuery,
-                                onValueChange = { modelSearchQuery = it },
-                                placeholder = { Text(stringResource(R.string.search_models), fontSize = 12.sp) },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth().height(48.dp)
-                            )
-                        }
-
-                        val filteredModels = if (modelSearchQuery.isBlank()) discoveredModels else {
-                            discoveredModels.filter { it.contains(modelSearchQuery.trim(), ignoreCase = true) }
-                        }
-
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            filteredModels.take(12).forEach { m ->
-                                InputChip(
-                                    selected = selectedModel == m,
-                                    onClick = { selectedModel = m },
-                                    label = { Text(m, fontSize = 11.sp) }
-                                )
-                            }
-                        }
-                    }
-                } else if (suggestedModels.isNotEmpty()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            text = "Recommended Models (tap to select):",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            suggestedModels.forEach { m ->
-                                InputChip(
-                                    selected = selectedModel == m,
-                                    onClick = { selectedModel = m },
-                                    label = { Text(m, fontSize = 11.sp) }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                OutlinedTextField(
-                    value = headersJson,
-                    onValueChange = { headersJson = it },
-                    label = { Text(stringResource(R.string.custom_http_headers)) },
-                    minLines = 2,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val finalName = name.trim().ifBlank { "Custom AI Engine" }
-                    val finalUrl = baseUrl.trim().ifBlank { "https://api.openai.com/v1" }
-                    val isGemini = finalUrl.contains("generativelanguage.googleapis.com") ||
-                            finalName.contains("Gemini", ignoreCase = true)
-
-                    val saved = (initial ?: CustomCloudProvider(
-                        id = UUID.randomUUID().toString(),
-                        name = finalName,
-                        baseUrl = finalUrl
-                    )).copy(
-                        name = finalName,
-                        baseUrl = finalUrl,
-                        apiKey = apiKey.trim(),
-                        selectedModel = selectedModel.trim().ifBlank { if (isGemini) "gemini-2.5-flash" else "gpt-4o-mini" },
-                        customHeadersJson = headersJson.trim().ifBlank { "{}" },
-                        timeoutSeconds = timeoutSeconds.toIntOrNull() ?: 60,
-                        isDefaultGemini = isGemini
                     )
-                    onSave(saved)
-                },
-                modifier = Modifier.testTag("btn_save_provider")
-            ) {
-                Text(stringResource(R.string.save_provider))
+                }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.cancel))
+                }
+                Button(
+                    onClick = {
+                        val finalName = name.trim().ifBlank { "Custom AI Engine" }
+                        val finalUrl = baseUrl.trim().ifBlank { "https://api.openai.com/v1" }
+                        val isGemini = finalUrl.contains("generativelanguage.googleapis.com") ||
+                                finalName.contains("Gemini", ignoreCase = true)
+
+                        val saved = (initial ?: CustomCloudProvider(
+                            id = UUID.randomUUID().toString(),
+                            name = finalName,
+                            baseUrl = finalUrl
+                        )).copy(
+                            name = finalName,
+                            baseUrl = finalUrl,
+                            apiKey = apiKey.trim(),
+                            selectedModel = selectedModel.trim().ifBlank {
+                                if (isGemini) "gemini-2.5-flash" else "gpt-4o-mini"
+                            },
+                            customHeadersJson = headersJson.trim().ifBlank { "{}" },
+                            timeoutSeconds = timeoutSeconds.toIntOrNull() ?: 60,
+                            isDefaultGemini = isGemini
+                        )
+                        onSave(saved)
+                    },
+                    modifier = Modifier.testTag("btn_save_provider")
+                ) {
+                    Text(stringResource(R.string.save_provider))
+                }
             }
         }
-    )
+    }
 }

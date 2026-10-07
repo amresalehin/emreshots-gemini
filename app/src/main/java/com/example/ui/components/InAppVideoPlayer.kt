@@ -1,5 +1,7 @@
 package com.amresalehin.emreshots.ui.components
 
+import com.amresalehin.emreshots.R
+
 import android.media.MediaPlayer
 import android.net.Uri
 import android.widget.FrameLayout

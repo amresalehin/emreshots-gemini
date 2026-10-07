@@ -195,10 +195,10 @@ fun ScreenshotDetailScreen(
     if (showCollectionsDialog) {
         AlertDialog(
             onDismissRequest = { showCollectionsDialog = false },
-            title = { Text("Collections") },
+            title = { Text(stringResource(R.string.collections)) },
             text = {
                 if (collections.isEmpty()) {
-                    Text("No collections yet. Create one in Settings.")
+                    Text(stringResource(R.string.no_collections_yet))
                 } else {
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         collections.forEach { collection ->
@@ -230,7 +230,7 @@ fun ScreenshotDetailScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showCollectionsDialog = false }) { Text("Done") }
+                TextButton(onClick = { showCollectionsDialog = false }) { Text(stringResource(R.string.done)) }
             }
         )
     }
@@ -238,7 +238,7 @@ fun ScreenshotDetailScreen(
     if (showReminderDialog) {
         AlertDialog(
             onDismissRequest = { showReminderDialog = false },
-            title = { Text("Reminder") },
+            title = { Text(stringResource(R.string.reminder)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
@@ -262,7 +262,7 @@ fun ScreenshotDetailScreen(
                             showReminderDialog = false
                         },
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text("Tomorrow · 9:00 AM") }
+                    ) { Text(stringResource(R.string.tomorrow_morning)) }
                     OutlinedButton(
                         onClick = {
                             val calendar = Calendar.getInstance().apply {
@@ -276,7 +276,7 @@ fun ScreenshotDetailScreen(
                             showReminderDialog = false
                         },
                         modifier = Modifier.fillMaxWidth(),
-                    ) { Text("Tomorrow · 6:00 PM") }
+                    ) { Text(stringResource(R.string.tomorrow_evening)) }
                     OutlinedButton(
                         onClick = {
                             val initial = Calendar.getInstance()
@@ -304,11 +304,11 @@ fun ScreenshotDetailScreen(
                             ).show()
                         },
                         modifier = Modifier.fillMaxWidth(),
-                    ) { Text("Choose date & time") }
+                    ) { Text(stringResource(R.string.choose_date_time)) }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showReminderDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showReminderDialog = false }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -320,7 +320,7 @@ fun ScreenshotDetailScreen(
                     title = { Text("Media item not found", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     navigationIcon = {
                         IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("btn_detail_back")) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -335,7 +335,7 @@ fun ScreenshotDetailScreen(
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Media item not found")
+                Text(stringResource(R.string.media_item_not_found))
             }
         }
         return
@@ -358,7 +358,7 @@ fun ScreenshotDetailScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("btn_detail_back")) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
@@ -368,7 +368,7 @@ fun ScreenshotDetailScreen(
                     ) {
                         Icon(
                             imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = if (screenshot.isFavorite) "Remove from favorites" else "Add to favorites",
+                            contentDescription = if (screenshot.isFavorite) stringResource(R.string.remove_from_favorites) else stringResource(R.string.add_to_favorites),
                             tint = if (screenshot.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -377,14 +377,14 @@ fun ScreenshotDetailScreen(
                             onClick = { showOverflowMenu = true },
                             modifier = Modifier.testTag("btn_detail_overflow")
                         ) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More actions")
+                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more_actions))
                         }
                         DropdownMenu(
                             expanded = showOverflowMenu,
                             onDismissRequest = { showOverflowMenu = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text(if (isEditingDetails) "Finish editing" else "Edit details") },
+                                text = { Text(if (isEditingDetails) stringResource(R.string.finish_editing) else stringResource(R.string.edit_details)) },
                                 leadingIcon = {
                                     Icon(
                                         if (isEditingDetails) Icons.Default.Close else Icons.Default.Edit,
@@ -408,7 +408,7 @@ fun ScreenshotDetailScreen(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Share") },
+                                text = { Text(stringResource(R.string.share)) },
                                 leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) },
                                 onClick = {
                                     showOverflowMenu = false
@@ -433,7 +433,7 @@ fun ScreenshotDetailScreen(
                                 modifier = Modifier.testTag("btn_detail_share")
                             )
                             DropdownMenuItem(
-                                text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                                text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },
                                 leadingIcon = {
                                     Icon(
                                         Icons.Default.Delete,
@@ -448,13 +448,13 @@ fun ScreenshotDetailScreen(
                                 modifier = Modifier.testTag("btn_detail_delete")
                             )
                             DropdownMenuItem(
-                                text = { Text("OCR") },
+                                text = { Text(stringResource(R.string.ocr)) },
                                 leadingIcon = { Icon(Icons.Default.DocumentScanner, contentDescription = null) },
                                 onClick = { showOverflowMenu = false; showOcrSheet = true }
                             )
                             if (!screenshot.isVideo) {
                                 DropdownMenuItem(
-                                    text = { Text("Edit EXIF") },
+                                    text = { Text(stringResource(R.string.edit_exif)) },
                                     leadingIcon = { Icon(Icons.Default.CameraAlt, contentDescription = null) },
                                     onClick = {
                                         showOverflowMenu = false
@@ -470,7 +470,7 @@ fun ScreenshotDetailScreen(
                         }
 
                         DropdownMenuItem(
-                            text = { Text("Collections") },
+                            text = { Text(stringResource(R.string.collections)) },
                             leadingIcon = { Icon(Icons.Default.Collections, contentDescription = null) },
                             onClick = {
                                 showOverflowMenu = false
@@ -481,7 +481,7 @@ fun ScreenshotDetailScreen(
 
                         DropdownMenuItem(
                             text = {
-                                Text(if (screenshot.reminderTime != null) "Edit reminder" else "Set reminder")
+                                Text(if (screenshot.reminderTime != null) stringResource(R.string.edit_reminder) else stringResource(R.string.set_reminder))
                             },
                             leadingIcon = { Icon(Icons.Default.Alarm, contentDescription = null) },
                             onClick = {
@@ -492,7 +492,7 @@ fun ScreenshotDetailScreen(
                         )
                         if (screenshot.reminderTime != null) {
                             DropdownMenuItem(
-                                text = { Text("Remove reminder") },
+                                text = { Text(stringResource(R.string.remove_reminder)) },
                                 leadingIcon = { Icon(Icons.Default.Close, contentDescription = null) },
                                 onClick = {
                                     showOverflowMenu = false
@@ -618,7 +618,7 @@ fun ScreenshotDetailScreen(
                                 .height(48.dp)
                                 .testTag("btn_grant_detail_permission")
                         ) {
-                            Text("Grant", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.grant), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -667,7 +667,7 @@ fun ScreenshotDetailScreen(
                             Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
                         }
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(if (isAnalyzing) "Analyzing" else if (screenshot.aiProcessed) "Reanalyze" else "Analyze", fontSize = 12.sp)
+                        Text(if (isAnalyzing) stringResource(R.string.analyzing) else if (screenshot.aiProcessed) stringResource(R.string.reanalyze) else stringResource(R.string.analyze), fontSize = 12.sp)
                     }
 
                     OutlinedButton(
@@ -678,7 +678,7 @@ fun ScreenshotDetailScreen(
                     ) {
                         Icon(Icons.Default.DocumentScanner, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("OCR", fontSize = 12.sp)
+                        Text(stringResource(R.string.ocr), fontSize = 12.sp)
                     }
 
                     if (!screenshot.isVideo) {
@@ -697,7 +697,7 @@ fun ScreenshotDetailScreen(
                         ) {
                             Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("EXIF", fontSize = 12.sp)
+                            Text(stringResource(R.string.exif), fontSize = 12.sp)
                         }
                     }
                 }
@@ -713,7 +713,7 @@ fun ScreenshotDetailScreen(
                             OutlinedTextField(
                                 value = editTitle,
                                 onValueChange = { editTitle = it },
-                                label = { Text("Title") },
+                                label = { Text(stringResource(R.string.title)) },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -721,7 +721,7 @@ fun ScreenshotDetailScreen(
                             OutlinedTextField(
                                 value = editDescription,
                                 onValueChange = { editDescription = it },
-                                label = { Text("Description") },
+                                label = { Text(stringResource(R.string.description)) },
                                 minLines = 2,
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -729,7 +729,7 @@ fun ScreenshotDetailScreen(
                             OutlinedTextField(
                                 value = editNotes,
                                 onValueChange = { editNotes = it },
-                                label = { Text("Personal Notes") },
+                                label = { Text(stringResource(R.string.personal_notes)) },
                                 modifier = Modifier.fillMaxWidth()
                             )
                         } else {
@@ -781,7 +781,7 @@ fun ScreenshotDetailScreen(
                             },
                             modifier = Modifier.testTag("btn_save_edit_details")
                         ) {
-                            Icon(Icons.Default.Check, contentDescription = "Save changes")
+                            Icon(Icons.Default.Check, contentDescription = stringResource(R.string.save_changes))
                         }
                         IconButton(
                             onClick = {
@@ -792,7 +792,7 @@ fun ScreenshotDetailScreen(
                             },
                             modifier = Modifier.testTag("btn_cancel_edit_details")
                         ) {
-                            Icon(Icons.Default.Close, contentDescription = "Cancel editing")
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cancel_editing))
                         }
                     }
                 }
@@ -850,7 +850,7 @@ fun ScreenshotDetailScreen(
                             ) {
                                 Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
                                 Spacer(modifier = Modifier.width(2.dp))
-                                Text("Add Tag", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                                Text(stringResource(R.string.add_tag), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                             }
                         }
                     }
@@ -968,7 +968,7 @@ fun ScreenshotDetailScreen(
                                             },
                                             modifier = Modifier.size(28.dp)
                                         ) {
-                                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy", modifier = Modifier.size(14.dp))
+                                            Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.copy), modifier = Modifier.size(14.dp))
                                         }
                                         if (link.startsWith("http://") || link.startsWith("https://")) {
                                             IconButton(
@@ -979,7 +979,7 @@ fun ScreenshotDetailScreen(
                                                 },
                                                 modifier = Modifier.size(28.dp)
                                             ) {
-                                                Icon(Icons.Default.OpenInBrowser, contentDescription = "Open", modifier = Modifier.size(14.dp))
+                                                Icon(Icons.Default.OpenInBrowser, contentDescription = stringResource(R.string.open), modifier = Modifier.size(14.dp))
                                             }
                                         }
                                     }
@@ -1063,12 +1063,12 @@ fun ScreenshotDetailScreen(
     if (showAddTagDialog) {
         AlertDialog(
             onDismissRequest = { showAddTagDialog = false },
-            title = { Text("Add Tag") },
+            title = { Text(stringResource(R.string.add_tag)) },
             text = {
                 OutlinedTextField(
                     value = newTagInput,
                     onValueChange = { newTagInput = it },
-                    label = { Text("Tag Name") },
+                    label = { Text(stringResource(R.string.tag_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1083,12 +1083,12 @@ fun ScreenshotDetailScreen(
                         }
                     }
                 ) {
-                    Text("Add")
+                    Text(stringResource(R.string.add))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showAddTagDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -1098,8 +1098,8 @@ fun ScreenshotDetailScreen(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Delete Media?") },
-            text = { Text("This will permanently remove the item and its metadata.") },
+            title = { Text(stringResource(R.string.delete_media_question)) },
+            text = { Text(stringResource(R.string.delete_media_confirmation)) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -1114,7 +1114,7 @@ fun ScreenshotDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )

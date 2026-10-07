@@ -117,14 +117,14 @@ fun ScreenshotListItem(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(MaterialTheme.shapes.medium)
             .clickable(onClick = onClick)
             .testTag("list_item_${screenshot.id}"),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-        shape = RoundedCornerShape(14.dp),
+        shape = MaterialTheme.shapes.medium,
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
@@ -137,7 +137,7 @@ fun ScreenshotListItem(
             Box(
                 modifier = Modifier
                     .size(68.dp)
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(MaterialTheme.shapes.small)
                     .background(Color.Black.copy(alpha = 0.15f))
             ) {
                 if (screenshot.isVideo && videoThumbnailBitmap != null) {

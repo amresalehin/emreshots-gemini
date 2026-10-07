@@ -329,14 +329,6 @@ fun SettingsScreen(
                             onClick = { showLanguageManagerSheet = true }
                         )
 
-                        SettingsSimpleDivider()
-                        SettingsToggleRow(
-                            icon = Icons.Default.AutoAwesome,
-                            title = "Fix OCR Artefacts with Small LLM",
-                            subtitle = "Repairs scanning glitches, broken words, and noise",
-                            checked = fixOcrArtefactsEnabled,
-                            onCheckedChange = { viewModel.setFixOcrArtefactsEnabled(it) }
-                        )
                     }
                     SettingsSimpleDivider()
                     SettingsToggleRow(

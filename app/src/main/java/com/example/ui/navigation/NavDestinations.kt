@@ -6,7 +6,6 @@ sealed class Screen(val route: String) {
     data object Processing : Screen("processing")
     data object AiStudio : Screen("ai_studio")
     data object CloudProviders : Screen("cloud_providers")
-    data object CloudProvidersFromAiStudio : Screen("cloud_providers_from_ai_studio")
     data object OnDeviceVision : Screen("on_device_vision")
     data object OcrSettings : Screen("ocr_settings")
     data object BackupRestore : Screen("backup_restore")

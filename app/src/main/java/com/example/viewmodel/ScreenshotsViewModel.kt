@@ -563,7 +563,6 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         }
 
         viewModelScope.launch { appPreferences.ocrEnabled.collect { _ocrEnabled.value = it } }
-        viewModelScope.launch { appPreferences.ocrEngine.collect { _ocrEngine.value = it } }
         viewModelScope.launch { appPreferences.ocrLanguage.collect { _ocrLanguage.value = it } }
         viewModelScope.launch { appPreferences.fixOcrArtefactsEnabled.collect { _fixOcrArtefactsEnabled.value = it } }
         refreshInstalledOcrLanguages()
@@ -572,7 +571,6 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch { appPreferences.autoSyncDeviceMedia.collect { _autoSyncDeviceMedia.value = it } }
         viewModelScope.launch { appPreferences.aiQualityPreset.collect { _aiQualityPreset.value = it } }
         viewModelScope.launch { appPreferences.autoWriteExif.collect { _autoWriteExifSetting.value = it } }
-        viewModelScope.launch { appPreferences.ocrEnrichmentProviderId.collect { _ocrEnrichmentProviderId.value = it; _ocrAiProviderId.value = it } }
         viewModelScope.launch { appPreferences.visionCaptionTagProviderId.collect { _visionCaptionTagProviderId.value = it } }
         viewModelScope.launch { appPreferences.gridColumns.collect { _gridColumns.value = it.coerceIn(2, 5) } }
         viewModelScope.launch(Dispatchers.IO) {
@@ -1065,7 +1063,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         onComplete: ((AiAnalysisResult) -> Unit)? = null
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val selectedId = ocrAiProviderId.value
+            val selectedId = visionCaptionTagProviderId.value
             val provider = providers.value.firstOrNull { it.id == selectedId && it.apiKey.isNotBlank() }
                 ?: activeProvider.value
             if (provider == null) {

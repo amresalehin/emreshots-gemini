@@ -22,7 +22,7 @@ class OcrArtefactLlmFixerTest {
     @Before
     fun setUp() {
         val app = ApplicationProvider.getApplicationContext<android.app.Application>()
-        fixer = OcrArtefactLlmFixer(app)
+        fixer = OcrArtefactLlmFixer(app, enableLocalLlm = false)
         viewModel = ScreenshotsViewModel(app)
     }
 

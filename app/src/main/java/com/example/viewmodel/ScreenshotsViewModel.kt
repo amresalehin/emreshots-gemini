@@ -40,6 +40,7 @@ import com.amresalehin.emreshots.service.ocr.LocalOcrService
 import com.amresalehin.emreshots.service.ocr.LocalOcrLlmManager
 import com.amresalehin.emreshots.service.ocr.LocalOcrAiResult
 import com.amresalehin.emreshots.service.ocr.OcrArtefactLlmFixer
+import com.amresalehin.emreshots.service.reminder.ReminderReceiver
 import com.amresalehin.emreshots.service.ocr.TessDataManager
 import com.amresalehin.emreshots.service.ocr.TessLanguage
 import kotlinx.coroutines.Dispatchers
@@ -1418,12 +1419,20 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch(Dispatchers.IO) {
             val updated = screenshot.copy(reminderTime = timeMs, reminderText = text)
             screenshotRepository.update(updated)
+            ReminderReceiver.schedule(
+                getApplication(),
+                screenshot.id,
+                timeMs,
+                context.getString(R.string.reminder_notification_title),
+                text
+            )
             _snackbarMessage.value = "Reminder scheduled!"
         }
     }
 
     fun removeReminder(screenshot: ScreenshotItem) {
         viewModelScope.launch(Dispatchers.IO) {
+            ReminderReceiver.cancel(getApplication(), screenshot.id)
             val updated = screenshot.copy(reminderTime = null, reminderText = null)
             screenshotRepository.update(updated)
             _snackbarMessage.value = "Reminder removed"

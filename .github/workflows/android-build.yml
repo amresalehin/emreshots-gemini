@@ -80,7 +80,7 @@ jobs:
             fi
           done < <(find "$HOME/.gradle/caches/9.3.1/transforms" -path "*/transformed/ui-release/res/values/values.xml" -type f -print0 2>/dev/null)
           echo "matching_transforms=$found"
-          find "$HOME/.gradle/caches/9.3.1/transforms" -path "*/transformed/ui-release/res/values/values.xml" -type f -print | sort
+          find "$RUNNER_TEMP/gradle-clean/caches/9.3.1/transforms" -path "*/transformed/ui-release/res/values/values.xml" -type f -print | sort
 
       - name: Upload transformed resource diagnostic
         if: ${{ always() }}

@@ -156,6 +156,7 @@ fun ScreenshotDetailScreen(
     val ocrSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val coroutineScope = rememberCoroutineScope()
     val isExtractingOcr by viewModel.isExtractingOcr.collectAsStateWithLifecycle()
+    val isFixingArtefacts by viewModel.isFixingArtefacts.collectAsStateWithLifecycle()
     val aiOcrModelOptions by viewModel.aiOcrModelOptions.collectAsStateWithLifecycle()
     val ocrEnrichmentProviderId by viewModel.ocrEnrichmentProviderId.collectAsStateWithLifecycle()
 
@@ -574,15 +575,31 @@ fun ScreenshotDetailScreen(
                             letterSpacing = 1.sp
                         )
 
-                        TextButton(
-                            onClick = { showOcrSheet = true },
-                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = if (!screenshot.ocrText.isNullOrBlank()) "Inspect & Send to AI" else "Extract Text",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            if (!screenshot.ocrText.isNullOrBlank()) {
+                                TextButton(
+                                    onClick = { viewModel.fixScreenshotOcrArtefacts(screenshot) },
+                                    enabled = !isFixingArtefacts,
+                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = if (isFixingArtefacts) "Fixing…" else "Fix Artefacts",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                            TextButton(
+                                onClick = { showOcrSheet = true },
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = if (!screenshot.ocrText.isNullOrBlank()) "Inspect & Send to AI" else "Extract Text",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
 
@@ -826,10 +843,12 @@ fun ScreenshotDetailScreen(
             screenshot = screenshot,
             isExtractingOcr = isExtractingOcr,
             isAiProcessing = isAnalyzing,
+            isFixingArtefacts = isFixingArtefacts,
             aiOcrModelOptions = aiOcrModelOptions,
             selectedOcrProviderId = ocrEnrichmentProviderId,
             onSelectOcrProvider = viewModel::setOcrEnrichmentProviderId,
             onExtractOcr = { viewModel.extractOcr(screenshot) },
+            onFixOcrArtefacts = { _, callback -> viewModel.fixScreenshotOcrArtefacts(screenshot) { callback(it) } },
             onSendOcrToAi = { text, writeMetadata ->
                 viewModel.sendOcrToAi(screenshot, text, writeMetadata)
             },

@@ -19,5 +19,6 @@ enum class MediaGroupBy(val displayName: String) {
 enum class GalleryViewMode(val displayName: String) {
     GRID("Grid"),
     MASONRY("Masonry"),
+    FEED("Feed"),
     LIST("List")
 }

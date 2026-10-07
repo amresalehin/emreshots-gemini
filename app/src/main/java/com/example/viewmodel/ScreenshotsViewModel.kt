@@ -36,6 +36,11 @@ import com.amresalehin.emreshots.service.media.DuplicateDetectionService
 import com.amresalehin.emreshots.service.media.DuplicateGroup
 import com.amresalehin.emreshots.service.media.BackgroundSyncScheduler
 import com.amresalehin.emreshots.service.ocr.LocalOcrService
+import com.amresalehin.emreshots.service.ocr.LocalOcrLlmManager
+import com.amresalehin.emreshots.service.ocr.LocalOcrAiResult
+import com.amresalehin.emreshots.service.ocr.OcrArtefactLlmFixer
+import com.amresalehin.emreshots.service.ocr.TessDataManager
+import com.amresalehin.emreshots.service.ocr.TessLanguage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -197,8 +202,6 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     val showFileNames: StateFlow<Boolean> = _showFileNames.asStateFlow()
     private val _showTags = MutableStateFlow(true)
     val showTags: StateFlow<Boolean> = _showTags.asStateFlow()
-    private val _ocrLanguages = MutableStateFlow(listOf("English"))
-    val ocrLanguages: StateFlow<List<String>> = _ocrLanguages.asStateFlow()
 
     val aiOcrModelOptions: StateFlow<List<AiOcrModelOption>> = providers
         .map { list ->
@@ -214,14 +217,185 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     val lastBackupInfo: StateFlow<String?> = appPreferences.lastBackupInfo.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
+    val tessDataManager: TessDataManager = localOcrService.tessDataManager
+    val ocrArtefactLlmFixer = OcrArtefactLlmFixer(application)
+    val localOcrLlmManager: LocalOcrLlmManager = ocrArtefactLlmFixer.localLlmManager
+
+    val isLocalOcrLlmInstalled: StateFlow<Boolean> = localOcrLlmManager.isModelInstalled
+    val isDownloadingLocalOcrLlm: StateFlow<Boolean> = localOcrLlmManager.isDownloading
+    val localOcrLlmDownloadProgress: StateFlow<Float> = localOcrLlmManager.downloadProgress
+
+    private val _ocrEngine = MutableStateFlow("tesseract")
+    val ocrEngine: StateFlow<String> = _ocrEngine.asStateFlow()
+
+    private val _ocrLanguage = MutableStateFlow("eng")
+    val ocrLanguage: StateFlow<String> = _ocrLanguage.asStateFlow()
+
+    private val _fixOcrArtefactsEnabled = MutableStateFlow(true)
+    val fixOcrArtefactsEnabled: StateFlow<Boolean> = _fixOcrArtefactsEnabled.asStateFlow()
+
+    private val _isFixingArtefacts = MutableStateFlow(false)
+    val isFixingArtefacts: StateFlow<Boolean> = _isFixingArtefacts.asStateFlow()
+
+    private val _installedOcrLanguages = MutableStateFlow<List<String>>(emptyList())
+    val installedOcrLanguages: StateFlow<List<String>> = _installedOcrLanguages.asStateFlow()
+
+    private val _ocrLanguageDownloadProgress = MutableStateFlow<Map<String, Float>>(emptyMap())
+    val ocrLanguageDownloadProgress: StateFlow<Map<String, Float>> = _ocrLanguageDownloadProgress.asStateFlow()
+
+    fun setOcrEngine(engine: String) {
+        _ocrEngine.value = engine
+        viewModelScope.launch { appPreferences.setOcrEngine(engine) }
+    }
+
+    fun setOcrLanguage(language: String) {
+        _ocrLanguage.value = language
+        viewModelScope.launch { appPreferences.setOcrLanguage(language) }
+    }
+
+    fun setFixOcrArtefactsEnabled(enabled: Boolean) {
+        _fixOcrArtefactsEnabled.value = enabled
+        viewModelScope.launch { appPreferences.setFixOcrArtefactsEnabled(enabled) }
+    }
+
+    fun downloadLocalOcrLlm() {
+        viewModelScope.launch {
+            localOcrLlmManager.downloadModel()
+        }
+    }
+
+    fun importLocalOcrLlm(uri: Uri) {
+        viewModelScope.launch {
+            localOcrLlmManager.importModel(uri)
+        }
+    }
+
+    /**
+     * Directly sends extracted OCR text to the local text-only LLM (PixelShot pipeline).
+     * Fixes OCR artefacts and generates categorization tags without cloud or VLM overhead.
+     */
+    fun scheduleBackgroundOcrArtefactFix(screenshot: ScreenshotItem, rawText: String) {
+        if (rawText.isBlank()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val aiResult = ocrArtefactLlmFixer.processOcrWithLocalAi(rawText)
+            val mergedTags = (screenshot.tags + aiResult.tags).distinct().filter { it.isNotBlank() }
+            val mergedLinks = (screenshot.links + aiResult.detectedLinks).distinct().filter { it.isNotBlank() }
+            val newTitle = if (screenshot.title.isBlank() || screenshot.title.startsWith("Screenshot_") || screenshot.title.startsWith("IMG_")) {
+                aiResult.title ?: screenshot.title
+            } else screenshot.title
+
+            screenshotRepository.update(
+                screenshot.copy(
+                    ocrText = aiResult.fixedOcrText,
+                    tags = mergedTags,
+                    links = mergedLinks,
+                    title = newTitle,
+                    aiProcessed = true,
+                    aiModelUsed = "Local LLM"
+                )
+            )
+        }
+    }
+
+    fun fixOcrArtefacts(rawText: String, onComplete: (String) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isFixingArtefacts.value = true
+            _ocrStatusText.value = "Processing with Local AI (PixelShot)…"
+            val aiResult = ocrArtefactLlmFixer.processOcrWithLocalAi(rawText)
+            _isFixingArtefacts.value = false
+            _ocrStatusText.value = null
+            withContext(Dispatchers.Main) {
+                onComplete(aiResult.fixedOcrText)
+            }
+        }
+    }
+
+    fun fixScreenshotOcrArtefacts(screenshot: ScreenshotItem, onComplete: ((String) -> Unit)? = null) {
+        val raw = screenshot.ocrText.orEmpty()
+        if (raw.isBlank()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            _isFixingArtefacts.value = true
+            _ocrStatusText.value = "Processing with Local AI (PixelShot)…"
+            val aiResult = ocrArtefactLlmFixer.processOcrWithLocalAi(raw)
+            val mergedTags = (screenshot.tags + aiResult.tags).distinct().filter { it.isNotBlank() }
+            val mergedLinks = (screenshot.links + aiResult.detectedLinks).distinct().filter { it.isNotBlank() }
+            val newTitle = if (screenshot.title.isBlank() || screenshot.title.startsWith("Screenshot_") || screenshot.title.startsWith("IMG_")) {
+                aiResult.title ?: screenshot.title
+            } else screenshot.title
+
+            val updated = screenshot.copy(
+                ocrText = aiResult.fixedOcrText,
+                tags = mergedTags,
+                links = mergedLinks,
+                title = newTitle,
+                aiProcessed = true,
+                aiModelUsed = "Local LLM"
+            )
+            screenshotRepository.update(updated)
+
+            _isFixingArtefacts.value = false
+            _ocrStatusText.value = null
+            _snackbarMessage.value = "Local AI: OCR fixed & ${aiResult.tags.size} tags assigned."
+            withContext(Dispatchers.Main) {
+                onComplete?.invoke(aiResult.fixedOcrText)
+            }
+        }
+    }
+
+    fun refreshInstalledOcrLanguages() {
+        viewModelScope.launch(Dispatchers.IO) {
+            tessDataManager.ensureBundledData()
+            _installedOcrLanguages.value = tessDataManager.getInstalledLanguages()
+        }
+    }
+
+    fun downloadOcrLanguage(code: String) {
+        if (_ocrLanguageDownloadProgress.value.containsKey(code)) return
+        viewModelScope.launch(Dispatchers.IO) {
+            _ocrLanguageDownloadProgress.value = _ocrLanguageDownloadProgress.value + (code to 0.01f)
+            val result = tessDataManager.downloadLanguage(code) { progress ->
+                _ocrLanguageDownloadProgress.value = _ocrLanguageDownloadProgress.value + (code to progress)
+            }
+            _ocrLanguageDownloadProgress.value = _ocrLanguageDownloadProgress.value - code
+            if (result.isSuccess) {
+                refreshInstalledOcrLanguages()
+                _snackbarMessage.value = "Language pack '${TessLanguage.findByCode(code).englishName}' installed."
+            } else {
+                _snackbarMessage.value = "Failed to download language: ${result.exceptionOrNull()?.message ?: "Unknown error"}"
+            }
+        }
+    }
+
+    fun deleteOcrLanguage(code: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val deleted = tessDataManager.deleteLanguage(code)
+            if (deleted) {
+                if (_ocrLanguage.value == code) {
+                    setOcrLanguage("eng")
+                }
+                refreshInstalledOcrLanguages()
+                _snackbarMessage.value = "Language pack '$code' removed."
+            }
+        }
+    }
+
+    fun importCustomOcrLanguage(uri: Uri, fileName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = tessDataManager.importLanguageFile(uri, fileName)
+            if (result.isSuccess) {
+                refreshInstalledOcrLanguages()
+                val code = fileName.substringBeforeLast(".")
+                setOcrLanguage(code)
+                _snackbarMessage.value = "Custom language '$code' imported and selected."
+            } else {
+                _snackbarMessage.value = "Failed to import language: ${result.exceptionOrNull()?.message ?: "Unknown error"}"
+            }
+        }
+    }
+
     fun setOcrEnabled(enabled: Boolean) {
         _ocrEnabled.value = enabled
         viewModelScope.launch { appPreferences.setOcrEnabled(enabled) }
-    }
-    fun setOcrLanguages(languages: List<String>) {
-        val normalized = localOcrService.normalizeLanguages(languages)
-        _ocrLanguages.value = normalized
-        viewModelScope.launch { appPreferences.setOcrLanguages(normalized) }
     }
     fun setLinksDetectionEnabled(enabled: Boolean) {
         _linksDetectionEnabled.value = enabled
@@ -446,6 +620,10 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         }
 
         viewModelScope.launch { appPreferences.ocrEnabled.collect { _ocrEnabled.value = it } }
+        viewModelScope.launch { appPreferences.ocrEngine.collect { _ocrEngine.value = it } }
+        viewModelScope.launch { appPreferences.ocrLanguage.collect { _ocrLanguage.value = it } }
+        viewModelScope.launch { appPreferences.fixOcrArtefactsEnabled.collect { _fixOcrArtefactsEnabled.value = it } }
+        refreshInstalledOcrLanguages()
         viewModelScope.launch { appPreferences.linksDetectionEnabled.collect { _linksDetectionEnabled.value = it } }
         viewModelScope.launch { appPreferences.smartTagsEnabled.collect { _smartTagsEnabled.value = it } }
         viewModelScope.launch { appPreferences.autoSyncDeviceMedia.collect { _autoSyncDeviceMedia.value = it } }
@@ -455,6 +633,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch { appPreferences.visionCaptionTagProviderId.collect { _visionCaptionTagProviderId.value = it } }
         viewModelScope.launch { appPreferences.gridColumns.collect { _gridColumns.value = it.coerceIn(2, 5) } }
         viewModelScope.launch(Dispatchers.IO) {
+            localOcrLlmManager.ensureModelReady()
             seedInitialData(database, getApplication())
             migrateProviderApiKeysToKeystore()
             ensureConfiguredProviderActiveIfNeeded()
@@ -578,7 +757,11 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun setFilter(filter: ScreenshotFilter) {
-        _selectedFilter.value = if (_selectedFilter.value == filter) ScreenshotFilter.ALL else filter
+        if (_selectedFilter.value == filter) {
+            _selectedFilter.value = ScreenshotFilter.ALL
+        } else {
+            _selectedFilter.value = filter
+        }
     }
 
     fun clearSnackbar() {
@@ -989,11 +1172,13 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     fun extractOcr(screenshot: ScreenshotItem, onComplete: ((String?) -> Unit)? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             _isExtractingOcr.value = true
-            _ocrStatusText.value = "Extracting text locally on this device…"
+            val langLabel = TessLanguage.findByCode(_ocrLanguage.value).englishName
+            val engineLabel = if (_ocrEngine.value == "tesseract") "Tesseract ($langLabel)" else "ML Kit"
+            _ocrStatusText.value = "Extracting text using $engineLabel…"
 
             val file = resolveImageFile(screenshot)
             val result = if (file != null) {
-                localOcrService.recognize(file, ocrLanguages.value)
+                localOcrService.recognize(file, engine = _ocrEngine.value, languageCode = _ocrLanguage.value)
             } else {
                 Result.failure(IllegalArgumentException("Screenshot image is not accessible."))
             }
@@ -1002,24 +1187,50 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             _ocrStatusText.value = null
 
             if (result.isSuccess) {
-                val ocr = result.getOrNull().orEmpty()
-                val updated = screenshot.copy(ocrText = ocr)
+                val rawOcr = result.getOrNull().orEmpty()
+                _ocrStatusText.value = "Local AI: repairing text & generating tags (PixelShot)…"
+
+                // Directly sent to local text-only LLM (PixelShot pipeline)
+                val aiResult = ocrArtefactLlmFixer.processOcrWithLocalAi(rawOcr)
+                val mergedTags = (screenshot.tags + aiResult.tags).distinct().filter { it.isNotBlank() }
+                val mergedLinks = (screenshot.links + aiResult.detectedLinks).distinct().filter { it.isNotBlank() }
+                val newTitle = if (screenshot.title.isBlank() || screenshot.title.startsWith("Screenshot_") || screenshot.title.startsWith("IMG_")) {
+                    aiResult.title ?: screenshot.title
+                } else screenshot.title
+
+                val updated = screenshot.copy(
+                    ocrText = aiResult.fixedOcrText,
+                    tags = mergedTags,
+                    links = mergedLinks,
+                    title = newTitle,
+                    aiProcessed = true,
+                    aiModelUsed = "Local LLM"
+                )
                 screenshotRepository.update(updated)
-                _snackbarMessage.value = "Local OCR complete (" + ocr.length + " chars). The image was not uploaded."
-                withContext(Dispatchers.Main) { onComplete?.invoke(ocr) }
+
+                _isExtractingOcr.value = false
+                _ocrStatusText.value = null
+                _snackbarMessage.value = "$engineLabel + Local AI: text cleaned & ${aiResult.tags.size} tags assigned."
+                withContext(Dispatchers.Main) { onComplete?.invoke(aiResult.fixedOcrText) }
             } else {
-                _snackbarMessage.value = "Local OCR failed: " + (result.exceptionOrNull()?.message ?: "Unknown error")
+                _isExtractingOcr.value = false
+                _ocrStatusText.value = null
+                _snackbarMessage.value = "$engineLabel failed: " + (result.exceptionOrNull()?.message ?: "Unknown error")
                 withContext(Dispatchers.Main) { onComplete?.invoke(null) }
             }
         }
     }
 
     /**
-     * Runs local OCR only. This path never invokes cloud AI, local vision, tagging,
-     * link detection, EXIF writing, or any other indexing feature.
+     * Runs local OCR and directly routes text through the local small text LLM.
+     * Fixes OCR artefacts and generates tags automatically. No cloud or VLM overhead.
      */
     fun batchExtractOcr(items: List<ScreenshotItem>, onlyMissing: Boolean = true) {
         if (isExtractingOcr.value) return
+        if (!_ocrEnabled.value) {
+            _snackbarMessage.value = "OCR is disabled in Settings. Enable it to run text extraction."
+            return
+        }
         val targets = items.filter { !it.isVideo && (!onlyMissing || it.ocrText.isNullOrBlank()) }
         if (targets.isEmpty()) {
             _snackbarMessage.value = if (onlyMissing) "No media is waiting for local OCR." else "No image media is available for local OCR."
@@ -1030,18 +1241,36 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             _isExtractingOcr.value = true
             var completed = 0
             var failed = 0
+            val langLabel = TessLanguage.findByCode(_ocrLanguage.value).englishName
+            val engineLabel = if (_ocrEngine.value == "tesseract") "Tesseract ($langLabel)" else "ML Kit"
             try {
                 targets.forEachIndexed { index, item ->
                     if (!isActive) return@forEachIndexed
-                    _ocrStatusText.value = "Local OCR (" + (index + 1) + "/" + targets.size + "): " + item.title.ifBlank { "Image " + (index + 1) }
+                    _ocrStatusText.value = "$engineLabel (" + (index + 1) + "/" + targets.size + "): " + item.title.ifBlank { "Image " + (index + 1) }
                     val file = resolveImageFile(item)
                     val result = if (file != null) {
-                        localOcrService.recognize(file, ocrLanguages.value)
+                        localOcrService.recognize(file, engine = _ocrEngine.value, languageCode = _ocrLanguage.value)
                     } else {
                         Result.failure(IllegalArgumentException("Image is not accessible."))
                     }
                     if (result.isSuccess) {
-                        screenshotRepository.update(item.copy(ocrText = result.getOrNull().orEmpty()))
+                        val rawOcr = result.getOrNull().orEmpty()
+                        val aiResult = ocrArtefactLlmFixer.processOcrWithLocalAi(rawOcr)
+                        val mergedTags = (item.tags + aiResult.tags).distinct().filter { it.isNotBlank() }
+                        val mergedLinks = (item.links + aiResult.detectedLinks).distinct().filter { it.isNotBlank() }
+                        val newTitle = if (item.title.isBlank() || item.title.startsWith("Screenshot_") || item.title.startsWith("IMG_")) {
+                            aiResult.title ?: item.title
+                        } else item.title
+
+                        val updated = item.copy(
+                            ocrText = aiResult.fixedOcrText,
+                            tags = mergedTags,
+                            links = mergedLinks,
+                            title = newTitle,
+                            aiProcessed = true,
+                            aiModelUsed = "Local LLM"
+                        )
+                        screenshotRepository.update(updated)
                         completed++
                     } else {
                         failed++
@@ -1051,7 +1280,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
                 _isExtractingOcr.value = false
                 _ocrStatusText.value = null
             }
-            _snackbarMessage.value = "Local OCR complete: " + completed + " processed" + (if (failed > 0) ", " + failed + " failed" else "") + ". No AI features were triggered."
+            _snackbarMessage.value = "$engineLabel + Local AI: $completed processed" + (if (failed > 0) ", $failed failed" else "") + ". Text fixed & tags generated."
         }
     }
 
@@ -1064,22 +1293,17 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch(Dispatchers.IO) {
             val selection = ocrEnrichmentProviderId.value.ifBlank { ocrAiProviderId.value }
             _isAnalyzing.value = true
-            val result = if (selection.startsWith("local:")) {
-                _analysisStatusText.value = "Enriching OCR with offline VLM…"
-                enrichOcrWithLocalVision(screenshot, ocrText, selection.removePrefix("local:"), writeToMetadata)
-            } else {
-                val cloudId = selection.removePrefix("cloud:")
-                val provider = if (selection.startsWith("cloud:")) providers.value.firstOrNull { it.id == cloudId && it.apiKey.isNotBlank() } else activeProvider.value
-                if (provider == null) {
-                    _isAnalyzing.value = false
-                    _analysisStatusText.value = null
-                    _snackbarMessage.value = "No OCR enrichment provider configured. Choose an offline VLM or add a custom endpoint in Settings."
-                    onComplete?.invoke(AiAnalysisResult(isSuccess = false, errorMessage = "No OCR enrichment provider configured."))
-                    return@launch
-                }
-                _analysisStatusText.value = "Processing OCR text with " + provider.selectedModel + "…"
-                enrichOcrWithProvider(screenshot, ocrText, provider, writeToMetadata)
+            val cloudId = selection.removePrefix("cloud:").removePrefix("local:")
+            val provider = if (selection.startsWith("cloud:")) providers.value.firstOrNull { it.id == cloudId && it.apiKey.isNotBlank() } else activeProvider.value
+            if (provider == null) {
+                _isAnalyzing.value = false
+                _analysisStatusText.value = null
+                _snackbarMessage.value = "No OCR enrichment provider configured. Set up an AI provider in Settings."
+                onComplete?.invoke(AiAnalysisResult(isSuccess = false, errorMessage = "No OCR enrichment provider configured."))
+                return@launch
             }
+            _analysisStatusText.value = "Processing OCR text with " + provider.selectedModel + "…"
+            val result = enrichOcrWithProvider(screenshot, ocrText, provider, writeToMetadata)
             _isAnalyzing.value = false
             _analysisStatusText.value = null
             _snackbarMessage.value = if (result.isSuccess) {
@@ -1128,41 +1352,6 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             _snackbarMessage.value = "AI OCR enrichment complete: " + completed + " processed" +
                 if (failed > 0) ", " + failed + " failed." else "."
         }
-    }
-
-    private suspend fun enrichOcrWithLocalVision(screenshot: ScreenshotItem, ocrText: String, modelId: String, writeToMetadata: Boolean): AiAnalysisResult {
-        val file = resolveImageFile(screenshot) ?: return AiAnalysisResult(isSuccess = false, errorMessage = "Unable to access image for offline VLM enrichment.")
-        val local = onDeviceVisionService.analyze(
-            request = com.amresalehin.emreshots.service.ai.VisionAnalysisRequest(
-                imagePath = file.absolutePath,
-                quality = com.amresalehin.emreshots.service.ai.VisionQualityPreset.BALANCED,
-                ocrText = ocrText,
-                requestedCapabilities = setOf(
-                    com.amresalehin.emreshots.service.ai.OnDeviceVisionCapability.TITLE_GENERATION,
-                    com.amresalehin.emreshots.service.ai.OnDeviceVisionCapability.DESCRIPTION_SUMMARY,
-                    com.amresalehin.emreshots.service.ai.OnDeviceVisionCapability.TAG_SUGGESTIONS,
-                    com.amresalehin.emreshots.service.ai.OnDeviceVisionCapability.LINK_DETECTION,
-                    com.amresalehin.emreshots.service.ai.OnDeviceVisionCapability.OCR_CONTEXT
-                )
-            ),
-            modePreference = "FORCE_LOCAL",
-            modelPreference = modelId
-        )
-        if (!local.isSuccess) return AiAnalysisResult(isSuccess = false, errorMessage = local.errorMessage)
-        val updated = screenshot.copy(
-            title = local.title.ifBlank { screenshot.title },
-            description = local.description.ifBlank { screenshot.description },
-            tags = (screenshot.tags + local.tags).distinct(),
-            links = (screenshot.links + local.detectedLinks).distinct(),
-            ocrText = ocrText,
-            aiProcessed = true,
-            aiModelUsed = local.modelUsed
-        )
-        screenshotRepository.update(updated)
-        if (writeToMetadata) {
-            exifManager.applyAiMetadataToExifSafe(getApplication(), updated, updated.title, updated.description, updated.tags, local.modelUsed)
-        }
-        return AiAnalysisResult(isSuccess = true, title = updated.title, description = updated.description, tags = local.tags, detectedLinks = local.detectedLinks, ocrText = ocrText, modelUsed = local.modelUsed, processingTimeMs = local.processingTimeMs)
     }
 
     private suspend fun enrichOcrWithProvider(

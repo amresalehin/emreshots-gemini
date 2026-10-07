@@ -19,4 +19,10 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
-\n# Kotlin-LlamaCpp JNI/runtime reflection\n-keep class org.nehuatl.llamacpp.** { *; }\n
+# Kotlin-LlamaCpp JNI/runtime reflection
+-keep class org.nehuatl.llamacpp.** { *; }
+
+# Tesseract4Android / Leptonica JNI / reflection
+-keep class cz.adaptech.tesseract4android.** { *; }
+-keep class com.googlecode.tesseract.android.** { *; }
+-keep class com.googlecode.leptonica.android.** { *; }

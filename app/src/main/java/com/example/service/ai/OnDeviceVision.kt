@@ -52,8 +52,8 @@ object OnDeviceVisionCatalog {
     private val models=listOf(
         OnDeviceVisionModel("smolvlm-256m-q4","SmolVLM","SmolVLM 256M Instruct Q4_K_M","0.26B","Q4_K_M",718,1800,2400,
             capabilities=setOf(OnDeviceVisionCapability.TITLE_GENERATION,OnDeviceVisionCapability.DESCRIPTION_SUMMARY,OnDeviceVisionCapability.TAG_SUGGESTIONS,OnDeviceVisionCapability.CATEGORY_TOPIC,OnDeviceVisionCapability.LINK_DETECTION,OnDeviceVisionCapability.VISUAL_QA,OnDeviceVisionCapability.OCR_CONTEXT),
-            expectedSpeed="Fastest local VLM profile",license="Apache-2.0",sourceUrl="$HF/pierretokns/SmolVLM-256M-Instruct-GGUF",artifacts=listOf(
-                ModelArtifact("base","SmolVLM-256M-Instruct-Q4_K_M.gguf","$HF/pierretokns/SmolVLM-256M-Instruct-GGUF/resolve/main/SmolVLM-256M-Instruct-Q4_K_M.gguf",125_053_120,"8f19fa336b353f60389efcdcfe75ab52e584193266646fe397e0de7903319e57"),
+            expectedSpeed="Fastest local VLM profile",license="Apache-2.0",sourceUrl="$HF/ggml-org/SmolVLM-256M-Instruct-GGUF",artifacts=listOf(
+                ModelArtifact("base","SmolVLM-256M-Instruct-Q4_K_M.gguf","$HF/ggml-org/SmolVLM-256M-Instruct-GGUF/resolve/main/SmolVLM-256M-Instruct-Q4_K_M.gguf",125_053_120,"8f19fa336b353f60389efcdcfe75ab52e584193266646fe397e0de7903319e57"),
                 ModelArtifact("mmproj","mmproj-SmolVLM-256M-Instruct-Q8_0.gguf","$HF/ggml-org/SmolVLM-256M-Instruct-GGUF/resolve/main/mmproj-SmolVLM-256M-Instruct-Q8_0.gguf",103_769_856,"7e943f7c53f0382a6fc41b6ee0c2def63ba4fded9ab8ed039cc9e2ab905e0edd"))),
         OnDeviceVisionModel("smolvlm-256m-q8","SmolVLM","SmolVLM 256M Instruct Q8_0","0.26B","Q8_0",279,1800,6000,
             capabilities=setOf(OnDeviceVisionCapability.TITLE_GENERATION,OnDeviceVisionCapability.DESCRIPTION_SUMMARY,OnDeviceVisionCapability.TAG_SUGGESTIONS,OnDeviceVisionCapability.CATEGORY_TOPIC,OnDeviceVisionCapability.LINK_DETECTION,OnDeviceVisionCapability.VISUAL_QA,OnDeviceVisionCapability.OCR_CONTEXT),
@@ -79,11 +79,17 @@ object OnDeviceVisionCatalog {
             capabilities=setOf(OnDeviceVisionCapability.TITLE_GENERATION,OnDeviceVisionCapability.DESCRIPTION_SUMMARY,OnDeviceVisionCapability.TAG_SUGGESTIONS,OnDeviceVisionCapability.CATEGORY_TOPIC,OnDeviceVisionCapability.VISUAL_QA),
             expectedSpeed="Fast on suitable mid-range devices",license="Model-specific",sourceUrl="https://github.com/ggml-org/llama.cpp/blob/master/docs/multimodal/MobileVLM.md",artifacts=emptyList(),notes="Compatibility profile; import a verified bundle when available.")
     )
-    fun all()=models
-    fun find(id:String)=models.firstOrNull{it.id==id}
+    private val customModels = java.util.concurrent.CopyOnWriteArrayList<OnDeviceVisionModel>()
+    fun registerCustomModel(model: OnDeviceVisionModel) {
+        if (customModels.none { it.id == model.id } && models.none { it.id == model.id }) {
+            customModels.add(model)
+        }
+    }
+    fun all(): List<OnDeviceVisionModel> = models + customModels
+    fun find(id: String): OnDeviceVisionModel? = (models + customModels).firstOrNull { it.id == id }
     fun recommend(c:DeviceCapabilities,mode:VisionSelectionMode=VisionSelectionMode.AUTOMATIC):OnDeviceModelRecommendation{
-        val ok=models.filter{c.canRun(it)&&it.artifacts.isNotEmpty()&&it.artifacts.none{a->a.sha256=="UNVERIFIED"}}
-        val blocked=models.filterNot{ok.contains(it)}.mapNotNull{m->when{
+        val ok=all().filter{c.canRun(it)&&it.artifacts.isNotEmpty()&&it.artifacts.none{a->a.sha256=="UNVERIFIED"}}
+        val blocked=all().filterNot{ok.contains(it)}.mapNotNull{m->when{
             c.abi !in m.supportedAbis->"Unsupported CPU architecture ("+c.abi+")"
             c.apiLevel<m.minApiLevel->"Requires Android "+m.minApiLevel+"+"
             c.totalRamMb<m.minRamMb->"Needs at least "+m.minRamMb+" MB RAM"
@@ -117,13 +123,14 @@ class OnDeviceVisionService(private val context:Context,private val runtimeFacto
     suspend fun delete(model:OnDeviceVisionModel)=manager.delete(model)
     suspend fun storageUsageBytes()=manager.storageUsageBytes()
     suspend fun isInstalled(model:OnDeviceVisionModel)=manager.isInstalled(model)
+    suspend fun importCustomGguf(uri: android.net.Uri, name: String? = null) = manager.importCustomGguf(uri, name)
     suspend fun analyze(request: VisionAnalysisRequest, modePreference: String, modelPreference: String, selectionMode: VisionSelectionMode = VisionSelectionMode.AUTOMATIC): VisionAnalysisResult =
         analyze(request, OnDeviceVisionMode.fromPreference(modePreference), modelPreference, selectionMode)
 
     suspend fun analyze(request:VisionAnalysisRequest,mode:OnDeviceVisionMode,modelPreference:String,selectionMode:VisionSelectionMode=VisionSelectionMode.AUTOMATIC):VisionAnalysisResult{
         if(mode==OnDeviceVisionMode.DISABLED)return VisionAnalysisResult(false,modelPreference,errorMessage="On-device vision is disabled.")
         val caps=deviceCapabilities()
-        val selected=if(modelPreference.isBlank()||modelPreference=="auto")OnDeviceVisionCatalog.recommend(caps,selectionMode).recommended else OnDeviceVisionCatalog.find(modelPreference)?.takeIf{caps.canRun(it)&&it.artifacts.none{a->a.sha256=="UNVERIFIED"}}
+        val selected=if(modelPreference.isBlank()||modelPreference=="auto")OnDeviceVisionCatalog.recommend(caps,selectionMode).recommended else OnDeviceVisionCatalog.find(modelPreference)
         if(selected==null)return VisionAnalysisResult(false,modelPreference,errorMessage="No compatible verified local vision model is available.")
         val installed=manager.installedModel(selected)?:return VisionAnalysisResult(false,selected.id,errorMessage="Model is not installed. Download it from AI settings.")
         val provider=runtimeFactory.create(selected,context)?:return VisionAnalysisResult(false,selected.id,errorMessage="No compatible local runtime is installed for "+selected.displayName+".")

@@ -29,6 +29,12 @@ android {
       file(releaseKeystorePath!!).exists()
 
   signingConfigs {
+    create("debugConfig") {
+      storeFile = file("${rootDir}/debug.keystore")
+      storePassword = "android"
+      keyAlias = "androiddebugkey"
+      keyPassword = "android"
+    }
     if (hasReleaseSigning) {
       create("release") {
         storeFile = file(releaseKeystorePath!!)
@@ -40,6 +46,9 @@ android {
   }
 
   buildTypes {
+    debug {
+      signingConfig = signingConfigs.getByName("debugConfig")
+    }
     release {
       isCrunchPngs = false
       isMinifyEnabled = false
@@ -49,7 +58,7 @@ android {
       } else {
         // CI/local smoke builds must still produce an installable APK.
         // Production distribution should provide KEYSTORE_PATH + credentials.
-        signingConfig = signingConfigs.getByName("debug")
+        signingConfig = signingConfigs.getByName("debugConfig")
       }
     }
   }
@@ -67,6 +76,10 @@ android {
   defaultConfig {
     ndk { abiFilters += listOf("arm64-v8a") }
     buildConfigField("String", "PERL5_ASSET_VERSION", "\"2\"")
+  }
+
+  androidResources {
+    noCompress += listOf("gguf", "traineddata")
   }
 
   packaging {
@@ -105,13 +118,8 @@ dependencies {
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.okhttp)
-  implementation("androidx.documentfile:documentfile:1.0.1")
-  implementation("cz.adaptech.tesseract4android:tesseract4android:4.9.0")
   implementation(libs.mlkit.text.recognition)
-  implementation(libs.mlkit.text.recognition.chinese)
-  implementation(libs.mlkit.text.recognition.devanagari)
-  implementation(libs.mlkit.text.recognition.japanese)
-  implementation(libs.mlkit.text.recognition.korean)
+  implementation("cz.adaptech.tesseract4android:tesseract4android:4.7.0")
   implementation("io.github.ljcamargo:llamacpp-kotlin:0.4.0")
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)

@@ -1142,6 +1142,93 @@ Do not include any prose outside the JSON.
         }
     }
 
+    suspend fun repairOcrArtefactsWithLlm(
+        ocrText: String,
+        provider: CustomCloudProvider,
+        geminiApiKey: String = ""
+    ): Result<String> = withContext(Dispatchers.IO) {
+        val prompt = """
+Fix optical character recognition (OCR) artefacts, scanning typos, broken hyphenation, and misaligned punctuation in this transcribed text.
+Rules:
+1. Fix broken hyphenated words and line wraps.
+2. Fix character confusions in context (e.g. 0 vs O, 1 vs l, rn vs m).
+3. Remove stray scanning noise symbols and border debris.
+4. Keep the exact factual meaning, names, codes, numbers, and URLs verbatim.
+5. Return ONLY the repaired text. Do not add any preamble, conversational text, or quotes.
+
+OCR Text:
+$ocrText
+""".trimIndent()
+
+        try {
+            val isGemini = isGeminiProvider(provider)
+            val effectiveGeminiKey = provider.apiKey.ifBlank { geminiApiKey }.trim()
+
+            if (isGemini) {
+                if (effectiveGeminiKey.isBlank()) {
+                    return@withContext Result.failure(IllegalStateException("Gemini API key is required"))
+                }
+                val effectiveModel = provider.selectedModel.ifBlank { "gemini-2.5-flash" }
+                val url = "https://generativelanguage.googleapis.com/v1beta/models/$effectiveModel:generateContent?key=$effectiveGeminiKey"
+
+                val root = JSONObject().apply {
+                    val contents = JSONArray()
+                    val contentObj = JSONObject().apply {
+                        val parts = JSONArray()
+                        parts.put(JSONObject().apply { put("text", prompt) })
+                        put("parts", parts)
+                    }
+                    contents.put(contentObj)
+                    put("contents", contents)
+                }
+
+                val requestBody = root.toString().toRequestBody("application/json".toMediaType())
+                val request = Request.Builder().url(url).post(requestBody).build()
+
+                client.newCall(request).execute().use { response ->
+                    val body = response.body?.string() ?: ""
+                    if (!response.isSuccessful) {
+                        return@withContext Result.failure(IllegalStateException("Server error ${response.code}: $body"))
+                    }
+                    val text = extractGeminiContent(body).trim()
+                    if (text.isNotBlank()) Result.success(text) else Result.failure(IllegalStateException("Empty LLM output"))
+                }
+            } else {
+                val chatUrl = buildChatCompletionsUrl(provider.baseUrl)
+                val requestJson = JSONObject().apply {
+                    put("model", provider.selectedModel.ifBlank { "gpt-4o-mini" })
+                    val messages = JSONArray()
+                    val userMsg = JSONObject().apply {
+                        put("role", "user")
+                        put("content", prompt)
+                    }
+                    messages.put(userMsg)
+                    put("messages", messages)
+                }
+
+                val requestBody = requestJson.toString().toRequestBody("application/json".toMediaType())
+                val requestBuilder = Request.Builder().url(chatUrl).post(requestBody)
+                if (provider.apiKey.isNotBlank()) {
+                    requestBuilder.addHeader("Authorization", "Bearer ${provider.apiKey.trim()}")
+                }
+                parseCustomHeaders(provider.customHeadersJson).forEach { (k, v) ->
+                    requestBuilder.addHeader(k, v)
+                }
+
+                client.newCall(requestBuilder.build()).execute().use { response ->
+                    val body = response.body?.string() ?: ""
+                    if (!response.isSuccessful) {
+                        return@withContext Result.failure(IllegalStateException("Server error ${response.code}: $body"))
+                    }
+                    val text = extractChatCompletionContent(body).trim()
+                    if (text.isNotBlank()) Result.success(text) else Result.failure(IllegalStateException("Empty LLM output"))
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     private fun buildAnalysisPrompt(): String {
         return """
 Analyze this screenshot/image with high precision for cataloging, search indexing, and EXIF embedding.

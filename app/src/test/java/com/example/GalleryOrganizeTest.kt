@@ -4,9 +4,12 @@ import androidx.test.core.app.ApplicationProvider
 import com.amresalehin.emreshots.data.model.GalleryViewMode
 import com.amresalehin.emreshots.data.model.MediaGroupBy
 import com.amresalehin.emreshots.data.model.MediaSortOption
+import com.amresalehin.emreshots.viewmodel.ScreenshotFilter
 import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -29,6 +32,8 @@ class GalleryOrganizeTest {
         assertEquals(GalleryViewMode.MASONRY, viewModel.viewMode.value)
         viewModel.setViewMode(GalleryViewMode.MASONRY)
         assertEquals(GalleryViewMode.MASONRY, viewModel.viewMode.value)
+        viewModel.setViewMode(GalleryViewMode.FEED)
+        assertEquals(GalleryViewMode.FEED, viewModel.viewMode.value)
         viewModel.setViewMode(GalleryViewMode.LIST)
         assertEquals(GalleryViewMode.LIST, viewModel.viewMode.value)
     }
@@ -57,5 +62,33 @@ class GalleryOrganizeTest {
     fun testGroupedScreenshotsNotNull() {
         val grouped = viewModel.groupedScreenshots.value
         assertNotNull(grouped)
+    }
+
+    @Test
+    fun testFilterTogglesAndUnselects() {
+        assertEquals(ScreenshotFilter.ALL, viewModel.selectedFilter.value)
+        viewModel.setFilter(ScreenshotFilter.PHOTOS)
+        assertEquals(ScreenshotFilter.PHOTOS, viewModel.selectedFilter.value)
+        // Clicking same filter again unselects it (reverts to ALL)
+        viewModel.setFilter(ScreenshotFilter.PHOTOS)
+        assertEquals(ScreenshotFilter.ALL, viewModel.selectedFilter.value)
+
+        // Switching between different filters
+        viewModel.setFilter(ScreenshotFilter.VIDEOS)
+        assertEquals(ScreenshotFilter.VIDEOS, viewModel.selectedFilter.value)
+        viewModel.setFilter(ScreenshotFilter.SCREENSHOTS)
+        assertEquals(ScreenshotFilter.SCREENSHOTS, viewModel.selectedFilter.value)
+        // Re-clicking unselects
+        viewModel.setFilter(ScreenshotFilter.SCREENSHOTS)
+        assertEquals(ScreenshotFilter.ALL, viewModel.selectedFilter.value)
+    }
+
+    @Test
+    fun testOcrSyncState() {
+        assertTrue(viewModel.ocrEnabled.value)
+        viewModel.setOcrEnabled(false)
+        assertFalse(viewModel.ocrEnabled.value)
+        viewModel.setOcrEnabled(true)
+        assertTrue(viewModel.ocrEnabled.value)
     }
 }

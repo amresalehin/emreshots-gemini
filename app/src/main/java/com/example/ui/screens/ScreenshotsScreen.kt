@@ -117,6 +117,7 @@ import com.amresalehin.emreshots.data.model.MediaSortOption
 import com.amresalehin.emreshots.service.media.DeviceMediaScanner
 import com.amresalehin.emreshots.ui.components.GalleryScrollBar
 import com.amresalehin.emreshots.ui.components.ScreenshotCard
+import com.amresalehin.emreshots.ui.components.ScreenshotFeedCard
 import com.amresalehin.emreshots.ui.components.ScreenshotListItem
 import com.amresalehin.emreshots.ui.components.ScreenshotMasonryCard
 import com.amresalehin.emreshots.viewmodel.ScreenshotFilter
@@ -157,9 +158,8 @@ fun ScreenshotsScreen(
 
     var isSearchExpanded by remember { mutableStateOf(false) }
     var hidePermissionBanner by remember { mutableStateOf(false) }
-    var showViewMenu by remember { mutableStateOf(false) }
-    var showSortMenu by remember { mutableStateOf(false) }
-    var showGroupByMenu by remember { mutableStateOf(false) }
+    var showSortDialog by remember { mutableStateOf(false) }
+    var showGroupDialog by remember { mutableStateOf(false) }
     var showFolderMenu by remember { mutableStateOf(false) }
     var selectedMediaType by remember { mutableStateOf<String?>(null) }
     var selectedFolder by remember { mutableStateOf<String?>(null) }
@@ -322,16 +322,45 @@ fun ScreenshotsScreen(
                             }
                         }
                         DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
-                            
                             DropdownMenuItem(
-                                text = { Text("Sort by · ${sortOption.displayName}") },
+                                text = {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text("Sort by")
+                                        Spacer(Modifier.width(16.dp))
+                                        Text(
+                                            text = sortOption.displayName,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                },
                                 leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null) },
-                                onClick = { showMoreMenu = false; showSortMenu = true }
+                                onClick = { showMoreMenu = false; showSortDialog = true },
+                                modifier = Modifier.testTag("btn_sort_option")
                             )
                             DropdownMenuItem(
-                                text = { Text("Group by · ${groupByOption.displayName}") },
-                                leadingIcon = { Icon(Icons.Default.Collections, contentDescription = null) },
-                                onClick = { showMoreMenu = false; showGroupByMenu = true }
+                                text = {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text("Group by")
+                                        Spacer(Modifier.width(16.dp))
+                                        Text(
+                                            text = groupByOption.displayName,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                },
+                                leadingIcon = { Icon(Icons.Default.GridView, contentDescription = null) },
+                                onClick = { showMoreMenu = false; showGroupDialog = true },
+                                modifier = Modifier.testTag("btn_group_by_option")
                             )
                             androidx.compose.material3.HorizontalDivider()
                             DropdownMenuItem(
@@ -515,9 +544,8 @@ fun ScreenshotsScreen(
                                     if (previousDistance > 12f && currentDistance > 12f) {
                                         scale *= currentDistance / previousDistance
                                         if (!changed && scale > 1.14f) {
-                                            viewModel.setViewMode(GalleryViewMode.GRID)
-                                            viewModel.setGridColumns(2)
-                                            pinchNotification = "2-column grid"
+                                            viewModel.setViewMode(GalleryViewMode.FEED)
+                                            pinchNotification = "Feed view"
                                             changed = true
                                         } else if (!changed && scale < 0.86f) {
                                             viewModel.setViewMode(GalleryViewMode.MASONRY)
@@ -655,6 +683,7 @@ fun ScreenshotsScreen(
                     } else {
                         val effectiveCols = when (viewMode) {
                             GalleryViewMode.GRID -> gridColumns
+                            GalleryViewMode.FEED -> 1
                             GalleryViewMode.LIST -> 1
                             GalleryViewMode.MASONRY -> 2
                         }
@@ -711,6 +740,13 @@ fun ScreenshotsScreen(
                                             screenshot = item,
                                             onClick = { onNavigateToDetail(item.id) },
                                             onToggleFavorite = { viewModel.toggleFavorite(item) }
+                                        )
+                                        GalleryViewMode.FEED -> ScreenshotFeedCard(
+                                            screenshot = item,
+                                            onClick = { onNavigateToDetail(item.id) },
+                                            onToggleFavorite = { viewModel.toggleFavorite(item) },
+                                            showFileName = false,
+                                             showTags = false
                                         )
                                         GalleryViewMode.LIST -> ScreenshotListItem(
                                             screenshot = item,
@@ -814,26 +850,46 @@ fun ScreenshotsScreen(
                 )
                 DropdownMenuItem(
                     text = {
-                        Column {
-                            Text("OCR", fontWeight = FontWeight.SemiBold)
-                            Text(
-                                when {
-                                    !ocrEnabled -> "OCR is disabled in Settings"
-                                    ocrPendingCount > 0 -> "$ocrPendingCount images waiting"
-                                    else -> "All images have OCR text"
-                                },
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("OCR", fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    if (!ocrEnabled) "Disabled in Settings"
+                                    else if (ocrPendingCount > 0) "$ocrPendingCount images waiting"
+                                    else "All images have OCR text",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (!ocrEnabled) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Switch(
+                                checked = ocrEnabled,
+                                onCheckedChange = { viewModel.setOcrEnabled(it) },
+                                modifier = Modifier.testTag("switch_home_ocr")
                             )
                         }
                     },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    trailingIcon = { if (ocrPendingCount > 0) Text("$ocrPendingCount") },
-                    enabled = ocrEnabled && !isExtractingOcr && ocrPendingCount > 0,
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = null,
+                            tint = if (ocrEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                    },
+                    trailingIcon = { if (ocrEnabled && ocrPendingCount > 0) Text("$ocrPendingCount") },
                     onClick = {
-                        showProcessingMenu = false
-                        viewModel.batchExtractOcr(allScreenshots, onlyMissing = true)
-                    }
+                        if (!ocrEnabled) {
+                            viewModel.setOcrEnabled(true)
+                        } else if (!isExtractingOcr && ocrPendingCount > 0) {
+                            showProcessingMenu = false
+                            viewModel.batchExtractOcr(allScreenshots, onlyMissing = true)
+                        }
+                    },
+                    modifier = Modifier.testTag("btn_home_ocr")
                 )
                 DropdownMenuItem(
                     text = {
@@ -902,63 +958,101 @@ fun ScreenshotsScreen(
         }
     }
 
-    if (showSortMenu) {
+    if (showSortDialog) {
         AlertDialog(
-            onDismissRequest = { showSortMenu = false },
-            title = { Text("Sort media") },
+            onDismissRequest = { showSortDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Sort Media")
+                }
+            },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     MediaSortOption.entries.forEach { option ->
                         Row(
-                            modifier = Modifier.fillMaxWidth().clickable {
-                                viewModel.setSortOption(option)
-                                showSortMenu = false
-                            }.padding(vertical = 6.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.setSortOption(option)
+                                    showSortDialog = false
+                                }
+                                .padding(vertical = 8.dp, horizontal = 4.dp)
+                                .testTag("sort_option_${option.name.lowercase()}"),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(
                                 selected = sortOption == option,
                                 onClick = {
                                     viewModel.setSortOption(option)
-                                    showSortMenu = false
+                                    showSortDialog = false
                                 }
                             )
-                            Text(option.displayName)
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                text = option.displayName,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = if (sortOption == option) FontWeight.SemiBold else FontWeight.Normal
+                            )
                         }
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { showSortMenu = false }) { Text("Done") } }
+            confirmButton = {
+                TextButton(onClick = { showSortDialog = false }) {
+                    Text("Close")
+                }
+            }
         )
     }
 
-    if (showGroupByMenu) {
+    if (showGroupDialog) {
         AlertDialog(
-            onDismissRequest = { showGroupByMenu = false },
-            title = { Text("Group media") },
+            onDismissRequest = { showGroupDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.GridView, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Group Media")
+                }
+            },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     MediaGroupBy.entries.forEach { option ->
                         Row(
-                            modifier = Modifier.fillMaxWidth().clickable {
-                                viewModel.setGroupByOption(option)
-                                showGroupByMenu = false
-                            }.padding(vertical = 6.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.setGroupByOption(option)
+                                    showGroupDialog = false
+                                }
+                                .padding(vertical = 8.dp, horizontal = 4.dp)
+                                .testTag("group_by_option_${option.name.lowercase()}"),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(
                                 selected = groupByOption == option,
                                 onClick = {
                                     viewModel.setGroupByOption(option)
-                                    showGroupByMenu = false
+                                    showGroupDialog = false
                                 }
                             )
-                            Text(option.displayName)
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                text = option.displayName,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = if (groupByOption == option) FontWeight.SemiBold else FontWeight.Normal
+                            )
                         }
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { showGroupByMenu = false }) { Text("Done") } }
+            confirmButton = {
+                TextButton(onClick = { showGroupDialog = false }) {
+                    Text("Close")
+                }
+            }
         )
     }
 

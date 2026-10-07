@@ -34,6 +34,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -63,8 +64,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.amresalehin.emreshots.data.model.ScreenshotItem
 import com.amresalehin.emreshots.service.ai.AiAnalysisResult
-import com.amresalehin.emreshots.service.ai.OnDeviceVisionCatalog
-import com.amresalehin.emreshots.service.ai.OnDeviceVisionService
 import com.amresalehin.emreshots.viewmodel.AiOcrModelOption
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -74,10 +73,12 @@ fun OcrAiSheet(
     screenshot: ScreenshotItem,
     isExtractingOcr: Boolean,
     isAiProcessing: Boolean,
+    isFixingArtefacts: Boolean = false,
     aiOcrModelOptions: List<AiOcrModelOption> = emptyList(),
     selectedOcrProviderId: String = "",
     onSelectOcrProvider: (String) -> Unit = {},
     onExtractOcr: () -> Unit,
+    onFixOcrArtefacts: ((String, (String) -> Unit) -> Unit)? = null,
     onSendOcrToAi: (String, Boolean) -> Unit,
     onWriteToMetadata: (String, String, String, List<String>) -> Unit,
     onDismiss: () -> Unit
@@ -90,11 +91,6 @@ fun OcrAiSheet(
     var writeDirectlyToMetadata by remember { mutableStateOf(false) }
 
     var aiResultPreview by remember { mutableStateOf<AiAnalysisResult?>(null) }
-    val visionService = remember(context) { OnDeviceVisionService(context) }
-    var installedVisionModels by remember { mutableStateOf<Set<String>>(emptySet()) }
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        installedVisionModels = runCatching { visionService.installedModels().map { it.model.id }.toSet() }.getOrDefault(emptySet())
-    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -207,6 +203,32 @@ fun OcrAiSheet(
                 }
 
                 if (ocrTextState.isNotBlank()) {
+                    if (onFixOcrArtefacts != null) {
+                        FilledTonalButton(
+                            onClick = {
+                                onFixOcrArtefacts(ocrTextState) { cleaned ->
+                                    ocrTextState = cleaned
+                                }
+                            },
+                            enabled = !isFixingArtefacts && !isExtractingOcr,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.testTag("btn_fix_ocr_artefacts")
+                        ) {
+                            if (isFixingArtefacts) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(14.dp),
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Fixing…", fontSize = 13.sp)
+                            } else {
+                                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Fix Artefacts", fontSize = 13.sp)
+                            }
+                        }
+                    }
+
                     OutlinedButton(
                         onClick = {
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -296,7 +318,7 @@ fun OcrAiSheet(
                 }
             }
 
-            if (aiOcrModelOptions.isNotEmpty() || OnDeviceVisionCatalog.all().isNotEmpty()) {
+            if (aiOcrModelOptions.isNotEmpty()) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
                     shape = RoundedCornerShape(12.dp),
@@ -306,37 +328,13 @@ fun OcrAiSheet(
                         modifier = Modifier.padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Text("OCR enrichment model", fontWeight = FontWeight.Bold)
+                        Text("OCR text enrichment provider", fontWeight = FontWeight.Bold)
                         Text(
-                            "Independent from the image-vision model. Only extracted OCR text and metadata are sent.",
+                            "Only extracted OCR text and metadata are analyzed. The image is never uploaded.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Text("Offline VLM", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                        OnDeviceVisionCatalog.all().forEach { model ->
-                            val selectionId = "local:" + model.id
-                            val installed = model.id in installedVisionModels
-                            Row(
-                                modifier = Modifier.fillMaxWidth().clickable(enabled = installed) { onSelectOcrProvider(selectionId) },
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = selectedOcrProviderId == selectionId,
-                                    onClick = { if (installed) onSelectOcrProvider(selectionId) },
-                                    enabled = installed
-                                )
-                                Column {
-                                    Text(model.displayName, fontWeight = FontWeight.SemiBold)
-                                    Text(
-                                        if (installed) model.quantization + " · Ready" else model.quantization + " · Download in Settings",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-
-                        Text("Cloud / custom", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(4.dp))
                         aiOcrModelOptions.forEach { option ->
                             val selectionId = "cloud:" + option.providerId
                             Row(

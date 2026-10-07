@@ -60,7 +60,7 @@ jobs:
 
       - name: Build and test
         continue-on-error: true
-        run: gradle build --stacktrace
+        run: gradle --no-parallel build --stacktrace
 
       - name: Inspect failing transformed resources
         if: ${{ always() }}
@@ -91,7 +91,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 2
       - name: Assemble installable release APK
-        run: gradle :app:assembleRelease --stacktrace
+        run: gradle --no-parallel :app:assembleRelease --stacktrace
 
       - name: Verify APK signature and alignment
         shell: bash

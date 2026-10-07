@@ -610,28 +610,6 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     }
     fun setSearchQuery(query: String) { _searchQuery.value = query }
 
-    fun scanDuplicates() {
-        viewModelScope.launch(Dispatchers.IO) {
-            _isScanningDuplicates.value = true
-            _duplicateGroups.value = duplicateDetectionService.findDuplicates(allScreenshots.value)
-            _isScanningDuplicates.value = false
-            val count = _duplicateGroups.value.sumOf { it.items.size - 1 }
-            _snackbarMessage.value = if (count == 0) "No duplicates found." else "Found $count duplicate items."
-        }
-    }
-
-    fun removeDuplicateFromLibrary(id: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            screenshotRepository.deleteById(id)
-            _duplicateGroups.value = _duplicateGroups.value.mapNotNull { group ->
-                val remaining = group.items.filterNot { it.id == id }
-                if (remaining.size > 1) group.copy(items = remaining) else null
-            }
-        }
-    }
-
-    fun clearDuplicateResults() { _duplicateGroups.value = emptyList() }
-
     fun batchRename(items: List<ScreenshotItem>, template: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val cleanTemplate = template.trim()

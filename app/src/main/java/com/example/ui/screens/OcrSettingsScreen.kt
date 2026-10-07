@@ -1,5 +1,7 @@
 package com.amresalehin.emreshots.ui.screens
 
+import com.amresalehin.emreshots.R
+
 import android.provider.OpenableColumns
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult

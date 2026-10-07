@@ -1,5 +1,7 @@
 package com.amresalehin.emreshots
 
+// CI verification for P2 preference plumbing.
+
 import androidx.test.core.app.ApplicationProvider
 import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 import org.junit.Assert.assertEquals

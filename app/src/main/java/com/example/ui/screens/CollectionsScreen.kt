@@ -1,5 +1,7 @@
 package com.amresalehin.emreshots.ui.screens
 
+import com.amresalehin.emreshots.R
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.res.stringResource

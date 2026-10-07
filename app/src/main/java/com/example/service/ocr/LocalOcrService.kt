@@ -81,7 +81,7 @@ class LocalOcrService(
                 return recognizeWithMlKit(file)
             }
 
-            try {
+            val rawText = try {
                 // Low-resolution camera photos benefit substantially from rescaling and
                 // grayscale/contrast normalization before Tesseract sees the pixels.
                 val primaryBitmap = enhancedBitmap ?: bitmap
@@ -90,23 +90,25 @@ class LocalOcrService(
 
                 // If preprocessing produced no useful text, retry the original pixels before
                 // falling back to ML Kit. This preserves accuracy for unusual colour layouts.
-                val rawText = if (primaryText.length >= 3 || enhancedBitmap == null) {
+                if (primaryText.length >= 3 || enhancedBitmap == null) {
                     primaryText
                 } else {
                     baseApi.setImage(bitmap)
                     baseApi.utF8Text.orEmpty().trim()
                 }
-                if (rawText.isBlank()) {
-                    // Tesseract can legitimately return an empty page on difficult camera photos;
-                    // give ML Kit a chance instead of treating an empty OCR result as success.
-                    return recognizeWithMlKit(file)
-                }
-                Result.success(rawText)
             } finally {
                 baseApi.stop()
                 baseApi.recycle()
                 if (enhancedBitmap != null && !enhancedBitmap.isRecycled) enhancedBitmap.recycle()
                 if (!bitmap.isRecycled) bitmap.recycle()
+            }
+
+            if (rawText.isBlank()) {
+                // Tesseract can legitimately return an empty page on difficult camera photos;
+                // give ML Kit a chance instead of treating an empty OCR result as success.
+                recognizeWithMlKit(file)
+            } else {
+                Result.success(rawText)
             }
         } catch (t: Throwable) {
             // If Tesseract throws an error (e.g. native lib issue in tests), fallback to ML Kit

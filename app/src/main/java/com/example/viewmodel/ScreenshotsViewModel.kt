@@ -78,6 +78,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     val exifManager = ExifMetadataManager(application)
     val aiService = CloudAiService()
+    private val onDeviceVisionService = com.amresalehin.emreshots.service.ai.OnDeviceVisionService(application)
     private val localOcrService = LocalOcrService(application)
     val mediaScanner = com.amresalehin.emreshots.service.media.DeviceMediaScanner(application)
 

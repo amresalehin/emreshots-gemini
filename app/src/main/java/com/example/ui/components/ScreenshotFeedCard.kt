@@ -195,7 +195,7 @@ fun ScreenshotFeedCard(
                                 ) {
                                     Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Text(stringResource(R.string.ai_indexed), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Text(stringResource(R.string.ai_indexed), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }

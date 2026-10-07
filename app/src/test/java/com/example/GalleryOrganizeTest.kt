@@ -18,6 +18,7 @@ import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
+// CI verification: exercise the current gallery defaults on the release branch.
 class GalleryOrganizeTest {
 
     private lateinit var viewModel: ScreenshotsViewModel

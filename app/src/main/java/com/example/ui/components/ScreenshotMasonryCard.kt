@@ -290,7 +290,7 @@ fun ScreenshotMasonryCard(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     imageVector = Icons.Default.PlayArrow,
-                                    contentDescription = null,
+                                    contentDescription = stringResource(R.string.play_video),
                                     tint = Color.White,
                                     modifier = Modifier.size(12.dp)
                                 )
@@ -306,7 +306,7 @@ fun ScreenshotMasonryCard(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     imageVector = Icons.Default.Link,
-                                    contentDescription = null,
+                                    contentDescription = stringResource(R.string.links),
                                     tint = Color.White.copy(alpha = 0.8f),
                                     modifier = Modifier.size(11.dp)
                                 )

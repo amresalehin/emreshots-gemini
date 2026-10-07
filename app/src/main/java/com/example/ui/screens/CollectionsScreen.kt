@@ -46,9 +46,11 @@ import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 @Composable
 fun CollectionsScreen(
     viewModel: ScreenshotsViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onOpenCollection: (String) -> Unit
 ) {
     val collections by viewModel.collections.collectAsStateWithLifecycle()
+    val allScreenshots by viewModel.allScreenshots.collectAsStateWithLifecycle()
     var showCreate by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
 
@@ -73,8 +75,10 @@ fun CollectionsScreen(
         ) {
             collections.forEach { collection ->
                 Card(
+                    onClick = { onOpenCollection(collection.id) },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    shape = MaterialTheme.shapes.large
                 ) {
                     Row(modifier = Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Collections, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
@@ -82,7 +86,7 @@ fun CollectionsScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(collection.name, fontWeight = FontWeight.SemiBold)
                             Text(
-                                collection.description.ifBlank { "Available for organizing media" },
+                                stringResource(R.string.collection_items_count, allScreenshots.count { it.collectionIds.contains(collection.id) }),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

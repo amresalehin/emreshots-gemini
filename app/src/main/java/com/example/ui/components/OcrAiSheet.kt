@@ -105,7 +105,7 @@ fun OcrAiSheet(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(
-                        shape = RoundedCornerShape(10.dp),
+                        shape = MaterialTheme.shapes.small,
                         color = MaterialTheme.colorScheme.primaryContainer,
                         modifier = Modifier.size(36.dp)
                     ) {
@@ -152,7 +152,7 @@ fun OcrAiSheet(
                 Button(
                     onClick = { onExtractOcr { ocrTextState = it } },
                     enabled = !isExtractingOcr,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = MaterialTheme.shapes.medium,
                     modifier = Modifier
                         .weight(1f)
                         .testTag("btn_extract_ocr")
@@ -178,7 +178,7 @@ fun OcrAiSheet(
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             clipboard.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.ocr_clipboard_label), ocrTextState))
                         },
-                        shape = RoundedCornerShape(12.dp),
+                        shape = MaterialTheme.shapes.medium,
                         modifier = Modifier.testTag("btn_copy_ocr")
                     ) {
                         Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -203,7 +203,7 @@ fun OcrAiSheet(
                     placeholder = { Text(stringResource(R.string.no_text_extracted)) },
                     minLines = 4,
                     maxLines = 8,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = MaterialTheme.shapes.medium,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -216,7 +216,7 @@ fun OcrAiSheet(
 
             // Write Directly in Metadata Option (By default OFF / false)
             Surface(
-                shape = RoundedCornerShape(12.dp),
+                shape = MaterialTheme.shapes.medium,
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -273,7 +273,7 @@ fun OcrAiSheet(
                             screenshot.tags
                         )
                     },
-                    shape = RoundedCornerShape(12.dp),
+                    shape = MaterialTheme.shapes.medium,
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("btn_write_metadata_now")

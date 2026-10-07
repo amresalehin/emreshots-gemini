@@ -1,6 +1,7 @@
 package com.amresalehin.emreshots.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -143,7 +144,7 @@ fun ExifEditorDialog(
                 ) {
                     Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Auto-Fill with AI Analysis")
+                    Text(stringResource(R.string.auto_fill_with_ai_analysis))
                 }
 
                 HorizontalDivider()
@@ -151,7 +152,7 @@ fun ExifEditorDialog(
                 OutlinedTextField(
                     value = imageDescription,
                     onValueChange = { imageDescription = it },
-                    label = { Text("Title / Description (TAG_IMAGE_DESCRIPTION)") },
+                    label = { Text(stringResource(R.string.title_description_exif)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("input_exif_description")
@@ -160,7 +161,7 @@ fun ExifEditorDialog(
                 OutlinedTextField(
                     value = userComment,
                     onValueChange = { userComment = it },
-                    label = { Text("User Comment / Notes (TAG_USER_COMMENT)") },
+                    label = { Text(stringResource(R.string.user_comment_notes_exif)) },
                     minLines = 2,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -171,7 +172,7 @@ fun ExifEditorDialog(
                     OutlinedTextField(
                         value = cameraMake,
                         onValueChange = { cameraMake = it },
-                        label = { Text("Make") },
+                        label = { Text(stringResource(R.string.make)) },
                         modifier = Modifier
                             .weight(1f)
                             .testTag("input_exif_make")
@@ -179,7 +180,7 @@ fun ExifEditorDialog(
                     OutlinedTextField(
                         value = cameraModel,
                         onValueChange = { cameraModel = it },
-                        label = { Text("Model") },
+                        label = { Text(stringResource(R.string.model)) },
                         modifier = Modifier
                             .weight(1f)
                             .testTag("input_exif_model")
@@ -189,7 +190,7 @@ fun ExifEditorDialog(
                 OutlinedTextField(
                     value = software,
                     onValueChange = { software = it },
-                    label = { Text("Software / Tool (TAG_SOFTWARE)") },
+                    label = { Text(stringResource(R.string.software_tool_exif)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("input_exif_software")
@@ -198,7 +199,7 @@ fun ExifEditorDialog(
                 OutlinedTextField(
                     value = artist,
                     onValueChange = { artist = it },
-                    label = { Text("Artist / Author (TAG_ARTIST)") },
+                    label = { Text(stringResource(R.string.artist_author_exif)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("input_exif_artist")
@@ -207,7 +208,7 @@ fun ExifEditorDialog(
                 OutlinedTextField(
                     value = dateTaken,
                     onValueChange = { dateTaken = it },
-                    label = { Text("Date Taken (YYYY:MM:DD HH:MM:SS)") },
+                    label = { Text(stringResource(R.string.date_taken_exif)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("input_exif_date")
@@ -247,7 +248,7 @@ fun ExifEditorDialog(
                             ) {
                                 Icon(Icons.Default.DeleteSweep, contentDescription = null, modifier = Modifier.size(14.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Clear GPS", fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
+                                Text(stringResource(R.string.clear_gps), fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
                             }
                         }
                     }
@@ -256,7 +257,7 @@ fun ExifEditorDialog(
                         OutlinedTextField(
                             value = latitudeInput,
                             onValueChange = { latitudeInput = it },
-                            label = { Text("Latitude (-90 to 90)") },
+                            label = { Text(stringResource(R.string.latitude_hint)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier
                                 .weight(1f)
@@ -265,7 +266,7 @@ fun ExifEditorDialog(
                         OutlinedTextField(
                             value = longitudeInput,
                             onValueChange = { longitudeInput = it },
-                            label = { Text("Longitude (-180 to 180)") },
+                            label = { Text(stringResource(R.string.longitude_hint)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier
                                 .weight(1f)
@@ -299,7 +300,7 @@ fun ExifEditorDialog(
             ) {
                 Icon(imageVector = Icons.Default.Check, contentDescription = null)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Save to File")
+                Text(stringResource(R.string.save_to_file))
             }
         },
         dismissButton = {
@@ -309,7 +310,7 @@ fun ExifEditorDialog(
             ) {
                 Icon(imageVector = Icons.Default.Close, contentDescription = null)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )

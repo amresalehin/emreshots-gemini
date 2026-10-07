@@ -619,7 +619,7 @@ fun ScreenshotDetailScreen(
                         Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.CameraAlt,
-                                contentDescription = null,
+                                contentDescription = stringResource(R.string.metadata_camera),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(16.dp)
                             )

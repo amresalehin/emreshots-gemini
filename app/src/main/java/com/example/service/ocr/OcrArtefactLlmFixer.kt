@@ -7,7 +7,7 @@ import kotlinx.coroutines.withContext
 /**
  * On-device screenshot AI processing engine (inspired by PixelShot / Pixel Screenshots).
  *
- * Directly receives raw extracted OCR text from Tesseract or ML Kit, repairs scanning artefacts,
+ * Receives raw extracted OCR text from Tesseract, repairs scanning artefacts,
  * fixes character misreads/hyphens/spacing, and automatically assigns relevant categorization tags.
  *
  * Uses:

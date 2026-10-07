@@ -15,6 +15,8 @@
     <string name="remove_from_favorites">Remove from favorites</string>
     <string name="remove_tag">Remove tag</string>
     <string name="close">Close</string>
+    <string name="play_video">Play video</string>
+    <string name="metadata_camera">Camera metadata</string>
     <string name="clear_gps">Clear GPS</string>
     <string name="delete">Delete</string>
     <string name="edit">Edit</string>

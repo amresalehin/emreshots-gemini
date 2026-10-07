@@ -192,7 +192,7 @@ fun ScreenshotMasonryCard(
                 if (screenshot.reminderTime != null) {
                     Spacer(modifier = Modifier.width(4.dp))
                     Surface(
-                        color = Color(0xFFF43F5E).copy(alpha = 0.85f),
+                        color = DangerRose.copy(alpha = 0.85f),
                         shape = CircleShape,
                         modifier = Modifier.size(18.dp)
                     ) {

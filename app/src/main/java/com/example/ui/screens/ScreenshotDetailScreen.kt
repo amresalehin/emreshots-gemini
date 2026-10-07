@@ -455,7 +455,9 @@ fun ScreenshotDetailScreen(
                                 onClick = { showOverflowMenu = false; showOcrSheet = true }
                             )
                             if (!screenshot.isVideo) {
-                                DropdownMenuItem(
+                                }
+
+                            DropdownMenuItem(
                                     text = { Text(stringResource(R.string.edit_exif)) },
                                     leadingIcon = { Icon(Icons.Default.CameraAlt, contentDescription = null) },
                                     onClick = {

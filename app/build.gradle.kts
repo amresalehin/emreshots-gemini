@@ -1,3 +1,4 @@
+import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
@@ -32,7 +33,7 @@ tasks.register("prepareBundledLocalOcrModel") {
       logger.lifecycle("Bundled local OCR LLM already present and verified.")
       return@doLast
     }
-    val tempFile = java.io.File(bundledOcrModelFile.parentFile, "$bundledOcrModelName.download")
+    val tempFile = File(bundledOcrModelFile.parentFile, "$bundledOcrModelName.download")
     if (tempFile.exists()) tempFile.delete()
     logger.lifecycle("Downloading $bundledOcrModelName (~88 MB) for offline OCR cleanup…")
     val connection = (URL(bundledOcrModelUrl).openConnection() as HttpURLConnection).apply {

@@ -14,7 +14,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,8 +33,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.border
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -106,6 +103,7 @@ import com.amresalehin.emreshots.data.model.ExifData
 import com.amresalehin.emreshots.ui.components.ExifEditorDialog
 import com.amresalehin.emreshots.ui.components.InAppVideoPlayer
 import com.amresalehin.emreshots.ui.components.OcrAiSheet
+import com.amresalehin.emreshots.ui.components.ZoomableImageViewer
 import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 import kotlinx.coroutines.launch
 import java.io.File
@@ -177,6 +175,7 @@ fun ScreenshotDetailScreen(
     var newTagInput by remember { mutableStateOf("") }
     var showCollectionsDialog by remember { mutableStateOf(false) }
     var showReminderDialog by remember { mutableStateOf(false) }
+    var showImageViewer by remember { mutableStateOf(false) }
     val collections by viewModel.collections.collectAsStateWithLifecycle()
 
     var isEditingDetails by remember { mutableStateOf(false) }
@@ -560,13 +559,18 @@ fun ScreenshotDetailScreen(
                     onTap = { }
                 )
             } else if (imageFile.exists() || !screenshot.uriString.isNullOrBlank()) {
-                ZoomableDetailImage(
+                AsyncImage(
                     model = ImageRequest.Builder(context)
                         .data(if (imageFile.exists()) imageFile else screenshot.uriString)
                         .crossfade(true)
                         .build(),
                     contentDescription = screenshot.title,
-                    onTap = { }
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(Unit) {
+                            detectTapGestures(onTap = { showImageViewer = true })
+                        }
                 )
             }
 
@@ -1134,6 +1138,15 @@ fun ScreenshotDetailScreen(
             }
         )
     }
+    if (showImageViewer) {
+        ZoomableImageViewer(
+            screenshot = screenshot,
+            exifData = exifData,
+            onDismiss = { showImageViewer = false },
+            onToggleFavorite = { viewModel.toggleFavorite(it) }
+        )
+    }
+
 }
 
 @Composable
@@ -1158,70 +1171,3 @@ fun DetailRow(label: String, value: String) {
 }
 
 
-@Composable
-private fun ZoomableDetailImage(
-    model: ImageRequest,
-    contentDescription: String?,
-    onTap: () -> Unit
-) {
-    var scale by remember { mutableStateOf(1f) }
-    var offsetX by remember { mutableStateOf(0f) }
-    var offsetY by remember { mutableStateOf(0f) }
-
-    fun reset() {
-        scale = 1f
-        offsetX = 0f
-        offsetY = 0f
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .clipToBounds()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .pointerInput(model.data) {
-                detectTapGestures(
-                    onTap = { onTap() },
-                    onDoubleTap = { tap ->
-                        if (scale > 1.1f) {
-                            reset()
-                        } else {
-                            scale = 2.5f
-                            offsetX = (size.width / 2f - tap.x) * 1.5f
-                            offsetY = (size.height / 2f - tap.y) * 1.5f
-                        }
-                    }
-                )
-            }
-            .pointerInput(model.data) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    val newScale = (scale * zoom).coerceIn(1f, 6f)
-                    scale = newScale
-                    if (newScale > 1f) {
-                        val maxX = size.width * (newScale - 1f) / 2f
-                        val maxY = size.height * (newScale - 1f) / 2f
-                        offsetX = (offsetX + pan.x * newScale).coerceIn(-maxX, maxX)
-                        offsetY = (offsetY + pan.y * newScale).coerceIn(-maxY, maxY)
-                    } else {
-                        offsetX = 0f
-                        offsetY = 0f
-                    }
-                }
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        AsyncImage(
-            model = model,
-            contentDescription = contentDescription,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                    translationX = offsetX
-                    translationY = offsetY
-                }
-        )
-    }
-}

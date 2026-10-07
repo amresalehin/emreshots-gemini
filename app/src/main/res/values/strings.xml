@@ -205,4 +205,9 @@
     <string name="get">Get</string>
     <string name="ai_analyzed">AI Analyzed</string>
     <string name="untitled">Untitled</string>
+    <string name="no_collections_yet">No collections yet. Create one in Settings.</string>
+    <string name="done">Done</string>
+    <string name="more_actions">More actions</string>
+    <string name="analyze">Analyze</string>
+    <string name="add">Add</string>
 </resources>

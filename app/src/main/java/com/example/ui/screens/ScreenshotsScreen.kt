@@ -1074,6 +1074,7 @@ fun ScreenshotsScreen(
     }
 
 }
+
 @Composable
 private fun GalleryMenuToggle(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(

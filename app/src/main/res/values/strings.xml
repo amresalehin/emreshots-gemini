@@ -105,7 +105,7 @@
     <string name="on_device_mode_disabled">Disabled</string>
     <string name="custom_gguf_model">Custom GGUF Model</string>
     <string name="custom_gguf_model_description">Import a local vision model.</string>
-    <string name="import">Import</string>
+    <string name="import_action">Import</string>
     <string name="available_gguf_models">Available GGUF Models</string>
     <string name="active">Active</string>
     <string name="select">Select</string>

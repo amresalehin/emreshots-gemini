@@ -1039,7 +1039,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         onComplete: ((AiAnalysisResult) -> Unit)? = null
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val selectedId = visionCaptionTagProviderId.value
+            val selectedId = visionCaptionTagProviderId.value.removePrefix("cloud:")
             val provider = providers.value.firstOrNull { it.id == selectedId && it.apiKey.isNotBlank() }
                 ?: activeProvider.value
             if (provider == null) {

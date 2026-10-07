@@ -199,6 +199,9 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     private val _gridColumns = MutableStateFlow(3)
     val gridColumns: StateFlow<Int> = _gridColumns.asStateFlow()
+
+    private val _isSyncingDeviceMedia = MutableStateFlow(false)
+    val isSyncingDeviceMedia: StateFlow<Boolean> = _isSyncingDeviceMedia.asStateFlow()
     val isLowEndDevice = com.amresalehin.emreshots.service.perf.PerformanceManager.isLowEndDevice(application)
     val isLowRamDevice = com.amresalehin.emreshots.service.perf.PerformanceManager.isLowRamDevice(application)
 
@@ -396,7 +399,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     // Gallery Organization & View Options
     val sortOption = MutableStateFlow(MediaSortOption.NEWEST)
     val groupByOption = MutableStateFlow(MediaGroupBy.NONE)
-    val viewMode = MutableStateFlow(GalleryViewMode.MASONRY)
+    val viewMode = MutableStateFlow(GalleryViewMode.GRID)
 
     fun setSortOption(option: MediaSortOption) { sortOption.value = option }
     fun setGroupByOption(option: MediaGroupBy) { groupByOption.value = option }
@@ -593,17 +596,22 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     fun syncDeviceMedia(onComplete: ((Int) -> Unit)? = null) {
         viewModelScope.launch(Dispatchers.IO) {
-            checkPermissions()
-            if (!_hasMediaPermissions.value) {
-                _snackbarMessage.value = "Please grant photos and videos permissions to auto-sync."
-                onComplete?.invoke(0)
-                return@launch
+            _isSyncingDeviceMedia.value = true
+            try {
+                checkPermissions()
+                if (!_hasMediaPermissions.value) {
+                    _snackbarMessage.value = "Please grant photos and videos permissions to auto-sync."
+                    onComplete?.invoke(0)
+                    return@launch
+                }
+                _analysisStatusText.value = "Syncing gallery…"
+                runCatching { mediaSyncManager.synchronize() }
+                    .onSuccess { result -> onComplete?.invoke(result.added) }
+                    .onFailure { _snackbarMessage.value = "Gallery sync failed: " + (it.message ?: "Unknown error") }
+            } finally {
+                _analysisStatusText.value = null
+                _isSyncingDeviceMedia.value = false
             }
-            _analysisStatusText.value = "Syncing gallery…"
-            runCatching { mediaSyncManager.synchronize() }
-                .onSuccess { result -> onComplete?.invoke(result.added) }
-                .onFailure { _snackbarMessage.value = "Gallery sync failed: " + (it.message ?: "Unknown error") }
-            _analysisStatusText.value = null
         }
     }
     fun setSearchQuery(query: String) { _searchQuery.value = query }

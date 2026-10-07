@@ -1,5 +1,6 @@
 package com.amresalehin.emreshots.ui.components
 
+import com.amresalehin.emreshots.ui.theme.DangerRose
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.foundation.Image

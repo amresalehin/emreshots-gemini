@@ -130,6 +130,10 @@
     <string name="collections">Collections</string>
     <string name="available_for_organizing_media">Available for organizing media</string>
     <string name="create_collection">Create collection</string>
+    <string name="collection">Collection</string>
+    <string name="collection_items_count">%1$d items</string>
+    <string name="all_collections">All collections</string>
+    <string name="no_collection_items">No items in this collection</string>
     <string name="name">Name</string>
     <string name="back_to_ai_studio">Back to AI Studio</string>
     <string name="add_provider">Add Provider</string>

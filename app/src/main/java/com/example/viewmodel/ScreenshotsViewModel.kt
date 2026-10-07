@@ -169,22 +169,9 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     private val _ocrLanguageDownloadProgress = MutableStateFlow<Map<String, Float>>(emptyMap())
     val ocrLanguageDownloadProgress: StateFlow<Map<String, Float>> = _ocrLanguageDownloadProgress.asStateFlow()
 
+    private val exifDataStore = MutableStateFlow<Map<String, ExifData>>(emptyMap())
+
     private val aiOcrCoordinator = AiOcrCoordinator(
-    private val mediaLibraryCoordinator = MediaLibraryCoordinator(
-        application = application,
-        scope = viewModelScope,
-        screenshotRepository = screenshotRepository,
-        collectionRepository = collectionRepository,
-        collections = collections,
-        activeProvider = activeProvider,
-        exifManager = exifManager,
-        onMessage = { _snackbarMessage.value = it }
-    )
-
-    val pendingWriteIntentSender: StateFlow<android.content.IntentSender?> =
-        mediaLibraryCoordinator.pendingWriteIntentSender
-    val exifDataState: StateFlow<Map<String, ExifData>> = mediaLibraryCoordinator.exifDataState
-
         application = application,
         scope = viewModelScope,
         screenshotRepository = screenshotRepository,
@@ -200,6 +187,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         visionCaptionTagProviderId = visionCaptionTagProviderId,
         ocrLanguage = ocrLanguage,
         autoWriteExifSetting = autoWriteExifSetting,
+        exifDataStore = exifDataStore,
         exifManager = exifManager,
         aiService = aiService,
         localOcrService = localOcrService,
@@ -211,9 +199,24 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     val lastFailedScreenshotIds: StateFlow<Set<String>> = aiOcrCoordinator.lastFailedScreenshotIds
     val analysisStatusText: StateFlow<String?> = aiOcrCoordinator.analysisStatusText
     val indexingState: StateFlow<IndexingState> = aiOcrCoordinator.indexingState
-    val exifDataState: StateFlow<Map<String, ExifData>> = aiOcrCoordinator.exifDataState
     val isExtractingOcr: StateFlow<Boolean> = aiOcrCoordinator.isExtractingOcr
     val ocrStatusText: StateFlow<String?> = aiOcrCoordinator.ocrStatusText
+
+    private val mediaLibraryCoordinator = MediaLibraryCoordinator(
+        application = application,
+        scope = viewModelScope,
+        screenshotRepository = screenshotRepository,
+        collectionRepository = collectionRepository,
+        collections = collections,
+        activeProvider = activeProvider,
+        exifDataStore = exifDataStore,
+        exifManager = exifManager,
+        onMessage = { _snackbarMessage.value = it }
+    )
+
+    val pendingWriteIntentSender: StateFlow<android.content.IntentSender?> =
+        mediaLibraryCoordinator.pendingWriteIntentSender
+    val exifDataState: StateFlow<Map<String, ExifData>> = exifDataStore.asStateFlow()
 
     private val providerBackupCoordinator = ProviderBackupCoordinator(
         application = application,

@@ -89,7 +89,7 @@ fun ProcessingScreen(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                 ) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("SCREENSHOT INTELLIGENCE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        Text("MEDIA INTELLIGENCE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                         Text(if (state.isIndexing) "Analyzing your library…" else "Your library is ready for analysis", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                         Text(if (state.total > 0) "$completed completed · $failed failed · $remaining remaining" else "${screenshots.count { it.aiProcessed }} analyzed · $remaining remaining", style = MaterialTheme.typography.bodyMedium)
                         LinearProgressIndicator(
@@ -167,7 +167,7 @@ fun ProcessingScreen(
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { showRetryInfo = false },
             title = { Text("Retry failed") },
-            text = { Text("Retrying failed items uses the screenshots that remain unprocessed.") },
+            text = { Text("Retrying starts all media that still needs analysis.") },
             confirmButton = {
                 Button(onClick = {
                     showRetryInfo = false

@@ -172,7 +172,7 @@ fun ScreenshotFeedCard(
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                                    Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.play_video), tint = Color.White, modifier = Modifier.size(14.dp))
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         text = formatFeedDuration(screenshot.durationMs),
@@ -193,7 +193,7 @@ fun ScreenshotFeedCard(
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                                    Icon(Icons.Default.AutoAwesome, contentDescription = stringResource(R.string.ai_indexed), tint = Color.White, modifier = Modifier.size(12.dp))
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(stringResource(R.string.ai_indexed), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 }

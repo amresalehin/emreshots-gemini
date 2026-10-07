@@ -168,7 +168,7 @@ fun ScreenshotCard(
                             Spacer(modifier = Modifier.width(3.dp))
                             Text(
                                 text = stringResource(R.string.ai_label),
-                                fontSize = 9.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )
@@ -294,7 +294,7 @@ fun ScreenshotCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.PlayArrow,
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.play_video),
                             tint = Color.White,
                             modifier = Modifier.size(12.dp)
                         )
@@ -302,7 +302,7 @@ fun ScreenshotCard(
                         Text(
                             text = durStr,
                             color = Color.White,
-                            fontSize = 10.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }

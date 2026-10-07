@@ -48,12 +48,18 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -66,9 +72,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -78,7 +85,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -158,6 +164,7 @@ fun ScreenshotDetailScreen(
     val isExtractingOcr by viewModel.isExtractingOcr.collectAsStateWithLifecycle()
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showOverflowMenu by remember { mutableStateOf(false) }
     val detailScrollState = rememberScrollState()
     var showAddTagDialog by remember { mutableStateOf(false) }
     var newTagInput by remember { mutableStateOf("") }
@@ -195,64 +202,111 @@ fun ScreenshotDetailScreen(
     val configuration = LocalConfiguration.current
     val galleryHeight = (configuration.screenHeightDp.dp * 0.58f).coerceIn(300.dp, 560.dp)
 
-    DisposableEffect(Unit) {
-        val window = (context as? android.app.Activity)?.window
-        val previousStatusBarColor = window?.statusBarColor
-        val previousNavigationBarColor = window?.navigationBarColor
-        val controller = window?.let { androidx.core.view.WindowCompat.getInsetsController(it, it.decorView) }
-        val previousLightStatusBars = controller?.isAppearanceLightStatusBars
-        val previousLightNavigationBars = controller?.isAppearanceLightNavigationBars
-
-        controller?.isAppearanceLightStatusBars = true
-        controller?.isAppearanceLightNavigationBars = true
-        window?.statusBarColor = android.graphics.Color.WHITE
-        window?.navigationBarColor = android.graphics.Color.WHITE
-
-        onDispose {
-            previousStatusBarColor?.let { window?.statusBarColor = it }
-            previousNavigationBarColor?.let { window?.navigationBarColor = it }
-            previousLightStatusBars?.let { controller?.isAppearanceLightStatusBars = it }
-            previousLightNavigationBars?.let { controller?.isAppearanceLightNavigationBars = it }
-        }
-    }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF6F7F9))
-            .statusBarsPadding()
-            .navigationBarsPadding()
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(detailScrollState)
-            .pointerInput(screenshotId) {
-                var totalDrag = 0f
-                var triggered = false
-                detectHorizontalDragGestures(
-                    onHorizontalDrag = { _, dragAmount ->
-                        totalDrag += dragAmount
-                        if (!triggered && kotlin.math.abs(totalDrag) >= 120f) {
-                            triggered = true
-                            if (totalDrag < 0) {
-                                nextScreenshotId?.let(onNavigateToScreenshot)
-                            } else {
-                                previousScreenshotId?.let(onNavigateToScreenshot)
+        TopAppBar(
+            title = { Text(if (screenshot.isVideo) "Video" else "Photo", maxLines = 1) },
+            navigationIcon = {
+                IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("btn_detail_back")) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+            },
+            actions = {
+                IconButton(
+                    onClick = { viewModel.toggleFavorite(screenshot) },
+                    modifier = Modifier.testTag("btn_detail_favorite")
+                ) {
+                    Icon(
+                        imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = if (screenshot.isFavorite) "Remove from favorites" else "Add to favorites",
+                        tint = if (screenshot.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                IconButton(
+                    onClick = {
+                        val uri = screenshot.uriString?.let(Uri::parse)
+                        if (uri == null) {
+                            viewModel.showMessage("Sharing is unavailable for this item.")
+                        } else {
+                            runCatching {
+                                val type = context.contentResolver.getType(uri)
+                                    ?: if (screenshot.isVideo) "video/*" else "image/*"
+                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                    this.type = type
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(Intent.createChooser(intent, "Share media"))
+                            }.onFailure {
+                                viewModel.showMessage("Unable to share this item.")
                             }
                         }
                     },
-                    onDragEnd = {
-                        totalDrag = 0f
-                        triggered = false
-                    },
-                    onDragCancel = {
-                        totalDrag = 0f
-                        triggered = false
+                    modifier = Modifier.testTag("btn_detail_share")
+                ) {
+                    Icon(Icons.Default.Share, contentDescription = "Share")
+                }
+                IconButton(
+                    onClick = { showDeleteConfirm = true },
+                    modifier = Modifier.testTag("btn_detail_delete")
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                }
+                Box {
+                    IconButton(onClick = { showOverflowMenu = true }, modifier = Modifier.testTag("btn_detail_overflow")) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "More actions")
                     }
-                )
-            }
-    ) {
+                    DropdownMenu(
+                        expanded = showOverflowMenu,
+                        onDismissRequest = { showOverflowMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(if (isEditingDetails) "Finish editing" else "Edit details") },
+                            leadingIcon = { Icon(if (isEditingDetails) Icons.Default.Close else Icons.Default.Edit, contentDescription = null) },
+                            onClick = {
+                                showOverflowMenu = false
+                                if (!isEditingDetails) isEditingDetails = true
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("OCR") },
+                            leadingIcon = { Icon(Icons.Default.DocumentScanner, contentDescription = null) },
+                            onClick = { showOverflowMenu = false; showOcrSheet = true }
+                        )
+                        if (!screenshot.isVideo) {
+                            DropdownMenuItem(
+                                text = { Text("Edit EXIF") },
+                                leadingIcon = { Icon(Icons.Default.CameraAlt, contentDescription = null) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    if (!hasMediaLocationPermission) {
+                                        permissionLauncher.launch(com.amresalehin.emreshots.service.media.DeviceMediaScanner.getRequiredPermissions())
+                                    }
+                                    showExifEditor = true
+                                }
+                            )
+                        }
+                    }
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            )
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 64.dp)
+                .verticalScroll(detailScrollState)
+        ) {
+            modifier = Modifier
+                .fillMaxSize()
+.verticalScroll(detailScrollState)
+        ) {
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -263,9 +317,31 @@ fun ScreenshotDetailScreen(
                         MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f),
                         RoundedCornerShape(22.dp)
                     )
-                    .clip(RoundedCornerShape(22.dp)),
+                    .clip(RoundedCornerShape(22.dp))
+                    .pointerInput(screenshotId) {
+                        var totalDrag = 0f
+                        var triggered = false
+                        detectHorizontalDragGestures(
+                            onHorizontalDrag = { _, dragAmount ->
+                                totalDrag += dragAmount
+                                if (!triggered && kotlin.math.abs(totalDrag) >= 120f) {
+                                    triggered = true
+                                    if (totalDrag < 0) nextScreenshotId?.let(onNavigateToScreenshot)
+                                    else previousScreenshotId?.let(onNavigateToScreenshot)
+                                }
+                            },
+                            onDragEnd = {
+                                totalDrag = 0f
+                                triggered = false
+                            },
+                            onDragCancel = {
+                                totalDrag = 0f
+                                triggered = false
+                            }
+                        )
+                    },
                 shape = RoundedCornerShape(22.dp),
-                color = Color(0xFFF1F2F4),
+                color = MaterialTheme.colorScheme.surfaceVariant,
                 tonalElevation = 0.dp
             ) {
             if (screenshot.isVideo) {
@@ -326,10 +402,10 @@ fun ScreenshotDetailScreen(
                             shape = RoundedCornerShape(12.dp),
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
                             modifier = Modifier
-                                .height(28.dp)
+                                .height(48.dp)
                                 .testTag("btn_grant_detail_permission")
                         ) {
-                            Text("Grant", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("Grant", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -347,7 +423,7 @@ fun ScreenshotDetailScreen(
                         RoundedCornerShape(28.dp)
                     ),
                 shape = RoundedCornerShape(28.dp),
-                color = Color.White,
+                color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 1.dp
             ) {
                 Column(
@@ -445,7 +521,7 @@ fun ScreenshotDetailScreen(
                             )
                         } else {
                             Text(
-                                text = if (screenshot.isVideo) "VIDEO" else "SCREENSHOT",
+                                text = if (screenshot.isVideo) "VIDEO" else "PHOTO",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.Bold,
@@ -478,9 +554,9 @@ fun ScreenshotDetailScreen(
                         }
                     }
 
-                    IconButton(
-                        onClick = {
-                            if (isEditingDetails) {
+                    if (isEditingDetails) {
+                        IconButton(
+                            onClick = {
                                 viewModel.updateScreenshot(
                                     screenshot.copy(
                                         title = editTitle.ifBlank { screenshot.title },
@@ -489,24 +565,29 @@ fun ScreenshotDetailScreen(
                                     )
                                 )
                                 isEditingDetails = false
-                            } else {
-                                isEditingDetails = true
-                            }
-                        },
-                        modifier = Modifier.testTag("btn_toggle_edit_details")
-                    ) {
-                        Icon(
-                            imageVector = if (isEditingDetails) Icons.Default.Check else Icons.Default.Edit,
-                            contentDescription = "Edit",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                            },
+                            modifier = Modifier.testTag("btn_save_edit_details")
+                        ) {
+                            Icon(Icons.Default.Check, contentDescription = "Save changes")
+                        }
+                        IconButton(
+                            onClick = {
+                                editTitle = screenshot.title
+                                editDescription = screenshot.description
+                                editNotes = screenshot.notes.orEmpty()
+                                isEditingDetails = false
+                            },
+                            modifier = Modifier.testTag("btn_cancel_edit_details")
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = "Cancel editing")
+                        }
                     }
                 }
 
                 // Tags Chip Cloud
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = "TAGS",
+                        text = "Tags",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Bold,
@@ -565,7 +646,7 @@ fun ScreenshotDetailScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "OCR TEXT TRANSCRIPTION",
+                            text = "OCR text",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Bold,
@@ -695,7 +776,7 @@ fun ScreenshotDetailScreen(
                 // Clean Specs & Technical Details
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = if (screenshot.isVideo) "VIDEO SPECIFICATIONS" else "METADATA & HARDWARE",
+                        text = if (screenshot.isVideo) "Video specifications" else "Metadata & camera",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Bold,
@@ -883,7 +964,7 @@ private fun ZoomableDetailImage(
         modifier = Modifier
             .fillMaxSize()
             .clipToBounds()
-            .background(Color(0xFFF1F2F4))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .pointerInput(model.data) {
                 detectTapGestures(
                     onTap = { onTap() },

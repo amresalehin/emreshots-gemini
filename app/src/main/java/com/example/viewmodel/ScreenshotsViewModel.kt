@@ -158,13 +158,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     private val appPreferences = com.amresalehin.emreshots.data.local.AppPreferences(application)
     private val mediaSyncManager = MediaSyncManager(application)
-    private val duplicateDetectionService = DuplicateDetectionService(application)
-
-    private val _duplicateGroups = MutableStateFlow<List<DuplicateGroup>>(emptyList())
-    val duplicateGroups: StateFlow<List<DuplicateGroup>> = _duplicateGroups.asStateFlow()
-    private val _isScanningDuplicates = MutableStateFlow(false)
-    val isScanningDuplicates: StateFlow<Boolean> = _isScanningDuplicates.asStateFlow()
-
+    // Media synchronization is handled independently from gallery display state.
     // Settings are persisted in DataStore so they survive process death and are not tied to SharedPreferences.
     private val _ocrEnabled = MutableStateFlow(true)
     val ocrEnabled: StateFlow<Boolean> = _ocrEnabled.asStateFlow()

@@ -70,9 +70,7 @@ fun OcrAiSheet(
     screenshot: ScreenshotItem,
     isExtractingOcr: Boolean,
     isAiProcessing: Boolean,
-    isFixingArtefacts: Boolean = false,
     onExtractOcr: ((String) -> Unit) -> Unit,
-    onFixOcrArtefacts: ((String, (String) -> Unit) -> Unit)? = null,
     onWriteToMetadata: (String, String, String, List<String>) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -172,32 +170,6 @@ fun OcrAiSheet(
                 }
 
                 if (ocrTextState.isNotBlank()) {
-                    if (onFixOcrArtefacts != null) {
-                        FilledTonalButton(
-                            onClick = {
-                                onFixOcrArtefacts(ocrTextState) { cleaned ->
-                                    ocrTextState = cleaned
-                                }
-                            },
-                            enabled = !isFixingArtefacts && !isExtractingOcr,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.testTag("btn_fix_ocr_artefacts")
-                        ) {
-                            if (isFixingArtefacts) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(14.dp),
-                                    strokeWidth = 2.dp
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Fixing…", fontSize = 13.sp)
-                            } else {
-                                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Fix Artefacts", fontSize = 13.sp)
-                            }
-                        }
-                    }
-
                     OutlinedButton(
                         onClick = {
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager

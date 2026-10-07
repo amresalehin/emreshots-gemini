@@ -356,7 +356,7 @@ class AiOcrCoordinator(
 
             val file = resolveImageFile(screenshot)
             val result = if (file != null) {
-                localOcrService.recognize(file, languageCode = _ocrLanguage.value)
+                localOcrService.recognize(file, languageCode = ocrLanguage.value)
             } else {
                 Result.failure(IllegalArgumentException("Screenshot image is not accessible."))
             }
@@ -419,7 +419,7 @@ class AiOcrCoordinator(
             _isExtractingOcr.value = true
             var completed = 0
             var failed = 0
-            val langLabel = TessLanguage.findByCode(_ocrLanguage.value).englishName
+            val langLabel = TessLanguage.findByCode(ocrLanguage.value).englishName
             val engineLabel = "Tesseract ($langLabel)"
             try {
                 targets.forEachIndexed { index, item ->
@@ -427,7 +427,7 @@ class AiOcrCoordinator(
                     _ocrStatusText.value = "$engineLabel (" + (index + 1) + "/" + targets.size + "): " + item.title.ifBlank { "Image " + (index + 1) }
                     val file = resolveImageFile(item)
                     val result = if (file != null) {
-                        localOcrService.recognize(file, languageCode = _ocrLanguage.value)
+                        localOcrService.recognize(file, languageCode = ocrLanguage.value)
                     } else {
                         Result.failure(IllegalArgumentException("Image is not accessible."))
                     }

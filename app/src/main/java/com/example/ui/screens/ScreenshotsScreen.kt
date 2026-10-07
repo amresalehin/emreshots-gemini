@@ -760,7 +760,9 @@ fun ScreenshotsScreen(
                                         GalleryViewMode.GRID -> ScreenshotCard(
                                             screenshot = item,
                                             onClick = { onNavigateToDetail(item.id) },
-                                            onToggleFavorite = { viewModel.toggleFavorite(item) }
+                                            onToggleFavorite = { viewModel.toggleFavorite(item) },
+                                            showFileName = showFileNames,
+                                            showTags = showTags
                                         )
                                         GalleryViewMode.FEED -> ScreenshotFeedCard(
                                             screenshot = item,

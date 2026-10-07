@@ -452,12 +452,13 @@ fun ScreenshotDetailScreen(
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.ocr)) },
                                 leadingIcon = { Icon(Icons.Default.DocumentScanner, contentDescription = null) },
-                                onClick = { showOverflowMenu = false; showOcrSheet = true }
+                                onClick = {
+                                    showOverflowMenu = false
+                                    showOcrSheet = true
+                                }
                             )
                             if (!screenshot.isVideo) {
-                                }
-
-                            DropdownMenuItem(
+                                DropdownMenuItem(
                                     text = { Text(stringResource(R.string.edit_exif)) },
                                     leadingIcon = { Icon(Icons.Default.CameraAlt, contentDescription = null) },
                                     onClick = {
@@ -471,41 +472,45 @@ fun ScreenshotDetailScreen(
                                     }
                                 )
                             }
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.collections)) },
-                            leadingIcon = { Icon(Icons.Default.Collections, contentDescription = null) },
-                            onClick = {
-                                showOverflowMenu = false
-                                showCollectionsDialog = true
-                            },
-                            modifier = Modifier.testTag("menu_detail_collections")
-                        )
-
-                        DropdownMenuItem(
-                            text = {
-                                Text(if (screenshot.reminderTime != null) stringResource(R.string.edit_reminder) else stringResource(R.string.set_reminder))
-                            },
-                            leadingIcon = { Icon(Icons.Default.Alarm, contentDescription = null) },
-                            onClick = {
-                                showOverflowMenu = false
-                                showReminderDialog = true
-                            },
-                            modifier = Modifier.testTag("menu_detail_reminder")
-                        )
-                        if (screenshot.reminderTime != null) {
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.remove_reminder)) },
-                                leadingIcon = { Icon(Icons.Default.Close, contentDescription = null) },
+                                text = { Text(stringResource(R.string.collections)) },
+                                leadingIcon = { Icon(Icons.Default.Collections, contentDescription = null) },
                                 onClick = {
                                     showOverflowMenu = false
-                                    viewModel.removeReminder(screenshot)
+                                    showCollectionsDialog = true
                                 },
-                                modifier = Modifier.testTag("menu_detail_remove_reminder")
+                                modifier = Modifier.testTag("menu_detail_collections")
                             )
-
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        if (screenshot.reminderTime != null) {
+                                            stringResource(R.string.edit_reminder)
+                                        } else {
+                                            stringResource(R.string.set_reminder)
+                                        }
+                                    )
+                                },
+                                leadingIcon = { Icon(Icons.Default.Alarm, contentDescription = null) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    showReminderDialog = true
+                                },
+                                modifier = Modifier.testTag("menu_detail_reminder")
+                            )
+                            if (screenshot.reminderTime != null) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.remove_reminder)) },
+                                    leadingIcon = { Icon(Icons.Default.Close, contentDescription = null) },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        viewModel.removeReminder(screenshot)
+                                    },
+                                    modifier = Modifier.testTag("menu_detail_remove_reminder")
+                                )
+                            }
                         }
 
-                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

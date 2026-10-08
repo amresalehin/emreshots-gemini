@@ -1,4 +1,5 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@file:Suppress("ExperimentalMaterial3Api")
 
 package com.amresalehin.emreshots
 

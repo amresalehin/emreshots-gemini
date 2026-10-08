@@ -187,6 +187,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         application = application,
         scope = viewModelScope,
         screenshotRepository = screenshotRepository,
+        allScreenshots = allScreenshots,
         collections = collections,
         providers = providers,
         activeProvider = activeProvider,

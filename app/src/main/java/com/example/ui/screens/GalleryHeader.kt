@@ -131,6 +131,7 @@ internal fun GalleryHeader(
     showFolderMenu: Boolean,
     onShowFolderMenuChange: (Boolean) -> Unit,
     selectedFolder: String?,
+    onSelectedFolderChange: (String?) -> Unit,
     totalDisplayCount: Int,
     availableFolders: List<String>,
     showMoreMenu: Boolean,
@@ -168,7 +169,7 @@ TopAppBar(
                                 Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear_search), modifier = Modifier.size(18.dp))
                             }
                         }
-                        IconButton(onClick = { isSearchExpanded = false }, modifier = Modifier.size(48.dp)) {
+                        IconButton(onClick = { onSearchExpandedChange(false) }, modifier = Modifier.size(48.dp)) {
                             Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close_search), modifier = Modifier.size(18.dp))
                         }
                     }
@@ -217,7 +218,7 @@ TopAppBar(
     },
     actions = {
         if (!isSearchExpanded) {
-            IconButton(onClick = { isSearchExpanded = true }, modifier = Modifier.testTag("btn_toggle_search")) {
+            IconButton(onClick = { onSearchExpandedChange(true) }, modifier = Modifier.testTag("btn_toggle_search")) {
                 Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
             }
         }

@@ -1,5 +1,7 @@
 package com.amresalehin.emreshots.ui.screens
 
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 import com.amresalehin.emreshots.R
 
 import androidx.activity.compose.BackHandler
@@ -47,7 +49,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CollectionsScreen(
     viewModel: ScreenshotsViewModel,

@@ -1,6 +1,6 @@
-package com.amresalehin.emreshots
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 
-@file:OptIn(ExperimentalMaterial3Api::class)
+package com.amresalehin.emreshots
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity

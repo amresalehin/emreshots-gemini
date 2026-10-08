@@ -168,7 +168,7 @@ FlowRow(
         val selectedCollectionName = collections.firstOrNull { it.id == selectedCollectionId }?.name
         FilterChip(
             selected = selectedCollectionId != null,
-            onClick = { showCollectionMenu = true },
+            onClick = { onShowCollectionMenuChange(true) },
             label = {
                 Text(
                     selectedCollectionName ?: stringResource(R.string.collection),
@@ -195,14 +195,14 @@ FlowRow(
         )
         DropdownMenu(
             expanded = showCollectionMenu,
-            onDismissRequest = { showCollectionMenu = false }
+            onDismissRequest = { onShowCollectionMenuChange(false) }
         ) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.all_collections)) },
                 trailingIcon = { if (selectedCollectionId == null) Text("✓") },
                 onClick = {
                     onSelectedCollectionIdChange(null)
-                    showCollectionMenu = false
+                    onShowCollectionMenuChange(false)
                 }
             )
             if (collections.isNotEmpty()) {
@@ -213,7 +213,7 @@ FlowRow(
                         trailingIcon = { if (selectedCollectionId == collection.id) Text("✓") },
                         onClick = {
                             onSelectedCollectionIdChange(collection.id)
-                            showCollectionMenu = false
+                            onShowCollectionMenuChange(false)
                         }
                     )
                 }

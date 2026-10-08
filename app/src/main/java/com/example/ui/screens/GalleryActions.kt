@@ -2,6 +2,8 @@
 
 package com.amresalehin.emreshots.ui.screens
 
+import android.net.Uri
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.result.PickVisualMediaRequest

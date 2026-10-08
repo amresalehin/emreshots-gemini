@@ -428,7 +428,7 @@ fun ScreenshotDetailScreen(
                                     showOverflowMenu = false
                                     val uri = screenshot.uriString?.let(Uri::parse)
                                     if (uri == null) {
-                                        viewModel.showMessage(stringResource(R.string.sharing_unavailable_for_item))
+                                        viewModel.showMessage(context.getString(R.string.sharing_unavailable_for_item))
                                     } else {
                                         runCatching {
                                             val type = context.contentResolver.getType(uri)
@@ -440,7 +440,7 @@ fun ScreenshotDetailScreen(
                                             }
                                             context.startActivity(Intent.createChooser(intent, context.getString(R.string.share_media)))
                                         }.onFailure {
-                                            viewModel.showMessage(stringResource(R.string.unable_to_share_item))
+                                            viewModel.showMessage(context.getString(R.string.unable_to_share_item))
                                         }
                                     }
                                 },

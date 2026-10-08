@@ -302,6 +302,8 @@ fun ScreenshotsScreen(
                 onNavigateToDetail = onNavigateToDetail
             )
 
+        }
+
         GalleryActions(
             viewModel = viewModel,
             mediaPickerLauncher = mediaPickerLauncher,

@@ -188,7 +188,7 @@ TopAppBar(
         } else {
             Box {
                 Surface(
-                    onClick = { showFolderMenu = true },
+                    onClick = { onShowFolderMenuChange(true) },
                     shape = MaterialTheme.shapes.large,
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
                 ) {
@@ -203,12 +203,12 @@ TopAppBar(
                         Text(totalDisplayCount.toString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                DropdownMenu(expanded = showFolderMenu, onDismissRequest = { showFolderMenu = false }) {
-                    DropdownMenuItem(text = { Text(stringResource(R.string.all_media)) }, trailingIcon = { if (selectedFolder == null) Text("✓") }, onClick = { selectedFolder = null; showFolderMenu = false })
+                DropdownMenu(expanded = showFolderMenu, onDismissRequest = { onShowFolderMenuChange(false) }) {
+                    DropdownMenuItem(text = { Text(stringResource(R.string.all_media)) }, trailingIcon = { if (selectedFolder == null) Text("✓") }, onClick = { selectedFolder = null; onShowFolderMenuChange(false) })
                     if (availableFolders.isNotEmpty()) {
                         androidx.compose.material3.HorizontalDivider()
                         availableFolders.take(24).forEach { folder ->
-                            DropdownMenuItem(text = { Text(folder, maxLines = 1) }, trailingIcon = { if (selectedFolder == folder) Text("✓") }, onClick = { selectedFolder = folder; showFolderMenu = false })
+                            DropdownMenuItem(text = { Text(folder, maxLines = 1) }, trailingIcon = { if (selectedFolder == folder) Text("✓") }, onClick = { selectedFolder = folder; onShowFolderMenuChange(false) })
                         }
                     }
                 }
@@ -224,12 +224,12 @@ TopAppBar(
 
         Box {
             IconButton(
-                onClick = { showMoreMenu = true },
+                onClick = { onShowMoreMenuChange(true) },
                 modifier = Modifier.testTag("btn_more_menu")
             ) {
                 Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more_options))
             }
-            DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
+            DropdownMenu(expanded = showMoreMenu, onDismissRequest = { onShowMoreMenuChange(false) }) {
                 DropdownMenuItem(
                     text = {
                         Row(
@@ -247,7 +247,7 @@ TopAppBar(
                         }
                     },
                     leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null) },
-                    onClick = { showMoreMenu = false; showSortDialog = true },
+                    onClick = { onShowMoreMenuChange(false); onShowSortDialog(true) },
                     modifier = Modifier.testTag("btn_sort_option")
                 )
                 DropdownMenuItem(
@@ -267,7 +267,7 @@ TopAppBar(
                         }
                     },
                     leadingIcon = { Icon(Icons.Default.GridView, contentDescription = null) },
-                    onClick = { showMoreMenu = false; showGroupDialog = true },
+                    onClick = { onShowMoreMenuChange(false); onShowGroupDialog(true) },
                     modifier = Modifier.testTag("btn_group_by_option")
                 )
                 androidx.compose.material3.HorizontalDivider()
@@ -316,7 +316,7 @@ TopAppBar(
                     leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
                     enabled = !isAnalyzing && aiVisionPendingCount > 0,
                     onClick = {
-                        showMoreMenu = false
+                        onShowMoreMenuChange(false)
                         viewModel.batchAnalyzeScreenshots(allScreenshots.filter { !it.isVideo && !it.aiProcessed })
                     },
                     modifier = Modifier.testTag("menu_ai_vision")
@@ -339,7 +339,7 @@ TopAppBar(
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     enabled = ocrEnabled && !isExtractingOcr && ocrPendingCount > 0,
                     onClick = {
-                        showMoreMenu = false
+                        onShowMoreMenuChange(false)
                         viewModel.batchExtractOcr(allScreenshots, onlyMissing = true)
                     },
                     modifier = Modifier.testTag("menu_ocr")
@@ -348,13 +348,13 @@ TopAppBar(
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.batch_rename_visible)) },
                     leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
-                    onClick = { showMoreMenu = false; showBatchRenameDialog = true },
+                    onClick = { onShowMoreMenuChange(false); onShowBatchRenameDialog(true) },
                     modifier = Modifier.testTag("btn_batch_rename")
                 )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.settings)) },
                     leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                    onClick = { showMoreMenu = false; onNavigateToSettings() }
+                    onClick = { onShowMoreMenuChange(false); onNavigateToSettings() }
                 )
             }
         }

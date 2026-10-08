@@ -204,11 +204,11 @@ TopAppBar(
                     }
                 }
                 DropdownMenu(expanded = showFolderMenu, onDismissRequest = { onShowFolderMenuChange(false) }) {
-                    DropdownMenuItem(text = { Text(stringResource(R.string.all_media)) }, trailingIcon = { if (selectedFolder == null) Text("✓") }, onClick = { selectedFolder = null; onShowFolderMenuChange(false) })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.all_media)) }, trailingIcon = { if (selectedFolder == null) Text("✓") }, onClick = { onSelectedFolderChange(null); onShowFolderMenuChange(false) })
                     if (availableFolders.isNotEmpty()) {
                         androidx.compose.material3.HorizontalDivider()
                         availableFolders.take(24).forEach { folder ->
-                            DropdownMenuItem(text = { Text(folder, maxLines = 1) }, trailingIcon = { if (selectedFolder == folder) Text("✓") }, onClick = { selectedFolder = folder; onShowFolderMenuChange(false) })
+                            DropdownMenuItem(text = { Text(folder, maxLines = 1) }, trailingIcon = { if (selectedFolder == folder) Text("✓") }, onClick = { onSelectedFolderChange(folder); onShowFolderMenuChange(false) })
                         }
                     }
                 }

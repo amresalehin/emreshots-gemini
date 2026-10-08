@@ -163,7 +163,7 @@ FloatingActionButton(
 
     if (showSortDialog) {
 AlertDialog(
-    onDismissRequest = { showSortDialog = false },
+    onDismissRequest = { onShowSortDialog(false) },
     title = {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
@@ -179,7 +179,7 @@ AlertDialog(
                         .fillMaxWidth()
                         .clickable {
                             viewModel.setSortOption(option)
-                            showSortDialog = false
+                            onShowSortDialog(false)
                         }
                         .padding(vertical = 8.dp, horizontal = 4.dp)
                         .testTag("sort_option_${option.name.lowercase()}"),
@@ -189,7 +189,7 @@ AlertDialog(
                         selected = sortOption == option,
                         onClick = {
                             viewModel.setSortOption(option)
-                            showSortDialog = false
+                            onShowSortDialog(false)
                         }
                     )
                     Spacer(Modifier.width(10.dp))
@@ -203,7 +203,7 @@ AlertDialog(
         }
     },
     confirmButton = {
-        TextButton(onClick = { showSortDialog = false }) {
+        TextButton(onClick = { onShowSortDialog(false) }) {
             Text(stringResource(R.string.close))
         }
     }
@@ -212,7 +212,7 @@ AlertDialog(
 
     if (showGroupDialog) {
 AlertDialog(
-    onDismissRequest = { showGroupDialog = false },
+    onDismissRequest = { onShowGroupDialog(false) },
     title = {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.GridView, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
@@ -228,7 +228,7 @@ AlertDialog(
                         .fillMaxWidth()
                         .clickable {
                             viewModel.setGroupByOption(option)
-                            showGroupDialog = false
+                            onShowGroupDialog(false)
                         }
                         .padding(vertical = 8.dp, horizontal = 4.dp)
                         .testTag("group_by_option_${option.name.lowercase()}"),
@@ -238,7 +238,7 @@ AlertDialog(
                         selected = groupByOption == option,
                         onClick = {
                             viewModel.setGroupByOption(option)
-                            showGroupDialog = false
+                            onShowGroupDialog(false)
                         }
                     )
                     Spacer(Modifier.width(10.dp))
@@ -252,7 +252,7 @@ AlertDialog(
         }
     },
     confirmButton = {
-        TextButton(onClick = { showGroupDialog = false }) {
+        TextButton(onClick = { onShowGroupDialog(false) }) {
             Text(stringResource(R.string.close))
         }
     }
@@ -261,7 +261,7 @@ AlertDialog(
 
     if (showBatchRenameDialog) {
 AlertDialog(
-    onDismissRequest = { showBatchRenameDialog = false },
+    onDismissRequest = { onShowBatchRenameDialog(false) },
     title = { Text(stringResource(R.string.batch_rename_visible_items)) },
     text = {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -279,13 +279,13 @@ AlertDialog(
     confirmButton = {
         Button(onClick = {
             viewModel.batchRename(groupedScreenshots.values.flatten(), renameTemplate)
-            showBatchRenameDialog = false
+            onShowBatchRenameDialog(false)
         }, enabled = groupedScreenshots.values.flatten().isNotEmpty() && renameTemplate.isNotBlank()) {
             Text(stringResource(R.string.rename_count, groupedScreenshots.values.sumOf { it.size }))
         }
     },
     dismissButton = {
-        androidx.compose.material3.TextButton(onClick = { showBatchRenameDialog = false }) { Text(stringResource(R.string.cancel)) }
+        androidx.compose.material3.TextButton(onClick = { onShowBatchRenameDialog(false) }) { Text(stringResource(R.string.cancel)) }
     }
 )
     }

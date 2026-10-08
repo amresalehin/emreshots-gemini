@@ -201,7 +201,7 @@ FlowRow(
                 text = { Text(stringResource(R.string.all_collections)) },
                 trailingIcon = { if (selectedCollectionId == null) Text("✓") },
                 onClick = {
-                    selectedCollectionId = null
+                    onSelectedCollectionIdChange(null)
                     showCollectionMenu = false
                 }
             )
@@ -212,7 +212,7 @@ FlowRow(
                         text = { Text(collection.name, maxLines = 1) },
                         trailingIcon = { if (selectedCollectionId == collection.id) Text("✓") },
                         onClick = {
-                            selectedCollectionId = collection.id
+                            onSelectedCollectionIdChange(collection.id)
                             showCollectionMenu = false
                         }
                     )
@@ -225,7 +225,7 @@ FlowRow(
         val isSelected = selectedMediaType == type
         FilterChip(
             selected = isSelected,
-            onClick = { selectedMediaType = if (isSelected) null else type },
+            onClick = { onSelectedMediaTypeChange(if (isSelected) null else type) },
             label = {
                 Text(
                     type.uppercase(Locale.ROOT),

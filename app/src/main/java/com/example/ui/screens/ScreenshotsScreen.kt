@@ -317,11 +317,11 @@ fun ScreenshotsScreen(
             onRenameTemplateChange = { renameTemplate = it },
             groupedScreenshots = groupedScreenshots
         )
-
-
+    }
+}
 
 @Composable
-private fun GalleryMenuToggle(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+fun GalleryMenuToggle(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -332,7 +332,7 @@ private fun GalleryMenuToggle(label: String, checked: Boolean, onCheckedChange: 
 }
 
 @Composable
-private fun GalleryMenuChoiceRow(
+fun GalleryMenuChoiceRow(
     options: List<String>,
     selected: String,
     onSelected: (String) -> Unit,

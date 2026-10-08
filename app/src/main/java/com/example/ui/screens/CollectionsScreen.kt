@@ -1,6 +1,6 @@
-package com.amresalehin.emreshots.ui.screens
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 
-@file:OptIn(ExperimentalMaterial3Api::class)
+package com.amresalehin.emreshots.ui.screens
 
 import com.amresalehin.emreshots.R
 

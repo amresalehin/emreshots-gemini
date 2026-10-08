@@ -216,7 +216,7 @@
     <string name="rescan_local_ocr">Re-scan Local OCR</string>
     <string name="ocr_clipboard_label">OCR Text</string>
     <string name="extracted_text_characters">Extracted Text (%1$d characters)</string>
-    <string name="no_text_extracted">No text extracted yet. Tap 'Local OCR' to transcribe text from this image.</string>
+    <string name="no_text_extracted">No text extracted yet. Tap Local OCR to transcribe text from this image.</string>
     <string name="save_ocr_and_insights">Save Current OCR &amp; Insights to Metadata</string>
     <string name="ocr_language_packs">OCR Language Packs</string>
     <string name="tesseract_multilanguage_engine">Tesseract Multi-Language Engine</string>

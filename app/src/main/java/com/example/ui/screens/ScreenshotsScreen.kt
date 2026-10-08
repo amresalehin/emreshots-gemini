@@ -235,6 +235,7 @@ fun ScreenshotsScreen(
                 showFolderMenu = showFolderMenu,
                 onShowFolderMenuChange = { showFolderMenu = it },
                 selectedFolder = selectedFolder,
+                onSelectedFolderChange = { selectedFolder = it },
                 totalDisplayCount = totalDisplayCount,
                 availableFolders = availableFolders,
                 showMoreMenu = showMoreMenu,

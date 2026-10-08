@@ -2,6 +2,8 @@
 
 package com.amresalehin.emreshots.ui.screens
 
+import android.net.Uri
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.result.PickVisualMediaRequest
@@ -125,7 +127,7 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 
 @Composable
-internal fun GalleryContent(
+internal fun ColumnScope.GalleryContent(
     modifier: Modifier,
     viewModel: ScreenshotsViewModel,
     displayGroups: Map<String, List<ScreenshotItem>>,

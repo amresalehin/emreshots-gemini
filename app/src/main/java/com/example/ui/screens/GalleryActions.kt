@@ -266,7 +266,7 @@ AlertDialog(
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedTextField(
                 value = renameTemplate,
-                onValueChange = { renameTemplate = it },
+                onValueChange = onRenameTemplateChange,
                 singleLine = true,
                 label = { Text(stringResource(R.string.template)) },
                 supportingText = { Text(stringResource(R.string.rename_template_tokens)) },

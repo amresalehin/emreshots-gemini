@@ -379,7 +379,4 @@ PullToRefreshBox(
             .padding(top = 8.dp, bottom = 80.dp)
     )
 }
-        }
-
-
 }

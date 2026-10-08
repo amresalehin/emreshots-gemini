@@ -159,7 +159,6 @@ FloatingActionButton(
 ) {
     Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_media))
 }
-    }
 
     if (showSortDialog) {
 AlertDialog(

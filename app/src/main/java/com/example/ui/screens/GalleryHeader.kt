@@ -63,6 +63,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FilterChipDefaults
@@ -106,6 +107,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.amresalehin.emreshots.R
 import com.amresalehin.emreshots.data.model.GalleryViewMode
+import com.amresalehin.emreshots.data.model.ScreenshotItem
 import com.amresalehin.emreshots.data.model.MediaGroupBy
 import com.amresalehin.emreshots.data.model.MediaSortOption
 import com.amresalehin.emreshots.service.media.DeviceMediaScanner

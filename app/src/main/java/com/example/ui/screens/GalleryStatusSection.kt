@@ -178,7 +178,7 @@ if (!hasMediaPermissions && !hidePermissionBanner) {
                     Text(stringResource(R.string.allow), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
                 IconButton(
-                    onClick = { hidePermissionBanner = true },
+                    onClick = { onHidePermissionBanner(true) },
                     modifier = Modifier
                         .size(48.dp)
                         .testTag("btn_dismiss_media_permission")

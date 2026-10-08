@@ -226,804 +226,99 @@ fun ScreenshotsScreen(
             .nestedScroll(scrollBehavior.nestedScrollConnection)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Professional gallery header: search, view, sort, and compact overflow.
-            TopAppBar(
-                title = {
-                    if (isSearchExpanded) {
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = { viewModel.setSearchQuery(it) },
-                            placeholder = { Text(stringResource(R.string.gallery_search_placeholder), fontSize = 14.sp) },
-                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                            trailingIcon = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    if (searchQuery.isNotEmpty()) {
-                                        IconButton(onClick = { viewModel.setSearchQuery("") }, modifier = Modifier.size(48.dp)) {
-                                            Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear_search), modifier = Modifier.size(18.dp))
-                                        }
-                                    }
-                                    IconButton(onClick = { isSearchExpanded = false }, modifier = Modifier.size(48.dp)) {
-                                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close_search), modifier = Modifier.size(18.dp))
-                                    }
-                                }
-                            },
-                            singleLine = true,
-                            shape = MaterialTheme.shapes.extraLarge,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                                unfocusedBorderColor = Color.Transparent
-                            ),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                            keyboardActions = KeyboardActions(onSearch = { }),
-                            modifier = Modifier.fillMaxWidth().focusRequester(searchFocusRequester).testTag("input_gallery_search")
-                        )
-                    } else {
-                        Box {
-                            Surface(
-                                onClick = { showFolderMenu = true },
-                                shape = MaterialTheme.shapes.large,
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(Icons.Default.Collections, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(7.dp))
-                                    Text(selectedFolder ?: stringResource(R.string.all_media), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                                    Spacer(modifier = Modifier.width(5.dp))
-                                    Text(totalDisplayCount.toString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                            DropdownMenu(expanded = showFolderMenu, onDismissRequest = { showFolderMenu = false }) {
-                                DropdownMenuItem(text = { Text(stringResource(R.string.all_media)) }, trailingIcon = { if (selectedFolder == null) Text("✓") }, onClick = { selectedFolder = null; showFolderMenu = false })
-                                if (availableFolders.isNotEmpty()) {
-                                    androidx.compose.material3.HorizontalDivider()
-                                    availableFolders.take(24).forEach { folder ->
-                                        DropdownMenuItem(text = { Text(folder, maxLines = 1) }, trailingIcon = { if (selectedFolder == folder) Text("✓") }, onClick = { selectedFolder = folder; showFolderMenu = false })
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                actions = {
-                    if (!isSearchExpanded) {
-                        IconButton(onClick = { isSearchExpanded = true }, modifier = Modifier.testTag("btn_toggle_search")) {
-                            Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
-                        }
-                    }
-
-                    Box {
-                        IconButton(
-                            onClick = { showMoreMenu = true },
-                            modifier = Modifier.testTag("btn_more_menu")
-                        ) {
-                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more_options))
-                        }
-                        DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
-                            DropdownMenuItem(
-                                text = {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(stringResource(R.string.sort_by))
-                                        Spacer(Modifier.width(16.dp))
-                                        Text(
-                                            text = sortOption.displayName,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null) },
-                                onClick = { showMoreMenu = false; showSortDialog = true },
-                                modifier = Modifier.testTag("btn_sort_option")
-                            )
-                            DropdownMenuItem(
-                                text = {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(stringResource(R.string.group_by))
-                                        Spacer(Modifier.width(16.dp))
-                                        Text(
-                                            text = groupByOption.displayName,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                },
-                                leadingIcon = { Icon(Icons.Default.GridView, contentDescription = null) },
-                                onClick = { showMoreMenu = false; showGroupDialog = true },
-                                modifier = Modifier.testTag("btn_group_by_option")
-                            )
-                            androidx.compose.material3.HorizontalDivider()
-                            Column(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.view),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                                )
-                                GalleryMenuChoiceRow(
-                                    options = GalleryViewMode.entries.map { it.displayName },
-                                    selected = viewMode.displayName,
-                                    onSelected = { selected ->
-                                        GalleryViewMode.entries
-                                            .firstOrNull { it.displayName == selected }
-                                            ?.let(viewModel::setViewMode)
-                                    },
-                                    twoRows = true
-                                )
-                            }
-                            GalleryMenuToggle(
-                                label = stringResource(R.string.show_file_names),
-                                checked = showFileNames,
-                                onCheckedChange = viewModel::setShowFileNames
-                            )
-                            GalleryMenuToggle(
-                                label = stringResource(R.string.show_tags),
-                                checked = showTags,
-                                onCheckedChange = viewModel::setShowTags
-                            )
-                            androidx.compose.material3.HorizontalDivider()
-                            DropdownMenuItem(
-                                text = {
-                                    Column {
-                                        Text(stringResource(R.string.ai_vision), fontWeight = FontWeight.SemiBold)
-                                        Text(
-                                            if (aiVisionPendingCount > 0) stringResource(R.string.media_waiting_for_analysis, aiVisionPendingCount) else stringResource(R.string.everything_is_analyzed),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                },
-                                leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
-                                enabled = !isAnalyzing && aiVisionPendingCount > 0,
-                                onClick = {
-                                    showMoreMenu = false
-                                    viewModel.batchAnalyzeScreenshots(allScreenshots.filter { !it.isVideo && !it.aiProcessed })
-                                },
-                                modifier = Modifier.testTag("menu_ai_vision")
-                            )
-                            DropdownMenuItem(
-                                text = {
-                                    Column {
-                                        Text(stringResource(R.string.ocr), fontWeight = FontWeight.SemiBold)
-                                        Text(
-                                            when {
-                                                !ocrEnabled -> stringResource(R.string.ocr_disabled_in_settings)
-                                                ocrPendingCount > 0 -> "stringResource(R.string.media_waiting_for_ocr, ocrPendingCount)"
-                                                else -> "All media has OCR text"
-                                            },
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                },
-                                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                                enabled = ocrEnabled && !isExtractingOcr && ocrPendingCount > 0,
-                                onClick = {
-                                    showMoreMenu = false
-                                    viewModel.batchExtractOcr(allScreenshots, onlyMissing = true)
-                                },
-                                modifier = Modifier.testTag("menu_ocr")
-                            )
-                            androidx.compose.material3.HorizontalDivider()
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.batch_rename_visible)) },
-                                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
-                                onClick = { showMoreMenu = false; showBatchRenameDialog = true },
-                                modifier = Modifier.testTag("btn_batch_rename")
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.settings)) },
-                                leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                                onClick = { showMoreMenu = false; onNavigateToSettings() }
-                            )
-                        }
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-                windowInsets = TopAppBarDefaults.windowInsets,
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
-                )
+            GalleryHeader(
+                viewModel = viewModel,
+                isSearchExpanded = isSearchExpanded,
+                onSearchExpandedChange = { isSearchExpanded = it },
+                searchQuery = searchQuery,
+                searchFocusRequester = searchFocusRequester,
+                showFolderMenu = showFolderMenu,
+                onShowFolderMenuChange = { showFolderMenu = it },
+                selectedFolder = selectedFolder,
+                totalDisplayCount = totalDisplayCount,
+                availableFolders = availableFolders,
+                showMoreMenu = showMoreMenu,
+                onShowMoreMenuChange = { showMoreMenu = it },
+                sortOption = sortOption,
+                onShowSortDialog = { showSortDialog = it },
+                groupByOption = groupByOption,
+                onShowGroupDialog = { showGroupDialog = it },
+                viewMode = viewMode,
+                showFileNames = showFileNames,
+                showTags = showTags,
+                aiVisionPendingCount = aiVisionPendingCount,
+                isAnalyzing = isAnalyzing,
+                allScreenshots = allScreenshots,
+                ocrEnabled = ocrEnabled,
+                ocrPendingCount = ocrPendingCount,
+                isExtractingOcr = isExtractingOcr,
+                onShowBatchRenameDialog = { showBatchRenameDialog = it },
+                onNavigateToSettings = onNavigateToSettings,
+                scrollBehavior = scrollBehavior
             )
 
-            // Wrapping filter pills keep both filter and file-type chips accessible without a horizontal-only row.
-            FlowRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                ScreenshotFilter.entries.filter { it != ScreenshotFilter.ALL }.forEach { filter ->
-                    val isSelected = selectedFilter == filter
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { viewModel.setFilter(filter) },
-                        label = {
-                            Text(
-                                text = filter.displayName,
-                                fontSize = 12.sp,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-                            )
-                        },
-                        shape = MaterialTheme.shapes.large,
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        ),
-                        border = null,
-                        modifier = Modifier.testTag("filter_chip_${filter.name.lowercase()}")
-                    )
-                }
-                Box {
-                    val selectedCollectionName = collections.firstOrNull { it.id == selectedCollectionId }?.name
-                    FilterChip(
-                        selected = selectedCollectionId != null,
-                        onClick = { showCollectionMenu = true },
-                        label = {
-                            Text(
-                                selectedCollectionName ?: stringResource(R.string.collection),
-                                fontSize = 12.sp,
-                                fontWeight = if (selectedCollectionId != null) FontWeight.SemiBold else FontWeight.Normal,
-                                maxLines = 1
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(Icons.Default.Collections, contentDescription = null, modifier = Modifier.size(16.dp))
-                        },
-                        trailingIcon = {
-                            Text("▾", fontSize = 12.sp)
-                        },
-                        shape = MaterialTheme.shapes.large,
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        ),
-                        border = null,
-                        modifier = Modifier.testTag("filter_chip_collection")
-                    )
-                    DropdownMenu(
-                        expanded = showCollectionMenu,
-                        onDismissRequest = { showCollectionMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.all_collections)) },
-                            trailingIcon = { if (selectedCollectionId == null) Text("✓") },
-                            onClick = {
-                                selectedCollectionId = null
-                                showCollectionMenu = false
-                            }
-                        )
-                        if (collections.isNotEmpty()) {
-                            androidx.compose.material3.HorizontalDivider()
-                            collections.take(24).forEach { collection ->
-                                DropdownMenuItem(
-                                    text = { Text(collection.name, maxLines = 1) },
-                                    trailingIcon = { if (selectedCollectionId == collection.id) Text("✓") },
-                                    onClick = {
-                                        selectedCollectionId = collection.id
-                                        showCollectionMenu = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
+            GalleryFilters(
+                viewModel = viewModel,
+                selectedFilter = selectedFilter,
+                collections = collections,
+                selectedCollectionId = selectedCollectionId,
+                onSelectedCollectionIdChange = { selectedCollectionId = it },
+                showCollectionMenu = showCollectionMenu,
+                onShowCollectionMenuChange = { showCollectionMenu = it },
+                availableFileTypes = availableFileTypes,
+                selectedMediaType = selectedMediaType,
+                onSelectedMediaTypeChange = { selectedMediaType = it }
+            )
 
-                availableFileTypes.forEach { type ->
-                    val isSelected = selectedMediaType == type
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { selectedMediaType = if (isSelected) null else type },
-                        label = {
-                            Text(
-                                type.uppercase(Locale.ROOT),
-                                fontSize = 12.sp,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-                            )
-                        },
-                        shape = MaterialTheme.shapes.large,
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        ),
-                        border = null,
-                        modifier = Modifier.testTag("filter_chip_type_$type")
-                    )
-                }
-            }
+            GalleryStatusSection(
+                hasMediaPermissions = hasMediaPermissions,
+                hidePermissionBanner = hidePermissionBanner,
+                onHidePermissionBanner = { hidePermissionBanner = it },
+                permissionLauncher = permissionLauncher,
+                isAnalyzing = isAnalyzing,
+                isExtractingOcr = isExtractingOcr,
+                statusText = statusText,
+                ocrStatusText = ocrStatusText
+            )
 
-            // Compact, non-intrusive permission card (only if not granted and not dismissed)
-            if (!hasMediaPermissions && !hidePermissionBanner) {
-                Surface(
-                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
-                    shape = MaterialTheme.shapes.medium,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                        .testTag("banner_permission_request")
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            modifier = Modifier.weight(1f),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PermMedia,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = stringResource(R.string.grant_media_access_to_sync_all_photos),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
+            GalleryContent(
+                modifier = Modifier.weight(1f),
+                viewModel = viewModel,
+                displayGroups = displayGroups,
+                totalDisplayCount = totalDisplayCount,
+                searchQuery = searchQuery,
+                selectedFilter = selectedFilter,
+                viewMode = viewMode,
+                gridColumns = gridColumns,
+                showFileNames = showFileNames,
+                showTags = showTags,
+                gridState = gridState,
+                staggeredGridState = staggeredGridState,
+                navBarBottom = navBarBottom,
+                isSyncingDeviceMedia = isSyncingDeviceMedia,
+                hasMediaPermissions = hasMediaPermissions,
+                permissionLauncher = permissionLauncher,
+                mediaPickerLauncher = mediaPickerLauncher,
+                onNavigateToDetail = onNavigateToDetail
+            )
 
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Button(
-                                onClick = {
-                                    permissionLauncher.launch(DeviceMediaScanner.getRequiredPermissions())
-                                },
-                                shape = MaterialTheme.shapes.medium,
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
-                                modifier = Modifier
-                                    .height(48.dp)
-                                    .testTag("btn_grant_media_permission")
-                            ) {
-                                Text(stringResource(R.string.allow), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            }
-                            IconButton(
-                                onClick = { hidePermissionBanner = true },
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .testTag("btn_dismiss_media_permission")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = stringResource(R.string.dismiss),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Unified background processing indicator: sync, local OCR, and AI enrichment/indexing.
-            val galleryProcessing = isAnalyzing || isExtractingOcr || statusText != null
-            if (galleryProcessing) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(3.dp)
-                ) {
-                    LinearProgressIndicator(
-                        modifier = Modifier.fillMaxWidth().height(3.dp),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = ocrStatusText ?: statusText ?: stringResource(R.string.processing),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 1
-                    )
-                }
-            }
-            // Gallery content
-            PullToRefreshBox(
-                isRefreshing = isSyncingDeviceMedia,
-                onRefresh = {
-                    if (hasMediaPermissions) viewModel.syncDeviceMedia()
-                    else permissionLauncher.launch(DeviceMediaScanner.getRequiredPermissions())
-                },
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            ) {
-                if (totalDisplayCount == 0) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Surface(
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                modifier = Modifier.size(72.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Default.Collections,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                        modifier = Modifier.size(32.dp)
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Text(
-                                text = if (searchQuery.isNotEmpty()) stringResource(R.string.no_media_matching, searchQuery)
-                                else if (selectedFilter != ScreenshotFilter.ALL) stringResource(R.string.no_filter_found, selectedFilter.displayName)
-                                else stringResource(R.string.no_photos_or_videos_yet),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center
-                            )
-
-                            Spacer(modifier = Modifier.height(6.dp))
-
-                            Text(
-                                text = stringResource(R.string.import_media_to_get_started),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-
-                            Spacer(modifier = Modifier.height(20.dp))
-
-                            Button(
-                                onClick = {
-                                    mediaPickerLauncher.launch(
-                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
-                                    )
-                                },
-                                shape = MaterialTheme.shapes.large,
-                                modifier = Modifier.testTag("btn_empty_import")
-                            ) {
-                                Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(stringResource(R.string.pick_photos_or_videos))
-                            }
-                        }
-                    }
-                } else {
-                    if (viewMode == GalleryViewMode.MASONRY) {
-                        LazyVerticalStaggeredGrid(
-                            columns = StaggeredGridCells.Adaptive(minSize = 160.dp),
-                            state = staggeredGridState,
-                            contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 88.dp + navBarBottom),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalItemSpacing = 8.dp,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .testTag("grid_screenshots")
-                        ) {
-                            displayGroups.forEach { (header, items) ->
-                                if (header.isNotBlank()) {
-                                    item(span = StaggeredGridItemSpan.FullLine, key = "staggered_header_$header") {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(start = 4.dp, end = 4.dp, top = 12.dp, bottom = 6.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(
-                                                text = header,
-                                                style = MaterialTheme.typography.titleSmall,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            Surface(
-                                                shape = RoundedCornerShape(8.dp),
-                                                color = MaterialTheme.colorScheme.surfaceVariant
-                                            ) {
-                                                Text(
-                                                    text = "${items.size}",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    fontWeight = FontWeight.Medium,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-
-                                items(
-                                    items = items,
-                                    key = { it.id },
-                                    contentType = { it.mediaType }
-                                ) { item ->
-                                    ScreenshotMasonryCard(
-                                        screenshot = item,
-                                        onClick = { onNavigateToDetail(item.id) },
-                                        onToggleFavorite = { viewModel.toggleFavorite(item) },
-                                        showFileName = showFileNames,
-                                             showTags = showTags
-                                    )
-                                }
-                            }
-                        }
-                    } else {
-                        val effectiveCols = when (viewMode) {
-                            GalleryViewMode.GRID -> gridColumns
-                            GalleryViewMode.FEED -> 1
-                            GalleryViewMode.LIST -> 1
-                            GalleryViewMode.MASONRY -> 2
-                        }
-
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(effectiveCols),
-                            state = gridState,
-                            contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 88.dp + navBarBottom),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .testTag("grid_screenshots")
-                        ) {
-                            displayGroups.forEach { (header, items) ->
-                                if (header.isNotBlank()) {
-                                    item(span = { GridItemSpan(maxLineSpan) }, key = "header_$header") {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(start = 4.dp, end = 4.dp, top = 12.dp, bottom = 6.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(
-                                                text = header,
-                                                style = MaterialTheme.typography.titleSmall,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            Surface(
-                                                shape = RoundedCornerShape(8.dp),
-                                                color = MaterialTheme.colorScheme.surfaceVariant
-                                            ) {
-                                                Text(
-                                                    text = "${items.size}",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    fontWeight = FontWeight.Medium,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-
-                                items(
-                                    items = items,
-                                    key = { it.id },
-                                    contentType = { it.mediaType }
-                                ) { item ->
-                                    when (viewMode) {
-                                        GalleryViewMode.GRID -> ScreenshotCard(
-                                            screenshot = item,
-                                            onClick = { onNavigateToDetail(item.id) },
-                                            onToggleFavorite = { viewModel.toggleFavorite(item) },
-                                            showFileName = showFileNames,
-                                            showTags = showTags
-                                        )
-                                        GalleryViewMode.FEED -> ScreenshotFeedCard(
-                                            screenshot = item,
-                                            onClick = { onNavigateToDetail(item.id) },
-                                            onToggleFavorite = { viewModel.toggleFavorite(item) },
-                                            showFileName = showFileNames,
-                                             showTags = showTags
-                                        )
-                                        GalleryViewMode.LIST -> ScreenshotListItem(
-                                            screenshot = item,
-                                            onClick = { onNavigateToDetail(item.id) },
-                                            onToggleFavorite = { viewModel.toggleFavorite(item) },
-                                            showFileName = showFileNames,
-                                             showTags = showTags
-                                        )
-                                        GalleryViewMode.MASONRY -> ScreenshotMasonryCard(
-                                        screenshot = item,
-                                        onClick = { onNavigateToDetail(item.id) },
-                                        onToggleFavorite = { viewModel.toggleFavorite(item) },
-                                        showFileName = showFileNames,
-                                             showTags = showTags
-                                    )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Sleek Visible Fast Scroll Bar positioned smoothly within gallery viewport
-                GalleryScrollBar(
-                    totalItemsCount = totalDisplayCount,
-                    gridState = if (viewMode != GalleryViewMode.MASONRY) gridState else null,
-                    staggeredGridState = if (viewMode == GalleryViewMode.MASONRY) staggeredGridState else null,
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .navigationBarsPadding()
-                        .padding(top = 8.dp, bottom = 80.dp)
-                )
-            }
-        }
-
-        // Clean, Compact Floating Action Button
-        FloatingActionButton(
-            onClick = {
-                mediaPickerLauncher.launch(
-                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
-                )
-            },
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            shape = CircleShape,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .navigationBarsPadding()
-                .padding(16.dp)
-                .size(56.dp)
-                .testTag("fab_import_screenshot")
-        ) {
-            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_media))
-        }
-    }
-
-    if (showSortDialog) {
-        AlertDialog(
-            onDismissRequest = { showSortDialog = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.sort_media))
-                }
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    MediaSortOption.entries.forEach { option ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    viewModel.setSortOption(option)
-                                    showSortDialog = false
-                                }
-                                .padding(vertical = 8.dp, horizontal = 4.dp)
-                                .testTag("sort_option_${option.name.lowercase()}"),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = sortOption == option,
-                                onClick = {
-                                    viewModel.setSortOption(option)
-                                    showSortDialog = false
-                                }
-                            )
-                            Spacer(Modifier.width(10.dp))
-                            Text(
-                                text = option.displayName,
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = if (sortOption == option) FontWeight.SemiBold else FontWeight.Normal
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showSortDialog = false }) {
-                    Text(stringResource(R.string.close))
-                }
-            }
+        GalleryActions(
+            viewModel = viewModel,
+            mediaPickerLauncher = mediaPickerLauncher,
+            showSortDialog = showSortDialog,
+            onShowSortDialog = { showSortDialog = it },
+            sortOption = sortOption,
+            showGroupDialog = showGroupDialog,
+            onShowGroupDialog = { showGroupDialog = it },
+            groupByOption = groupByOption,
+            showBatchRenameDialog = showBatchRenameDialog,
+            onShowBatchRenameDialog = { showBatchRenameDialog = it },
+            renameTemplate = renameTemplate,
+            onRenameTemplateChange = { renameTemplate = it },
+            groupedScreenshots = groupedScreenshots
         )
-    }
 
-    if (showGroupDialog) {
-        AlertDialog(
-            onDismissRequest = { showGroupDialog = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.GridView, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.group_media))
-                }
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    MediaGroupBy.entries.forEach { option ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    viewModel.setGroupByOption(option)
-                                    showGroupDialog = false
-                                }
-                                .padding(vertical = 8.dp, horizontal = 4.dp)
-                                .testTag("group_by_option_${option.name.lowercase()}"),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = groupByOption == option,
-                                onClick = {
-                                    viewModel.setGroupByOption(option)
-                                    showGroupDialog = false
-                                }
-                            )
-                            Spacer(Modifier.width(10.dp))
-                            Text(
-                                text = option.displayName,
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = if (groupByOption == option) FontWeight.SemiBold else FontWeight.Normal
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showGroupDialog = false }) {
-                    Text(stringResource(R.string.close))
-                }
-            }
-        )
-    }
 
-    if (showBatchRenameDialog) {
-        AlertDialog(
-            onDismissRequest = { showBatchRenameDialog = false },
-            title = { Text(stringResource(R.string.batch_rename_visible_items)) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedTextField(
-                        value = renameTemplate,
-                        onValueChange = { renameTemplate = it },
-                        singleLine = true,
-                        label = { Text(stringResource(R.string.template)) },
-                        supportingText = { Text(stringResource(R.string.rename_template_tokens)) },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Text(stringResource(R.string.rename_template_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    viewModel.batchRename(groupedScreenshots.values.flatten(), renameTemplate)
-                    showBatchRenameDialog = false
-                }, enabled = groupedScreenshots.values.flatten().isNotEmpty() && renameTemplate.isNotBlank()) {
-                    Text(stringResource(R.string.rename_count, groupedScreenshots.values.sumOf { it.size }))
-                }
-            },
-            dismissButton = {
-                androidx.compose.material3.TextButton(onClick = { showBatchRenameDialog = false }) { Text(stringResource(R.string.cancel)) }
-            }
-        )
-    }
-
-}
 
 @Composable
 private fun GalleryMenuToggle(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {

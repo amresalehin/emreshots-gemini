@@ -251,7 +251,7 @@ Surface(
         }
 
         OutlinedButton(
-            onClick = { showOcrSheet = true },
+            onClick = { onShowOcrSheetChange(true) },
             shape = MaterialTheme.shapes.large,
             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 11.dp),
             modifier = Modifier.weight(1f).testTag("btn_open_ocr_sheet")
@@ -269,7 +269,7 @@ Surface(
                             com.amresalehin.emreshots.service.media.DeviceMediaScanner.getRequiredPermissions()
                         )
                     }
-                    showExifEditor = true
+                    onShowExifEditorChange(true)
                 },
                 shape = MaterialTheme.shapes.large,
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 11.dp),
@@ -292,7 +292,7 @@ Surface(
             if (isEditingDetails) {
                 OutlinedTextField(
                     value = editTitle,
-                    onValueChange = { editTitle = it },
+                    onValueChange = { onEditTitleChange(it) },
                     label = { Text(stringResource(R.string.title)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -300,7 +300,7 @@ Surface(
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = editDescription,
-                    onValueChange = { editDescription = it },
+                    onValueChange = { onEditDescriptionChange(it) },
                     label = { Text(stringResource(R.string.description)) },
                     minLines = 2,
                     modifier = Modifier.fillMaxWidth()
@@ -308,7 +308,7 @@ Surface(
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = editNotes,
-                    onValueChange = { editNotes = it },
+                    onValueChange = { onEditNotesChange(it) },
                     label = { Text(stringResource(R.string.personal_notes)) },
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -357,7 +357,7 @@ Surface(
                             notes = editNotes.ifBlank { null }
                         )
                     )
-                    isEditingDetails = false
+                    onEditingDetailsChange(false)
                 },
                 modifier = Modifier.testTag("btn_save_edit_details")
             ) {
@@ -365,10 +365,10 @@ Surface(
             }
             IconButton(
                 onClick = {
-                    editTitle = screenshot.title
-                    editDescription = screenshot.description
-                    editNotes = screenshot.notes.orEmpty()
-                    isEditingDetails = false
+                    onEditTitleChange(screenshot.title)
+                    onEditDescriptionChange(screenshot.description)
+                    onEditNotesChange(screenshot.notes.orEmpty())
+                    onEditingDetailsChange(false)
                 },
                 modifier = Modifier.testTag("btn_cancel_edit_details")
             ) {
@@ -422,7 +422,7 @@ Surface(
             Surface(
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
                 shape = MaterialTheme.shapes.medium,
-                modifier = Modifier.clickable { showAddTagDialog = true }
+                modifier = Modifier.clickable { onShowAddTagDialogChange(true) }
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -454,7 +454,7 @@ Surface(
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 }
                 TextButton(
-                    onClick = { showOcrSheet = true },
+                    onClick = { onShowOcrSheetChange(true) },
                     contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(
@@ -471,7 +471,7 @@ Surface(
             shape = MaterialTheme.shapes.medium,
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { showOcrSheet = true }
+                .clickable { onShowOcrSheetChange(true) }
                 .testTag("card_ocr_preview")
         ) {
             Column(modifier = Modifier.padding(14.dp)) {

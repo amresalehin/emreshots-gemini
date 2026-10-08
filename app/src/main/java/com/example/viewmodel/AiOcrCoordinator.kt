@@ -33,6 +33,7 @@ class AiOcrCoordinator(
     private val application: Application,
     private val scope: CoroutineScope,
     private val screenshotRepository: ScreenshotRepository,
+    private val allScreenshots: StateFlow<List<ScreenshotItem>>,
     private val collections: StateFlow<List<CollectionItem>>,
     private val providers: StateFlow<List<CustomCloudProvider>>,
     private val activeProvider: StateFlow<CustomCloudProvider?>,
@@ -510,7 +511,7 @@ class AiOcrCoordinator(
             return
         }
 
-        val allItems = targetScreenshots ?: screenshotRepository.getAllScreenshotsSync()
+        val allItems = targetScreenshots ?: allScreenshots.value
         val items = if (onlyUnindexed) allItems.filter { !it.aiProcessed } else allItems
 
         if (items.isEmpty()) {
@@ -619,7 +620,7 @@ class AiOcrCoordinator(
     }
 
     fun retryFailedItems(autoWriteExif: Boolean = autoWriteExifSetting.value) {
-        val failedItems = screenshotRepository.getAllScreenshotsSync().filter { it.id in _lastFailedScreenshotIds.value }
+        val failedItems = allScreenshots.value.filter { it.id in _lastFailedScreenshotIds.value }
         if (failedItems.isEmpty()) {
             _snackbarMessage.value = application.getString(R.string.no_failed_items_to_retry)
             return

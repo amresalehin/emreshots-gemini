@@ -59,60 +59,10 @@ jobs:
           echo "Bundled OCR LLM verified: $(du -h "$MODEL" | cut -f1)"
 
       - name: Build and test
-        continue-on-error: true
-        shell: bash
-        run: |
-          set -euo pipefail
-          find "$HOME/.gradle/caches/9.3.1/transforms" -type d -path '*/transformed/ui-release' -prune -exec rm -rf {} + 2>/dev/null || true
-          gradle --no-parallel build --stacktrace
+        run: gradle build --stacktrace
 
-      - name: Inspect failing transformed resources
-        if: ${{ always() }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          out="$RUNNER_TEMP/emreshots-transform-diagnostic"
-          mkdir -p "$out"
-          found=0
-          while IFS= read -r -d "" file; do
-            if grep -a -q "no_text_extracted" "$file"; then
-              echo "MATCH=$file"
-              sha256sum "$file"
-              cp "$file" "$out/$(basename "$(dirname "$(dirname "$(dirname "$file")")")").xml"
-              grep -a -n -C 5 "no_text_extracted" "$file" || true
-              found=1
-            fi
-          done < <(find "$HOME/.gradle/caches/9.3.1/transforms" -path "*/transformed/ui-release/res/values/values.xml" -type f -print0 2>/dev/null)
-          echo "matching_transforms=$found"
-          find "$HOME/.gradle/caches/9.3.1/transforms" -path "*/transformed/ui-release/res/values/values.xml" -type f -print | sort
-
-      - name: Audit source AAR for malformed resource
-        if: ${{ always() }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          found=0
-          while IFS= read -r -d "" aar; do
-            if unzip -p "$aar" "res/values/values.xml" 2>/dev/null | grep -a -q "no_text_extracted"; then
-              echo "SOURCE_AAR=$aar"
-              unzip -p "$aar" "res/values/values.xml" 2>/dev/null | grep -a -n -C 5 "no_text_extracted" || true
-              found=1
-            fi
-          done < <(find "$HOME/.gradle/caches/modules-2/files-2.1" -type f -name "*.aar" -print0 2>/dev/null)
-          echo "source_aar_matches=$found"
-      - name: Upload transformed resource diagnostic
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: emreshots-transform-resource-diagnostic
-          path: ${{ runner.temp }}/emreshots-transform-diagnostic
-          if-no-files-found: ignore
-          retention-days: 2
       - name: Assemble installable release APK
-        shell: bash
-        run: |
-          set -euo pipefail
-          gradle --no-parallel :app:assembleRelease --stacktrace
+        run: gradle :app:assembleRelease --stacktrace
       - name: Verify APK signature and alignment
         shell: bash
         run: |

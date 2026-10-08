@@ -1,5 +1,7 @@
 package com.amresalehin.emreshots
 
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent

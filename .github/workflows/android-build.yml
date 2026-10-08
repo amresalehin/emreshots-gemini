@@ -60,7 +60,11 @@ jobs:
 
       - name: Build and test
         continue-on-error: true
-        run: gradle --no-parallel build --stacktrace
+        shell: bash
+        run: |
+          set -euo pipefail
+          find "$HOME/.gradle/caches/9.3.1/transforms" -type d -path '*/transformed/ui-release' -prune -exec rm -rf {} + 2>/dev/null || true
+          gradle --no-parallel build --stacktrace
 
       - name: Inspect failing transformed resources
         if: ${{ always() }}
@@ -80,7 +84,7 @@ jobs:
             fi
           done < <(find "$HOME/.gradle/caches/9.3.1/transforms" -path "*/transformed/ui-release/res/values/values.xml" -type f -print0 2>/dev/null)
           echo "matching_transforms=$found"
-          find "$RUNNER_TEMP/gradle-clean/caches/9.3.1/transforms" -path "*/transformed/ui-release/res/values/values.xml" -type f -print | sort
+          find "$HOME/.gradle/caches/9.3.1/transforms" -path "*/transformed/ui-release/res/values/values.xml" -type f -print | sort
 
       - name: Upload transformed resource diagnostic
         if: ${{ always() }}
@@ -91,7 +95,11 @@ jobs:
           if-no-files-found: ignore
           retention-days: 2
       - name: Assemble installable release APK
-        run: gradle --no-parallel :app:assembleRelease --stacktrace
+        shell: bash
+        run: |
+          set -euo pipefail
+          find "$HOME/.gradle/caches/9.3.1/transforms" -type d -path '*/transformed/ui-release' -prune -exec rm -rf {} + 2>/dev/null || true
+          gradle --no-parallel :app:assembleRelease --stacktrace
 
       - name: Verify APK signature and alignment
         shell: bash

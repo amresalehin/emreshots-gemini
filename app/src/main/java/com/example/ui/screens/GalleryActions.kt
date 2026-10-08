@@ -120,7 +120,7 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 
 @Composable
-internal fun GalleryActions(
+internal fun BoxScope.GalleryActions(
     viewModel: ScreenshotsViewModel,
     mediaPickerLauncher: ManagedActivityResultLauncher<PickVisualMediaRequest, Uri?>,
     showSortDialog: Boolean,

@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 
 package com.amresalehin.emreshots.ui.screens
 
@@ -9,25 +9,21 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -37,11 +33,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DocumentScanner
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.OpenInBrowser
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -55,14 +48,17 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -71,10 +67,7 @@ import com.amresalehin.emreshots.R
 import com.amresalehin.emreshots.data.model.ExifData
 import com.amresalehin.emreshots.data.model.ScreenshotItem
 import com.amresalehin.emreshots.service.media.DeviceMediaScanner
-import com.amresalehin.emreshots.ui.components.InAppVideoPlayer
-import com.amresalehin.emreshots.ui.components.ScreenshotCard
 import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
-import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -84,10 +77,9 @@ private fun DetailRow(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.Top
     ) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(modifier = Modifier.width(12.dp))
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
     }
 }
@@ -97,7 +89,7 @@ internal fun ScreenshotDetailContent(
     viewModel: ScreenshotsViewModel,
     screenshot: ScreenshotItem,
     screenshotId: String,
-    context: android.content.Context,
+    context: Context,
     imageFile: java.io.File,
     galleryHeight: Dp,
     detailScrollState: androidx.compose.foundation.ScrollState,
@@ -123,462 +115,264 @@ internal fun ScreenshotDetailContent(
     showAddTagDialog: Boolean,
     onShowAddTagDialogChange: (Boolean) -> Unit
 ) {
-// Permission Banner if Location or Media Permissions are not yet fully granted
-if (!hasMediaLocationPermission) {
-    Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
-        shape = MaterialTheme.shapes.medium,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .testTag("banner_detail_permission")
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.CameraAlt,
-                    contentDescription = stringResource(R.string.metadata_camera),
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Grant Media Location permission to access unredacted GPS & EXIF camera metadata.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-            Button(
-                onClick = {
-                    permissionLauncher.launch(com.amresalehin.emreshots.service.media.DeviceMediaScanner.getRequiredPermissions())
-                },
-                shape = MaterialTheme.shapes.medium,
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
-                modifier = Modifier
-                    .height(48.dp)
-                    .testTag("btn_grant_detail_permission")
-            ) {
-                Text(stringResource(R.string.grant), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-}
-
-// Main Details Content
-Surface(
-    modifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 12.dp, vertical = 12.dp)
-        .navigationBarsPadding()
-        .border(
-            1.dp,
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
-            RoundedCornerShape(28.dp)
-        ),
-    shape = RoundedCornerShape(28.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 1.dp
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
-    ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Button(
-            onClick = { viewModel.analyzeScreenshot(screenshot, autoWriteExif = false) },
-            enabled = !isAnalyzing,
-            shape = MaterialTheme.shapes.large,
-            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 11.dp),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp),
-            modifier = Modifier.weight(1f).testTag("btn_analyze_now")
-        ) {
-            if (isAnalyzing) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(14.dp),
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    strokeWidth = 2.dp
-                )
-            } else {
-                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
-            }
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(if (isAnalyzing) stringResource(R.string.analyzing) else if (screenshot.aiProcessed) stringResource(R.string.reanalyze) else stringResource(R.string.analyze), fontSize = 12.sp)
-        }
-
-        OutlinedButton(
-            onClick = { onShowOcrSheetChange(true) },
-            shape = MaterialTheme.shapes.large,
-            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 11.dp),
-            modifier = Modifier.weight(1f).testTag("btn_open_ocr_sheet")
-        ) {
-            Icon(Icons.Default.DocumentScanner, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(stringResource(R.string.ocr), fontSize = 12.sp)
-        }
-
-        if (!screenshot.isVideo) {
-            OutlinedButton(
-                onClick = {
-                    if (!hasMediaLocationPermission) {
-                        permissionLauncher.launch(
-                            com.amresalehin.emreshots.service.media.DeviceMediaScanner.getRequiredPermissions()
-                        )
-                    }
-                    onShowExifEditorChange(true)
-                },
-                shape = MaterialTheme.shapes.large,
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 11.dp),
-                modifier = Modifier.weight(1f).testTag("btn_open_exif_editor")
-            ) {
-                Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(stringResource(R.string.exif), fontSize = 12.sp)
-            }
-        }
-    }
-
-    // Title and Description
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Top
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            if (isEditingDetails) {
-                OutlinedTextField(
-                    value = editTitle,
-                    onValueChange = { onEditTitleChange(it) },
-                    label = { Text(stringResource(R.string.title)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = editDescription,
-                    onValueChange = { onEditDescriptionChange(it) },
-                    label = { Text(stringResource(R.string.description)) },
-                    minLines = 2,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = editNotes,
-                    onValueChange = { onEditNotesChange(it) },
-                    label = { Text(stringResource(R.string.personal_notes)) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            } else {
-                Text(
-                    text = if (screenshot.isVideo) stringResource(R.string.video).uppercase(Locale.ROOT) else stringResource(R.string.photo).uppercase(Locale.ROOT),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.1.sp
-                )
-                Spacer(modifier = Modifier.height(3.dp))
-                Text(
-                    text = screenshot.title.ifBlank { "Untitled" },
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    lineHeight = 32.sp
-                )
-                if (screenshot.description.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = screenshot.description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        lineHeight = 20.sp
-                    )
-                }
-                if (!screenshot.notes.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Notes: ${screenshot.notes}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-        }
-
-        if (isEditingDetails) {
-            IconButton(
-                onClick = {
-                    viewModel.updateScreenshot(
-                        screenshot.copy(
-                            title = editTitle.ifBlank { screenshot.title },
-                            description = editDescription,
-                            notes = editNotes.ifBlank { null }
-                        )
-                    )
-                    onEditingDetailsChange(false)
-                },
-                modifier = Modifier.testTag("btn_save_edit_details")
-            ) {
-                Icon(Icons.Default.Check, contentDescription = stringResource(R.string.save_changes))
-            }
-            IconButton(
-                onClick = {
-                    onEditTitleChange(screenshot.title)
-                    onEditDescriptionChange(screenshot.description)
-                    onEditNotesChange(screenshot.notes.orEmpty())
-                    onEditingDetailsChange(false)
-                },
-                modifier = Modifier.testTag("btn_cancel_edit_details")
-            ) {
-                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cancel_editing))
-            }
-        }
-    }
-
-    // Tags Chip Cloud
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(
-            text = "Tags",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.2.sp
-        )
-
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            screenshot.tags.forEach { tag ->
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(start = 10.dp, end = 6.dp, top = 4.dp, bottom = 4.dp)
-                    ) {
-                        Text(text = "#$tag", style = MaterialTheme.typography.bodySmall)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        IconButton(
-                            onClick = { viewModel.removeTag(screenshot, tag) },
-                            modifier = Modifier
-                                .size(48.dp)
-                                .testTag("btn_remove_tag_" + tag.hashCode())
-                        ) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = stringResource(R.string.remove_tag),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-            Surface(
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                shape = MaterialTheme.shapes.medium,
-                modifier = Modifier.clickable { onShowAddTagDialogChange(true) }
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text(stringResource(R.string.add_tag), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                }
-            }
-        }
-    }
-
-    // OCR Text Transcription Section
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "OCR text",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
-            )
-
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                }
-                TextButton(
-                    onClick = { onShowOcrSheetChange(true) },
-                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = if (!screenshot.ocrText.isNullOrBlank()) "View OCR" else "Extract Text",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
-
+    if (!hasMediaLocationPermission) {
         Surface(
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
             shape = MaterialTheme.shapes.medium,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onShowOcrSheetChange(true) }
-                .testTag("card_ocr_preview")
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).testTag("banner_detail_permission")
         ) {
-            Column(modifier = Modifier.padding(14.dp)) {
-                if (!screenshot.ocrText.isNullOrBlank()) {
-                    Text(
-                        text = screenshot.ocrText,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 4,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "Tap to inspect the OCR result or save it to EXIF metadata",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                } else {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.DocumentScanner,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "No OCR text extracted yet. Tap to transcribe text.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("Location metadata permission is required to read precise GPS/EXIF details.", style = MaterialTheme.typography.bodySmall)
+                }
+                TextButton(onClick = { permissionLauncher.launch(DeviceMediaScanner.getRequiredPermissions()) }) {
+                    Text(stringResource(R.string.grant))
                 }
             }
         }
     }
 
-    // Detected Links
-    if (screenshot.links.isNotEmpty()) {
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
-                text = "DETECTED DATA",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
+    var selectedDetailsTab by remember(screenshotId) { mutableStateOf("Overview") }
+    var showMetadata by remember(screenshotId) { mutableStateOf(false) }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp).navigationBarsPadding().testTag("viewer_details_drawer"),
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            Spacer(Modifier.height(1.dp))
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 9.dp).size(width = 36.dp, height = 4.dp)
+                    .clip(CircleShape).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.24f))
             )
-
-            screenshot.links.forEach { link ->
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = MaterialTheme.shapes.small,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Default.Link, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = link, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        screenshot.title.ifBlank { if (screenshot.isVideo) "Untitled video" else "Untitled screenshot" },
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        buildString {
+                            append(SimpleDateFormat("d MMM yyyy · h:mm a", Locale.getDefault()).format(Date(screenshot.addedOn)))
+                            append(" · ")
+                            append(String.format(Locale.US, "%.1f MB", screenshot.fileSize / (1024f * 1024f)))
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                IconButton(
+                    onClick = {
+                        if (isEditingDetails) {
+                            viewModel.updateScreenshot(
+                                screenshot.copy(
+                                    title = editTitle.ifBlank { screenshot.title },
+                                    description = editDescription,
+                                    notes = editNotes.ifBlank { null }
+                                )
+                            )
+                            onEditingDetailsChange(false)
+                        } else {
+                            onEditingDetailsChange(true)
                         }
+                    },
+                    modifier = Modifier.testTag("btn_toggle_edit_details")
+                ) {
+                    Icon(if (isEditingDetails) Icons.Default.Check else Icons.Default.Edit, contentDescription = if (isEditingDetails) "Save details" else "Edit details")
+                }
+            }
 
-                        Row {
-                            IconButton(
-                                onClick = {
-                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    clipboard.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.link), link))
-                                    viewModel.showMessage("Copied to clipboard!")
-                                },
-                                modifier = Modifier.size(28.dp)
-                            ) {
-                                Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.copy), modifier = Modifier.size(14.dp))
-                            }
-                            if (link.startsWith("http://") || link.startsWith("https://")) {
-                                IconButton(
-                                    onClick = {
-                                        try {
-                                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link)))
-                                        } catch (_: Exception) {}
-                                    },
-                                    modifier = Modifier.size(28.dp)
-                                ) {
-                                    Icon(Icons.Default.OpenInBrowser, contentDescription = stringResource(R.string.open), modifier = Modifier.size(14.dp))
+            if (isEditingDetails) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(editTitle, onEditTitleChange, label = { Text("Title") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(editDescription, onEditDescriptionChange, label = { Text("Description") }, minLines = 2, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(editNotes, onEditNotesChange, label = { Text("Personal notes") }, minLines = 2, modifier = Modifier.fillMaxWidth())
+                }
+            } else {
+                if (screenshot.description.isNotBlank()) Text(screenshot.description, style = MaterialTheme.typography.bodyMedium)
+                if (!screenshot.notes.isNullOrBlank()) Text("Notes · ${screenshot.notes}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                listOf("Overview", "Actions").forEach { tab ->
+                    Column(
+                        modifier = Modifier.weight(1f).clickable { selectedDetailsTab = tab }.padding(vertical = 8.dp).testTag("drawer_tab_${tab.lowercase()}"),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(tab, fontWeight = if (selectedDetailsTab == tab) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (selectedDetailsTab == tab) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(8.dp))
+                        HorizontalDivider(color = if (selectedDetailsTab == tab) MaterialTheme.colorScheme.onSurface else Color.Transparent, thickness = 2.dp)
+                    }
+                }
+            }
+
+            if (selectedDetailsTab == "Overview") {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.collections), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    if (screenshot.collectionIds.isEmpty()) {
+                        Text("Not in any collection", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            screenshot.collectionIds.forEach { collectionId ->
+                                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(14.dp)) {
+                                    Text(collectionId, modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp), style = MaterialTheme.typography.bodySmall)
                                 }
                             }
                         }
                     }
                 }
-            }
-        }
-    }
 
-    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("Tags", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        TextButton(onClick = { onShowAddTagDialogChange(true) }) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Add")
+                        }
+                    }
+                    if (screenshot.tags.isEmpty()) {
+                        Text("No tags", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            screenshot.tags.forEach { tag ->
+                                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(16.dp)) {
+                                    Row(Modifier.padding(start = 10.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Text(tag, style = MaterialTheme.typography.bodySmall)
+                                        IconButton(onClick = { viewModel.removeTag(screenshot, tag) }, modifier = Modifier.size(28.dp)) {
+                                            Icon(Icons.Default.Close, contentDescription = "Remove $tag", modifier = Modifier.size(14.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
 
-    // Clean Specs & Technical Details
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(
-            text = if (screenshot.isVideo) "Video specifications" else "Metadata & camera",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp
-        )
-
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            shape = MaterialTheme.shapes.medium,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                if (screenshot.isVideo) {
-                    val durSecs = (screenshot.durationMs / 1000) % 60
-                    val durMins = (screenshot.durationMs / 1000) / 60
-                    DetailRow("Duration", String.format("%d:%02d", durMins, durSecs))
-                    if (screenshot.width > 0) DetailRow("Resolution", "${screenshot.width} x ${screenshot.height}")
-                    val mb = screenshot.fileSize.toDouble() / (1024 * 1024)
-                    DetailRow("File Size", String.format(Locale.US, "%.2f MB", mb))
-                } else {
-                    DetailRow("Camera", exifData.cameraModel ?: (exifData.cameraMake ?: "Android Device"))
-                    DetailRow("Date", exifData.dateTaken ?: SimpleDateFormat("yyyy:MM:dd HH:mm", Locale.US).format(Date(screenshot.addedOn)))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Location", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     if (exifData.latitude != null && exifData.longitude != null) {
-                        DetailRow("GPS Location", String.format(Locale.US, "%.5f, %.5f", exifData.latitude, exifData.longitude))
+                        DetailRow("Coordinates", String.format(Locale.US, "%.5f, %.5f", exifData.latitude, exifData.longitude))
+                    } else {
+                        Text("No location data", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    if (exifData.iso != null) DetailRow("Settings", "ISO ${exifData.iso} • ƒ/${exifData.fNumber ?: "N/A"} • ${exifData.exposureTime ?: "N/A"}s")
-                    if (exifData.software != null) DetailRow("Software", exifData.software)
-                    if (!exifData.artist.isNullOrBlank()) DetailRow("Artist", exifData.artist)
-                    if (!exifData.imageDescription.isNullOrBlank() && exifData.imageDescription != screenshot.title) {
-                        DetailRow("EXIF Title", exifData.imageDescription)
-                    }
-                    if (!exifData.userComment.isNullOrBlank()) DetailRow("EXIF Notes", exifData.userComment)
                 }
-                if (screenshot.aiModelUsed != null) {
-                    DetailRow("Indexed With", screenshot.aiModelUsed)
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.fillMaxWidth().clickable { showMetadata = !showMetadata }.padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("Metadata", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        Icon(if (showMetadata) Icons.Default.Close else Icons.Default.Add,
+                            contentDescription = if (showMetadata) "Collapse metadata" else "Expand metadata", modifier = Modifier.size(18.dp))
+                    }
+                    if (showMetadata) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            DetailRow("Media type", if (screenshot.isVideo) "Video" else "Image")
+                            DetailRow("File size", String.format(Locale.US, "%.2f MB", screenshot.fileSize / (1024.0 * 1024.0)))
+                            if (screenshot.width > 0 && screenshot.height > 0) DetailRow("Resolution", "${screenshot.width} × ${screenshot.height}")
+                            DetailRow("Date added", SimpleDateFormat("d MMM yyyy, h:mm a", Locale.getDefault()).format(Date(screenshot.addedOn)))
+                            DetailRow("Camera", exifData.cameraModel ?: exifData.cameraMake ?: "Unknown")
+                            if (exifData.dateTaken != null) DetailRow("Date taken", exifData.dateTaken)
+                            if (exifData.iso != null) DetailRow("ISO", exifData.iso.toString())
+                            if (exifData.fNumber != null) DetailRow("Aperture", "ƒ/${exifData.fNumber}")
+                            if (exifData.software != null) DetailRow("Software", exifData.software)
+                            if (screenshot.aiModelUsed != null) DetailRow("Analysis model", screenshot.aiModelUsed)
+                        }
+                    }
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text("Image tools", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        Button(
+                            onClick = { viewModel.analyzeScreenshot(screenshot, autoWriteExif = false) },
+                            enabled = !isAnalyzing,
+                            modifier = Modifier.weight(1f).testTag("btn_analyze_now"),
+                            shape = RoundedCornerShape(18.dp)
+                        ) {
+                            if (isAnalyzing) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                            else Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(if (screenshot.aiProcessed) "Re-analyze" else "AI description")
+                        }
+                        OutlinedButton(onClick = { onShowOcrSheetChange(true) }, modifier = Modifier.weight(1f).testTag("btn_open_ocr_sheet"), shape = RoundedCornerShape(18.dp)) {
+                            Icon(Icons.Default.DocumentScanner, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Extract text")
+                        }
+                    }
+                    if (!screenshot.isVideo) {
+                        OutlinedButton(
+                            onClick = {
+                                if (!hasMediaLocationPermission) permissionLauncher.launch(DeviceMediaScanner.getRequiredPermissions())
+                                onShowExifEditorChange(true)
+                            },
+                            modifier = Modifier.fillMaxWidth().testTag("btn_open_exif_editor"),
+                            shape = RoundedCornerShape(18.dp)
+                        ) {
+                            Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.edit_exif))
+                        }
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("OCR text", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        if (!screenshot.ocrText.isNullOrBlank()) {
+                            Text(screenshot.ocrText, style = MaterialTheme.typography.bodyMedium, maxLines = 5)
+                            TextButton(onClick = { onShowOcrSheetChange(true) }) { Text("View or edit extracted text") }
+                        } else {
+                            Text("No text extracted yet", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            TextButton(onClick = { onShowOcrSheetChange(true) }) { Text("Extract text") }
+                        }
+                    }
+                    if (screenshot.links.isNotEmpty()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Detected links", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                            screenshot.links.forEach { link ->
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    Text(link, modifier = Modifier.weight(1f), maxLines = 2, style = MaterialTheme.typography.bodySmall)
+                                    IconButton(onClick = {
+                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                        clipboard.setPrimaryClip(ClipData.newPlainText("Link", link))
+                                        viewModel.showMessage("Copied to clipboard!")
+                                    }) { Icon(Icons.Default.ContentCopy, contentDescription = "Copy link") }
+                                    if (link.startsWith("http://") || link.startsWith("https://")) {
+                                        IconButton(onClick = { runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link))) } }) {
+                                            Icon(Icons.Default.OpenInBrowser, contentDescription = "Open link")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    OutlinedButton(
+                        onClick = { viewModel.deleteScreenshot(screenshot) },
+                        modifier = Modifier.fillMaxWidth().testTag("btn_delete_media"),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.delete))
+                    }
                 }
             }
+            Spacer(Modifier.height(24.dp))
         }
     }
 }

@@ -110,7 +110,7 @@ private fun VideoPlayerSurface(
     var isCompleted by remember { mutableStateOf(false) }
     var currentPositionMs by remember { mutableIntStateOf(0) }
     var durationMs by remember { mutableIntStateOf(initialDurationMs.toInt()) }
-    var showControls by remember { mutableStateOf(false) }
+    var showControls by remember { mutableStateOf(true) }
     var isMuted by remember { mutableStateOf(false) }
     var isUserScrubbing by remember { mutableStateOf(false) }
     var scrubProgress by remember { mutableFloatStateOf(0f) }
@@ -129,12 +129,7 @@ private fun VideoPlayerSurface(
         }
     }
 
-    LaunchedEffect(showControls, isPlaying, isPrepared) {
-        if (showControls && isPrepared) {
-            delay(if (isPlaying) 2800 else 2200)
-            showControls = false
-        }
-    }
+    // Keep bottom transport controls visible; there is no center play/pause overlay.
 
     DisposableEffect(Unit) {
         onDispose {
@@ -149,7 +144,7 @@ private fun VideoPlayerSurface(
             .pointerInput(videoUri) {
                 detectTapGestures(
                     onTap = {
-                        showControls = !showControls
+                        showControls = true
                         onTap?.invoke()
                     }
                 )
@@ -169,9 +164,11 @@ private fun VideoPlayerSurface(
                         isPrepared = true
                         if (mp.duration > 0) durationMs = mp.duration
                         mp.setVolume(1f, 1f)
-                        // Start immediately so opening a video never presents a blank frame.
-                        mp.start()
-                        isPlaying = true
+                        // Keep the viewer still when opened; users start playback from the bottom controls.
+                        mp.pause()
+                        isPlaying = false
+                        currentPositionMs = 0
+                        showControls = true
                     }
                     setOnCompletionListener {
                         isPlaying = false
@@ -222,75 +219,7 @@ private fun VideoPlayerSurface(
                     )
                 }
 
-                Row(
-                    modifier = Modifier.align(Alignment.Center),
-                    horizontalArrangement = Arrangement.spacedBy(18.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = {
-                            videoViewRef?.let { vv ->
-                                val target = (vv.currentPosition - 10_000).coerceAtLeast(0)
-                                vv.seekTo(target)
-                                currentPositionMs = target
-                                isCompleted = false
-                            }
-                        },
-                        modifier = Modifier.size(46.dp)
-                    ) {
-                        Icon(Icons.Default.Replay10, contentDescription = "Rewind 10 seconds", tint = Color.White, modifier = Modifier.size(30.dp))
-                    }
-
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .size(64.dp)
-                            .clickable {
-                                videoViewRef?.let { vv ->
-                                    if (isCompleted) {
-                                        vv.seekTo(0)
-                                        vv.start()
-                                        isPlaying = true
-                                        isCompleted = false
-                                    } else if (vv.isPlaying) {
-                                        vv.pause()
-                                        isPlaying = false
-                                    } else {
-                                        vv.start()
-                                        isPlaying = true
-                                    }
-                                }
-                            }
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = when {
-                                    isCompleted -> Icons.Default.Replay
-                                    isPlaying -> Icons.Default.Pause
-                                    else -> Icons.Default.PlayArrow
-                                },
-                                contentDescription = if (isPlaying) "Pause" else "Play",
-                                tint = Color.White,
-                                modifier = Modifier.size(34.dp)
-                            )
-                        }
-                    }
-
-                    IconButton(
-                        onClick = {
-                            videoViewRef?.let { vv ->
-                                val target = (vv.currentPosition + 10_000).coerceAtMost(durationMs)
-                                vv.seekTo(target)
-                                currentPositionMs = target
-                                isCompleted = false
-                            }
-                        },
-                        modifier = Modifier.size(46.dp)
-                    ) {
-                        Icon(Icons.Default.Forward10, contentDescription = "Forward 10 seconds", tint = Color.White, modifier = Modifier.size(30.dp))
-                    }
-                }
+                // Playback is controlled exclusively by the timeline controls below.
 
                 Column(
                     modifier = Modifier

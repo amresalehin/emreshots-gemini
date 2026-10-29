@@ -312,7 +312,7 @@ fun ZoomableImageViewer(
             // Draggable detail drawer. The full-screen media remains visible above it,
             // while the drawer owns its own scrolling region.
             if (drawerContent != null) {
-                var drawerHeightFraction by remember { mutableFloatStateOf(0.62f) }
+                var drawerHeightFraction by remember { mutableFloatStateOf(0.075f) }
                 BoxWithConstraints(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.BottomCenter
@@ -335,10 +335,10 @@ fun ZoomableImageViewer(
                                         onVerticalDrag = { change, dragAmount ->
                                             change.consume()
                                             drawerHeightFraction = (drawerHeightFraction - dragAmount / maxHeightPx)
-                                                .coerceIn(0.34f, 0.86f)
+                                                .coerceIn(0.075f, 0.86f)
                                         },
                                         onDragEnd = {
-                                            drawerHeightFraction = listOf(0.34f, 0.62f, 0.86f)
+                                            drawerHeightFraction = listOf(0.075f, 0.62f, 0.86f)
                                                 .minBy { kotlin.math.abs(it - drawerHeightFraction) }
                                         }
                                     )
@@ -351,13 +351,17 @@ fun ZoomableImageViewer(
                                     .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.24f))
                             )
                         }
-                        Box(Modifier.weight(1f).fillMaxWidth()) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .verticalScroll(rememberScrollState())
-                            ) {
-                                drawerContent()
+                        // In the closed state, only the small drag handle is visible.
+                        // The detail content is composed only after the user pulls the drawer up.
+                        if (drawerHeightFraction > 0.18f) {
+                            Box(Modifier.weight(1f).fillMaxWidth()) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .verticalScroll(rememberScrollState())
+                                ) {
+                                    drawerContent()
+                                }
                             }
                         }
                     }

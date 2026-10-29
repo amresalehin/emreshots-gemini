@@ -631,6 +631,8 @@ fun ScreenshotDetailScreen(
                 showAddTagDialog = showAddTagDialog,
                 onShowAddTagDialogChange = { showAddTagDialog = it }
             )
+        }
+    }
 
     if (showExifEditor) {
         ExifEditorDialog(

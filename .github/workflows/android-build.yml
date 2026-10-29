@@ -7,10 +7,16 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# New commits on the same PR supersede older builds. Avoid burning runner time
+# on commits that can no longer be merged as the PR head.
+concurrency:
+  group: android-build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,28 +29,41 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Cache verified ExifTool Android runtime
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/emreshots/exiftoolwrapper-arm64.apk
+          key: emreshots-exiftoolwrapper-release-20260610-arm64-v8a-22377307-v1
+
       - name: Install verified ExifTool Android runtime
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          mkdir -p app/src/main/jniLibs/arm64-v8a app/src/main/assets
-          RUNTIME_APK="$RUNNER_TEMP/exiftoolwrapper-arm64.apk"
-          curl -fsSL -o "$RUNTIME_APK" "https://github.com/bestvibes/exiftoolwrapper-android/releases/download/release-20260610/ExifToolWrapper-release-20260610-arm64-v8a.apk"
+          mkdir -p app/src/main/jniLibs/arm64-v8a app/src/main/assets "$HOME/.cache/emreshots"
+          RUNTIME_APK="$HOME/.cache/emreshots/exiftoolwrapper-arm64.apk"
+          if [[ ! -s "$RUNTIME_APK" ]] || [[ "$(stat -c %s "$RUNTIME_APK")" != "22377307" ]]; then
+            rm -f "$RUNTIME_APK"
+            curl -fsSL --retry 3 --retry-all-errors --connect-timeout 30 -o "$RUNTIME_APK" "https://github.com/bestvibes/exiftoolwrapper-android/releases/download/release-20260610/ExifToolWrapper-release-20260610-arm64-v8a.apk"
+          else
+            echo "Using cached ExifTool runtime APK."
+          fi
           test "$(stat -c %s "$RUNTIME_APK")" = "22377307"
           gh attestation verify "$RUNTIME_APK" -R bestvibes/exiftoolwrapper-android
+          rm -rf "$RUNNER_TEMP/exiftoolwrapper"
           unzip -q "$RUNTIME_APK" -d "$RUNNER_TEMP/exiftoolwrapper"
           cp "$RUNNER_TEMP/exiftoolwrapper/lib/arm64-v8a/"lib*.so app/src/main/jniLibs/arm64-v8a/
           cp "$RUNNER_TEMP/exiftoolwrapper/assets/perl5.tar" app/src/main/assets/perl5.tar
           test -s app/src/main/jniLibs/arm64-v8a/libperl.so
           test -s app/src/main/assets/perl5.tar
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
+      - name: Cache offline OCR model
+        uses: actions/cache@v4
         with:
-          gradle-version: "9.3.1"
-          cache-disabled: true
+          path: app/src/main/assets/models/SmolLM2-135M-Instruct-Q2_K.gguf
+          key: emreshots-ocr-smollm2-135m-q2-741ad12b64088fedc17c33aacb22e48be1972ef36a39f03666dd68bd15614fb9-v1
+
       - name: Prepare bundled offline OCR LLM
         shell: bash
         run: |
@@ -53,16 +72,25 @@ jobs:
           MODEL="app/src/main/assets/models/SmolLM2-135M-Instruct-Q2_K.gguf"
           URL="https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q2_K.gguf"
           SHA256="741ad12b64088fedc17c33aacb22e48be1972ef36a39f03666dd68bd15614fb9"
-          curl -fL --retry 4 --retry-all-errors --connect-timeout 30 --max-time 900 -o "$MODEL" "$URL"
+          if [[ -s "$MODEL" ]] && echo "$SHA256  $MODEL" | sha256sum -c --status; then
+            echo "Using cached OCR model."
+          else
+            rm -f "$MODEL"
+            curl -fL --retry 4 --retry-all-errors --connect-timeout 30 --max-time 900 -o "$MODEL" "$URL"
+          fi
           echo "$SHA256  $MODEL" | sha256sum -c -
           test "$(stat -c %s "$MODEL")" -gt 80000000
           echo "Bundled OCR LLM verified: $(du -h "$MODEL" | cut -f1)"
 
-      - name: Build and test
-        run: gradle build --stacktrace
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "9.3.1"
+          # Gradle User Home caching is enabled by default.
 
-      - name: Assemble installable release APK
-        run: gradle :app:assembleRelease --stacktrace
+      - name: Build, test, and assemble release APK
+        run: gradle --build-cache --stacktrace build :app:assembleRelease
+
       - name: Verify APK signature and alignment
         shell: bash
         run: |

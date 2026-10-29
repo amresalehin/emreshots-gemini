@@ -88,7 +88,7 @@ fun ZoomableImageViewer(
     exifData: ExifData = ExifData(),
     onDismiss: () -> Unit,
     onToggleFavorite: (ScreenshotItem) -> Unit = {},
-    drawerContent: @Composable () -> Unit = {}
+    drawerContent: (@Composable () -> Unit)? = null
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -305,7 +305,7 @@ fun ZoomableImageViewer(
 
             // Draggable detail drawer. The full-screen media remains visible above it,
             // while the drawer owns its own scrolling region.
-            if (drawerContent != {}) {
+            if (drawerContent != null) {
                 var drawerHeightFraction by remember { mutableFloatStateOf(0.62f) }
                 BoxWithConstraints(
                     modifier = Modifier.fillMaxSize(),
@@ -313,29 +313,38 @@ fun ZoomableImageViewer(
                 ) {
                     val density = androidx.compose.ui.platform.LocalDensity.current
                     val maxHeightPx = with(density) { maxHeight.toPx() }
-                    Box(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .fillMaxHeight(drawerHeightFraction)
-                            .pointerInput(maxHeightPx) {
-                                detectVerticalDragGestures(
-                                    onVerticalDrag = { change, dragAmount ->
-                                        change.consume()
-                                        drawerHeightFraction = (drawerHeightFraction - dragAmount / maxHeightPx)
-                                            .coerceIn(0.34f, 0.92f)
-                                    },
-                                    onDragEnd = {
-                                        drawerHeightFraction = listOf(0.34f, 0.62f, 0.92f)
-                                            .minBy { kotlin.math.abs(it - drawerHeightFraction) }
-                                    }
-                                )
-                            }
                     ) {
                         Box(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Transparent)
+                                .fillMaxWidth()
+                                .height(28.dp)
+                                .background(MaterialTheme.colorScheme.surface)
+                                .pointerInput(maxHeightPx) {
+                                    detectVerticalDragGestures(
+                                        onVerticalDrag = { change, dragAmount ->
+                                            change.consume()
+                                            drawerHeightFraction = (drawerHeightFraction - dragAmount / maxHeightPx)
+                                                .coerceIn(0.34f, 0.92f)
+                                        },
+                                        onDragEnd = {
+                                            drawerHeightFraction = listOf(0.34f, 0.62f, 0.92f)
+                                                .minBy { kotlin.math.abs(it - drawerHeightFraction) }
+                                        }
+                                    )
+                                },
+                            contentAlignment = Alignment.Center
                         ) {
+                            Box(
+                                Modifier.size(width = 38.dp, height = 4.dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.24f))
+                            )
+                        }
+                        Box(Modifier.weight(1f).fillMaxWidth()) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -350,7 +359,7 @@ fun ZoomableImageViewer(
 
             // Bottom HUD Bar
             AnimatedVisibility(
-                visible = showControls && drawerContent == {},
+                visible = showControls && drawerContent == null,
                 enter = fadeIn(),
                 exit = fadeOut(),
                 modifier = Modifier.align(Alignment.BottomCenter)

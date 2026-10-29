@@ -221,7 +221,6 @@ fun ScreenshotDetailScreen(
             .fillMaxSize()
             .background(Color(0xFFF6F7F9))
             .statusBarsPadding()
-            .navigationBarsPadding()
     ) {
         Column(
             modifier = Modifier
@@ -388,18 +387,16 @@ fun ScreenshotDetailScreen(
                             )
                         } else {
                             Text(
-                                text = if (screenshot.isVideo) "VIDEO" else "SCREENSHOT",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.1.sp
+                                text = screenshot.title.ifBlank { File(screenshot.filePath).name.ifBlank { "Untitled" } },
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 2,
+                                lineHeight = 22.sp
                             )
-                            Spacer(modifier = Modifier.height(3.dp))
                             Text(
-                                text = screenshot.title.ifBlank { "Untitled" },
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 32.sp
+                                text = SimpleDateFormat("d MMM yyyy  •  h:mm a", Locale.getDefault()).format(Date(screenshot.addedOn)),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             if (screenshot.description.isNotBlank()) {
                                 Spacer(modifier = Modifier.height(6.dp))
@@ -500,8 +497,9 @@ fun ScreenshotDetailScreen(
                     }
                 }
 
-                // OCR Text Transcription Section
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                // OCR belongs to still images; videos use AI description and technical metadata.
+                if (!screenshot.isVideo) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -572,6 +570,8 @@ fun ScreenshotDetailScreen(
                     }
                 }
 
+                }
+
                 // Detected Links
                 if (screenshot.links.isNotEmpty()) {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -638,13 +638,6 @@ fun ScreenshotDetailScreen(
                 // Clean Specs & Technical Details
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = if (screenshot.isVideo) "VIDEO SPECIFICATIONS" else "METADATA & HARDWARE",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
-
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                         shape = RoundedCornerShape(12.dp),

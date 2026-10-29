@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -322,16 +323,17 @@ fun ZoomableImageViewer(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(28.dp)
+                                .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                                 .background(MaterialTheme.colorScheme.surface)
                                 .pointerInput(maxHeightPx) {
                                     detectVerticalDragGestures(
                                         onVerticalDrag = { change, dragAmount ->
                                             change.consume()
                                             drawerHeightFraction = (drawerHeightFraction - dragAmount / maxHeightPx)
-                                                .coerceIn(0.34f, 0.92f)
+                                                .coerceIn(0.34f, 0.86f)
                                         },
                                         onDragEnd = {
-                                            drawerHeightFraction = listOf(0.34f, 0.62f, 0.92f)
+                                            drawerHeightFraction = listOf(0.34f, 0.62f, 0.86f)
                                                 .minBy { kotlin.math.abs(it - drawerHeightFraction) }
                                         }
                                     )

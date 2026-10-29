@@ -763,7 +763,8 @@ fun ScreenshotDetailScreen(
                 editNotes = editNotes,
                 onEditNotesChange = { editNotes = it },
                 showAddTagDialog = showAddTagDialog,
-                onShowAddTagDialogChange = { showAddTagDialog = it }
+                onShowAddTagDialogChange = { showAddTagDialog = it },
+                    showDrawerHandle = false
                 )
             }
         )

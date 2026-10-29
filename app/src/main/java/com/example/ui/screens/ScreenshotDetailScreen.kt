@@ -641,6 +641,8 @@ fun ScreenshotDetailScreen(
                     Spacer(Modifier.height(24.dp))
                 }
             }
+        }
+    }
 
     // EXIF Editor Modal
     if (showExifEditor) {

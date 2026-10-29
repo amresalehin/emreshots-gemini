@@ -110,7 +110,7 @@ private fun VideoPlayerSurface(
     var isCompleted by remember { mutableStateOf(false) }
     var currentPositionMs by remember { mutableIntStateOf(0) }
     var durationMs by remember { mutableIntStateOf(initialDurationMs.toInt()) }
-    var showControls by remember { mutableStateOf(false) }
+    var showControls by remember { mutableStateOf(true) }
     var isMuted by remember { mutableStateOf(false) }
     var isUserScrubbing by remember { mutableStateOf(false) }
     var scrubProgress by remember { mutableFloatStateOf(0f) }
@@ -129,12 +129,7 @@ private fun VideoPlayerSurface(
         }
     }
 
-    LaunchedEffect(showControls, isPlaying, isPrepared) {
-        if (showControls && isPrepared) {
-            delay(if (isPlaying) 2800 else 2200)
-            showControls = false
-        }
-    }
+    // Keep bottom transport controls visible; there is no center play/pause overlay.
 
     DisposableEffect(Unit) {
         onDispose {
@@ -149,7 +144,7 @@ private fun VideoPlayerSurface(
             .pointerInput(videoUri) {
                 detectTapGestures(
                     onTap = {
-                        showControls = !showControls
+                        showControls = true
                         onTap?.invoke()
                     }
                 )
@@ -173,7 +168,7 @@ private fun VideoPlayerSurface(
                         mp.pause()
                         isPlaying = false
                         currentPositionMs = 0
-                        showControls = false
+                        showControls = true
                     }
                     setOnCompletionListener {
                         isPlaying = false

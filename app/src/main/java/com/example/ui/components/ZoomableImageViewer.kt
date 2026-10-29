@@ -100,7 +100,8 @@ fun ZoomableImageViewer(
     var scale by remember { mutableFloatStateOf(1f) }
     var offsetX by remember { mutableFloatStateOf(0f) }
     var offsetY by remember { mutableFloatStateOf(0f) }
-    var showControls by remember { mutableStateOf(true) }
+    // Keep viewer chrome hidden until the user taps the image.
+    var showControls by remember { mutableStateOf(false) }
 
     fun resetZoom() {
         scale = 1f

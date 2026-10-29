@@ -184,7 +184,7 @@ fun ScreenshotDetailScreen(
     var newTagInput by remember { mutableStateOf("") }
     var showCollectionsDialog by remember { mutableStateOf(false) }
     var showReminderDialog by remember { mutableStateOf(false) }
-    var showImageViewer by remember { mutableStateOf(false) }
+    var showImageViewer by remember { mutableStateOf(true) }
     val collections by viewModel.collections.collectAsStateWithLifecycle()
 
     var isEditingDetails by remember { mutableStateOf(false) }
@@ -732,7 +732,7 @@ fun ScreenshotDetailScreen(
         ZoomableImageViewer(
             screenshot = screenshot,
             exifData = exifData,
-            onDismiss = { showImageViewer = false },
+            onDismiss = onNavigateBack,
             onToggleFavorite = { viewModel.toggleFavorite(it) },
             drawerContent = {
                 ScreenshotDetailContent(
@@ -766,6 +766,10 @@ fun ScreenshotDetailScreen(
                 onShowAddTagDialogChange = { showAddTagDialog = it },
                     showDrawerHandle = false
                 )
+            },
+            onMore = {
+                showImageViewer = false
+                showOverflowMenu = true
             }
         )
     }

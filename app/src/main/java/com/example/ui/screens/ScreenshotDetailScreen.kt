@@ -219,7 +219,7 @@ fun ScreenshotDetailScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF6F7F9))
+            .background(Color(0xFFF7F7F7))
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
@@ -227,32 +227,29 @@ fun ScreenshotDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(detailScrollState)
-            .pointerInput(screenshotId) {
-                var totalDrag = 0f
-                var triggered = false
-                detectHorizontalDragGestures(
-                    onHorizontalDrag = { _, dragAmount ->
-                        totalDrag += dragAmount
-                        if (!triggered && kotlin.math.abs(totalDrag) >= 120f) {
-                            triggered = true
-                            if (totalDrag < 0) {
-                                nextScreenshotId?.let(onNavigateToScreenshot)
-                            } else {
-                                previousScreenshotId?.let(onNavigateToScreenshot)
+                .pointerInput(screenshotId) {
+                    var totalDrag = 0f
+                    var triggered = false
+                    detectHorizontalDragGestures(
+                        onHorizontalDrag = { _, dragAmount ->
+                            totalDrag += dragAmount
+                            if (!triggered && kotlin.math.abs(totalDrag) >= 120f) {
+                                triggered = true
+                                if (totalDrag < 0) nextScreenshotId?.let(onNavigateToScreenshot)
+                                else previousScreenshotId?.let(onNavigateToScreenshot)
                             }
+                        },
+                        onDragEnd = {
+                            totalDrag = 0f
+                            triggered = false
+                        },
+                        onDragCancel = {
+                            totalDrag = 0f
+                            triggered = false
                         }
-                    },
-                    onDragEnd = {
-                        totalDrag = 0f
-                        triggered = false
-                    },
-                    onDragCancel = {
-                        totalDrag = 0f
-                        triggered = false
-                    }
-                )
-            }
-    ) {
+                    )
+                }
+        ) {
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()

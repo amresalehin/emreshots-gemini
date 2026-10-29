@@ -114,7 +114,8 @@ internal fun ScreenshotDetailContent(
     editNotes: String,
     onEditNotesChange: (String) -> Unit,
     showAddTagDialog: Boolean,
-    onShowAddTagDialogChange: (Boolean) -> Unit
+    onShowAddTagDialogChange: (Boolean) -> Unit,
+    showDrawerHandle: Boolean = true
 ) {
     if (!hasMediaLocationPermission) {
         Surface(
@@ -150,11 +151,13 @@ internal fun ScreenshotDetailContent(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            Spacer(Modifier.height(1.dp))
-            androidx.compose.foundation.layout.Box(
-                modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 9.dp).size(width = 36.dp, height = 4.dp)
-                    .clip(CircleShape).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.24f))
-            )
+            if (showDrawerHandle) {
+                Spacer(Modifier.height(1.dp))
+                androidx.compose.foundation.layout.Box(
+                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 9.dp).size(width = 36.dp, height = 4.dp)
+                        .clip(CircleShape).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.24f))
+                )
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top,

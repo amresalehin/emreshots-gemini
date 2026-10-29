@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.FitScreen
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
@@ -89,7 +90,8 @@ fun ZoomableImageViewer(
     exifData: ExifData = ExifData(),
     onDismiss: () -> Unit,
     onToggleFavorite: (ScreenshotItem) -> Unit = {},
-    drawerContent: (@Composable () -> Unit)? = null
+    drawerContent: (@Composable () -> Unit)? = null,
+    onMore: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -297,6 +299,9 @@ fun ZoomableImageViewer(
                                     contentDescription = stringResource(R.string.share),
                                     tint = Color.White
                                 )
+                            }
+                            IconButton(onClick = onMore, modifier = Modifier.size(40.dp)) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "More actions", tint = Color.White)
                             }
                         }
                     }

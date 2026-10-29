@@ -733,7 +733,39 @@ fun ScreenshotDetailScreen(
             screenshot = screenshot,
             exifData = exifData,
             onDismiss = { showImageViewer = false },
-            onToggleFavorite = { viewModel.toggleFavorite(it) }
+            onToggleFavorite = { viewModel.toggleFavorite(it) },
+            drawerContent = {
+                ScreenshotDetailContent(
+                viewModel = viewModel,
+                screenshot = screenshot,
+                screenshotId = screenshotId,
+                context = context,
+                imageFile = imageFile,
+                galleryHeight = galleryHeight,
+                detailScrollState = detailScrollState,
+                previousScreenshotId = previousScreenshotId,
+                nextScreenshotId = nextScreenshotId,
+                onNavigateToScreenshot = onNavigateToScreenshot,
+                hasMediaLocationPermission = hasMediaLocationPermission,
+                permissionLauncher = permissionLauncher,
+                exifData = exifData,
+                isAnalyzing = isAnalyzing,
+                showOcrSheet = showOcrSheet,
+                onShowOcrSheetChange = { showOcrSheet = it },
+                showExifEditor = showExifEditor,
+                onShowExifEditorChange = { showExifEditor = it },
+                isEditingDetails = isEditingDetails,
+                onEditingDetailsChange = { isEditingDetails = it },
+                editTitle = editTitle,
+                onEditTitleChange = { editTitle = it },
+                editDescription = editDescription,
+                onEditDescriptionChange = { editDescription = it },
+                editNotes = editNotes,
+                onEditNotesChange = { editNotes = it },
+                showAddTagDialog = showAddTagDialog,
+                onShowAddTagDialogChange = { showAddTagDialog = it }
+                )
+            }
         )
     }
 

@@ -193,7 +193,7 @@ fun ScreenshotDetailScreen(
     val imageFile = File(screenshot.filePath)
 
     val configuration = LocalConfiguration.current
-    val galleryHeight = (configuration.screenHeightDp.dp * 0.58f).coerceIn(300.dp, 560.dp)
+    val galleryHeight = (configuration.screenHeightDp.dp * 0.42f).coerceIn(240.dp, 420.dp)
 
     DisposableEffect(Unit) {
         val window = (context as? android.app.Activity)?.window
@@ -339,8 +339,7 @@ fun ScreenshotDetailScreen(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 12.dp)
-                    .navigationBarsPadding()
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
                     .border(
                         1.dp,
                         MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
@@ -353,65 +352,9 @@ fun ScreenshotDetailScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 24.dp),
-                    verticalArrangement = Arrangement.spacedBy(24.dp)
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        onClick = { viewModel.analyzeScreenshot(screenshot, autoWriteExif = false) },
-                        enabled = !isAnalyzing,
-                        shape = RoundedCornerShape(16.dp),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 11.dp),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp),
-                        modifier = Modifier.weight(1f).testTag("btn_analyze_now")
-                    ) {
-                        if (isAnalyzing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(14.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
-                        }
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(if (isAnalyzing) "Analyzing" else if (screenshot.aiProcessed) "Reanalyze" else "Analyze", fontSize = 12.sp)
-                    }
-
-                    OutlinedButton(
-                        onClick = { showOcrSheet = true },
-                        shape = RoundedCornerShape(16.dp),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 11.dp),
-                        modifier = Modifier.weight(1f).testTag("btn_open_ocr_sheet")
-                    ) {
-                        Icon(Icons.Default.DocumentScanner, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("OCR", fontSize = 12.sp)
-                    }
-
-                    if (!screenshot.isVideo) {
-                        OutlinedButton(
-                            onClick = {
-                                if (!hasMediaLocationPermission) {
-                                    permissionLauncher.launch(
-                                        com.amresalehin.emreshots.service.media.DeviceMediaScanner.getRequiredPermissions()
-                                    )
-                                }
-                                showExifEditor = true
-                            },
-                            shape = RoundedCornerShape(16.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 11.dp),
-                            modifier = Modifier.weight(1f).testTag("btn_open_exif_editor")
-                        ) {
-                            Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("EXIF", fontSize = 12.sp)
-                        }
-                    }
-                }
 
                 // Title and Description
                 Row(

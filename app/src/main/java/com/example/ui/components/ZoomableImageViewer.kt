@@ -12,8 +12,14 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -52,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -63,6 +70,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -79,7 +87,8 @@ fun ZoomableImageViewer(
     screenshot: ScreenshotItem,
     exifData: ExifData = ExifData(),
     onDismiss: () -> Unit,
-    onToggleFavorite: (ScreenshotItem) -> Unit = {}
+    onToggleFavorite: (ScreenshotItem) -> Unit = {},
+    drawerContent: @Composable () -> Unit = {}
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -108,6 +117,18 @@ fun ZoomableImageViewer(
                 .fillMaxSize()
                 .background(Color.Black)
         ) {
+            // Soft-focus backdrop gives the drawer a blurred scrim without blurring
+            // the actual media being viewed.
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(if (imageFile.exists()) imageFile else screenshot.uriString)
+                    .build(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().blur(30.dp)
+            )
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.48f)))
+
             // Interactive Zoom & Pan Area
             Box(
                 modifier = Modifier
@@ -281,9 +302,55 @@ fun ZoomableImageViewer(
                 }
             }
 
+
+            // Draggable detail drawer. The full-screen media remains visible above it,
+            // while the drawer owns its own scrolling region.
+            if (drawerContent != {}) {
+                var drawerHeightFraction by remember { mutableFloatStateOf(0.62f) }
+                BoxWithConstraints(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+                    val density = androidx.compose.ui.platform.LocalDensity.current
+                    val maxHeightPx = with(density) { maxHeight.toPx() }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(drawerHeightFraction)
+                            .pointerInput(maxHeightPx) {
+                                detectVerticalDragGestures(
+                                    onVerticalDrag = { change, dragAmount ->
+                                        change.consume()
+                                        drawerHeightFraction = (drawerHeightFraction - dragAmount / maxHeightPx)
+                                            .coerceIn(0.34f, 0.92f)
+                                    },
+                                    onDragEnd = {
+                                        drawerHeightFraction = listOf(0.34f, 0.62f, 0.92f)
+                                            .minBy { kotlin.math.abs(it - drawerHeightFraction) }
+                                    }
+                                )
+                            }
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Transparent)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .verticalScroll(rememberScrollState())
+                            ) {
+                                drawerContent()
+                            }
+                        }
+                    }
+                }
+            }
+
             // Bottom HUD Bar
             AnimatedVisibility(
-                visible = showControls,
+                visible = showControls && drawerContent == {},
                 enter = fadeIn(),
                 exit = fadeOut(),
                 modifier = Modifier.align(Alignment.BottomCenter)

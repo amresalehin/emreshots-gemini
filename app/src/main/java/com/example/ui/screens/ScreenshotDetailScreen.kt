@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.ActivityNotFoundException
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -49,6 +50,10 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -81,6 +86,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -163,6 +169,7 @@ fun ScreenshotDetailScreen(
     var newTagInput by remember { mutableStateOf("") }
 
     var isEditingDetails by remember { mutableStateOf(false) }
+    var showViewerMenu by remember { mutableStateOf(false) }
     var editTitle by remember { mutableStateOf("") }
     var editDescription by remember { mutableStateOf("") }
     var editNotes by remember { mutableStateOf("") }
@@ -252,40 +259,99 @@ fun ScreenshotDetailScreen(
                 )
             }
     ) {
-            Surface(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 12.dp)
                     .height(galleryHeight)
-                    .border(
-                        1.dp,
-                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f),
-                        RoundedCornerShape(22.dp)
-                    )
-                    .clip(RoundedCornerShape(22.dp)),
-                shape = RoundedCornerShape(22.dp),
-                color = Color(0xFFF1F2F4),
-                tonalElevation = 0.dp
+                    .background(Color(0xFFF1F2F4))
+                    .clipToBounds()
             ) {
-            if (screenshot.isVideo) {
-                InAppVideoPlayer(
-                    screenshot = screenshot,
-                    modifier = Modifier.fillMaxSize(),
-                    onTap = { }
-                )
-            } else if (imageFile.exists() || !screenshot.uriString.isNullOrBlank()) {
-                ZoomableDetailImage(
-                    model = ImageRequest.Builder(context)
-                        .data(if (imageFile.exists()) imageFile else screenshot.uriString)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = screenshot.title,
-                    onTap = { }
-                )
+                if (screenshot.isVideo) {
+                    InAppVideoPlayer(
+                        screenshot = screenshot,
+                        modifier = Modifier.fillMaxSize(),
+                        onTap = { }
+                    )
+                } else if (imageFile.exists() || !screenshot.uriString.isNullOrBlank()) {
+                    ZoomableDetailImage(
+                        model = ImageRequest.Builder(context)
+                            .data(if (imageFile.exists()) imageFile else screenshot.uriString)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = screenshot.title,
+                        onTap = { }
+                    )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.TopCenter)
+                        .statusBarsPadding()
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ViewerCircleButton(label = "Back", onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color(0xFF152440)
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ViewerCircleButton(
+                            label = if (screenshot.isFavorite) "Remove favourite" else "Favourite",
+                            onClick = { viewModel.toggleFavorite(screenshot) }
+                        ) {
+                            Icon(
+                                imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = if (screenshot.isFavorite) "Remove favourite" else "Favourite",
+                                tint = if (screenshot.isFavorite) Color(0xFFB33A4A) else Color(0xFF152440)
+                            )
+                        }
+                        ViewerCircleButton(label = "Tools", onClick = { showExifEditor = true }) {
+                            Icon(
+                                imageVector = Icons.Default.CameraAlt,
+                                contentDescription = "Tools",
+                                tint = Color(0xFF152440)
+                            )
+                        }
+                        Box {
+                            ViewerCircleButton(label = "More", onClick = { showViewerMenu = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "More",
+                                    tint = Color(0xFF152440)
+                                )
+                            }
+                            androidx.compose.material3.DropdownMenu(
+                                expanded = showViewerMenu,
+                                onDismissRequest = { showViewerMenu = false }
+                            ) {
+                                androidx.compose.material3.DropdownMenuItem(
+                                    text = { Text("Edit details") },
+                                    onClick = { showViewerMenu = false; isEditingDetails = true }
+                                )
+                                if (!screenshot.isVideo) {
+                                    androidx.compose.material3.DropdownMenuItem(
+                                        text = { Text("Edit EXIF") },
+                                        onClick = { showViewerMenu = false; showExifEditor = true }
+                                    )
+                                }
+                                androidx.compose.material3.DropdownMenuItem(
+                                    text = { Text("Analyze with AI") },
+                                    onClick = { showViewerMenu = false; viewModel.analyzeScreenshot(screenshot, autoWriteExif = false) }
+                                )
+                                androidx.compose.material3.DropdownMenuItem(
+                                    text = { Text("Delete") },
+                                    onClick = { showViewerMenu = false; showDeleteConfirm = true }
+                                )
+                            }
+                        }
+                    }
+                }
             }
-
-
-        }
 
         Spacer(modifier = Modifier.height(1.dp))
 
@@ -338,7 +404,7 @@ fun ScreenshotDetailScreen(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                    .padding(horizontal = 8.dp, vertical = 2.dp)
                     .border(
                         1.dp,
                         MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
@@ -351,98 +417,123 @@ fun ScreenshotDetailScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
 
-                // Title and Description
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        if (isEditingDetails) {
-                            OutlinedTextField(
-                                value = editTitle,
-                                onValueChange = { editTitle = it },
-                                label = { Text("Title") },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            OutlinedTextField(
-                                value = editDescription,
-                                onValueChange = { editDescription = it },
-                                label = { Text("Description") },
-                                minLines = 2,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            OutlinedTextField(
-                                value = editNotes,
-                                onValueChange = { editNotes = it },
-                                label = { Text("Personal Notes") },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        } else {
+                // Filename, timestamp and editable caption field.
+                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = screenshot.title.ifBlank { File(screenshot.filePath).name.ifBlank { "Untitled" } },
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 2,
-                                lineHeight = 22.sp
+                                overflow = TextOverflow.Ellipsis,
+                                color = Color(0xFF152440)
                             )
                             Text(
-                                text = SimpleDateFormat("d MMM yyyy  •  h:mm a", Locale.getDefault()).format(Date(screenshot.addedOn)),
+                                text = SimpleDateFormat("d MMM yyyy  •  h:mm a", Locale.getDefault()).format(Date(exifData.dateTaken?.let {
+                                    runCatching { SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US).parse(it) }.getOrNull()?.time
+                                } ?: screenshot.addedOn)),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = Color(0xFF7D879A)
                             )
-                            if (screenshot.description.isNotBlank()) {
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = screenshot.description,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    lineHeight = 20.sp
-                                )
-                            }
-                            if (!screenshot.notes.isNullOrBlank()) {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = "Notes: ${screenshot.notes}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
+                        }
+                        IconButton(
+                            onClick = {
+                                if (isEditingDetails) {
+                                    viewModel.updateScreenshot(
+                                        screenshot.copy(
+                                            title = editTitle.ifBlank { screenshot.title },
+                                            description = editDescription,
+                                            notes = editNotes.ifBlank { null }
+                                        )
+                                    )
+                                    isEditingDetails = false
+                                } else {
+                                    isEditingDetails = true
+                                }
+                            },
+                            modifier = Modifier.testTag("btn_toggle_edit_details")
+                        ) {
+                            Icon(
+                                imageVector = if (isEditingDetails) Icons.Default.Check else Icons.Default.Edit,
+                                contentDescription = if (isEditingDetails) "Save details" else "Edit details",
+                                tint = Color(0xFF152440)
+                            )
                         }
                     }
-
-                    IconButton(
-                        onClick = {
-                            if (isEditingDetails) {
-                                viewModel.updateScreenshot(
-                                    screenshot.copy(
-                                        title = editTitle.ifBlank { screenshot.title },
-                                        description = editDescription,
-                                        notes = editNotes.ifBlank { null }
-                                    )
-                                )
-                                isEditingDetails = false
-                            } else {
-                                isEditingDetails = true
-                            }
-                        },
-                        modifier = Modifier.testTag("btn_toggle_edit_details")
-                    ) {
-                        Icon(
-                            imageVector = if (isEditingDetails) Icons.Default.Check else Icons.Default.Edit,
-                            contentDescription = "Edit",
-                            tint = MaterialTheme.colorScheme.primary
+                    if (isEditingDetails) {
+                        OutlinedTextField(
+                            value = editTitle,
+                            onValueChange = { editTitle = it },
+                            label = { Text("Filename / title") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editDescription,
+                            onValueChange = { editDescription = it },
+                            label = { Text(if (screenshot.isVideo) "AI description / caption" else "Caption / description") },
+                            minLines = 2,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editNotes,
+                            onValueChange = { editNotes = it },
+                            label = { Text("Personal notes") },
+                            minLines = 1,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else {
+                        OutlinedTextField(
+                            value = editDescription,
+                            onValueChange = {
+                                editDescription = it
+                                // Persist captions on the trailing clear/save action or via Edit mode.
+                            },
+                            label = { Text(if (screenshot.isVideo) "AI description / caption" else "Caption / description") },
+                            minLines = 2,
+                            readOnly = true,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { isEditingDetails = true }
+                                .testTag("field_media_caption")
                         )
                     }
                 }
 
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    ViewerActionButton("Share", Icons.Default.Share, Modifier.weight(1f)) {
+                        runCatching {
+                            val shareUri = if (!screenshot.uriString.isNullOrBlank()) Uri.parse(screenshot.uriString) else Uri.fromFile(imageFile)
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = if (screenshot.isVideo) "video/*" else "image/*"
+                                putExtra(Intent.EXTRA_STREAM, shareUri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, "Share media"))
+                        }.onFailure { viewModel.showMessage("Unable to share this media") }
+                    }
+                    ViewerActionButton("Add to", Icons.Default.Add, Modifier.weight(1f)) {
+                        viewModel.showMessage("Album management is available from Collections")
+                    }
+                    ViewerActionButton("Move to", Icons.Default.CameraAlt, Modifier.weight(1f)) {
+                        viewModel.showMessage("Choose a collection from Collections")
+                    }
+                    ViewerActionButton("Delete", Icons.Default.Delete, Modifier.weight(1f)) {
+                        showDeleteConfirm = true
+                    }
+                }
                 // Tags Chip Cloud
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
@@ -864,5 +955,51 @@ private fun ZoomableDetailImage(
                     translationY = offsetY
                 }
         )
+    }
+}
+
+
+@Composable
+private fun ViewerCircleButton(
+    label: String,
+    onClick: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    Surface(
+        modifier = Modifier.size(44.dp),
+        shape = CircleShape,
+        color = Color.White.copy(alpha = 0.94f),
+        shadowElevation = 2.dp
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center
+        ) { content() }
+    }
+}
+
+@Composable
+private fun ViewerActionButton(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = modifier.height(44.dp).clickable(onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+        color = Color(0xFFF0F2F6)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 6.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, contentDescription = null, tint = Color(0xFF152440), modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(label, style = MaterialTheme.typography.labelSmall, color = Color(0xFF152440), maxLines = 1)
+        }
     }
 }

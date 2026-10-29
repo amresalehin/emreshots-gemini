@@ -309,61 +309,84 @@ fun ZoomableImageViewer(
             }
 
 
-            // Draggable detail drawer. The full-screen media remains visible above it,
-            // while the drawer owns its own scrolling region.
+            // The drawer is completely hidden while closed. A transparent edge
+            // gesture target remains at the bottom so an upward swipe can reveal it.
             if (drawerContent != null) {
-                var drawerHeightFraction by remember { mutableFloatStateOf(0.075f) }
+                var drawerHeightFraction by remember { mutableFloatStateOf(0f) }
                 BoxWithConstraints(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.BottomCenter
                 ) {
                     val density = androidx.compose.ui.platform.LocalDensity.current
                     val maxHeightPx = with(density) { maxHeight.toPx() }
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(drawerHeightFraction)
-                    ) {
+
+                    if (drawerHeightFraction > 0.04f) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .fillMaxHeight(drawerHeightFraction)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(28.dp)
+                                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                                    .background(MaterialTheme.colorScheme.surface)
+                                    .pointerInput(maxHeightPx) {
+                                        detectVerticalDragGestures(
+                                            onVerticalDrag = { change, dragAmount ->
+                                                change.consume()
+                                                drawerHeightFraction = (drawerHeightFraction - dragAmount / maxHeightPx)
+                                                    .coerceIn(0f, 0.86f)
+                                            },
+                                            onDragEnd = {
+                                                drawerHeightFraction = listOf(0f, 0.62f, 0.86f)
+                                                    .minBy { kotlin.math.abs(it - drawerHeightFraction) }
+                                            }
+                                        )
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Box(
+                                    Modifier.size(width = 38.dp, height = 4.dp)
+                                        .clip(RoundedCornerShape(50))
+                                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.24f))
+                                )
+                            }
+                            if (drawerHeightFraction > 0.18f) {
+                                Box(Modifier.weight(1f).fillMaxWidth()) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .verticalScroll(rememberScrollState())
+                                    ) {
+                                        drawerContent()
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Invisible, full-width swipe target; it draws nothing in the closed state.
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(28.dp)
-                                .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                                .background(MaterialTheme.colorScheme.surface)
+                                .height(40.dp)
                                 .pointerInput(maxHeightPx) {
                                     detectVerticalDragGestures(
                                         onVerticalDrag = { change, dragAmount ->
                                             change.consume()
                                             drawerHeightFraction = (drawerHeightFraction - dragAmount / maxHeightPx)
-                                                .coerceIn(0.075f, 0.86f)
+                                                .coerceIn(0f, 0.86f)
                                         },
                                         onDragEnd = {
-                                            drawerHeightFraction = listOf(0.075f, 0.62f, 0.86f)
-                                                .minBy { kotlin.math.abs(it - drawerHeightFraction) }
+                                            if (drawerHeightFraction > 0f) {
+                                                drawerHeightFraction = listOf(0f, 0.62f, 0.86f)
+                                                    .minBy { kotlin.math.abs(it - drawerHeightFraction) }
+                                            }
                                         }
                                     )
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Box(
-                                Modifier.size(width = 38.dp, height = 4.dp)
-                                    .clip(RoundedCornerShape(50))
-                                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.24f))
-                            )
-                        }
-                        // In the closed state, only the small drag handle is visible.
-                        // The detail content is composed only after the user pulls the drawer up.
-                        if (drawerHeightFraction > 0.18f) {
-                            Box(Modifier.weight(1f).fillMaxWidth()) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .verticalScroll(rememberScrollState())
-                                ) {
-                                    drawerContent()
                                 }
-                            }
-                        }
+                        )
                     }
                 }
             }

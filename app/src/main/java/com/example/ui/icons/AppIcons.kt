@@ -6,7 +6,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.unit.dp
 
-// Minimal Material vector set used by this app; avoids the full extended icon catalogue.
+// Adapted from Google Material Design Icons SVG path data as Compose ImageVectors.
+// Copyright Google LLC. Changes: consolidated only the vectors used by this app into Kotlin.
+// Licensed under Apache-2.0; see third_party/material-design-icons/LICENSE.
 object AppIcons {
   // Accessing this list constructs every vector and is used by the unit test to validate all path data.
   val all: List<ImageVector> by lazy { listOf(AddPhotoAlternate, Alarm, AutoAwesome, Backup, CameraAlt, CloudDone, CloudQueue, Collections, ContentCopy, Dashboard, DeleteSweep, DocumentScanner, Download, FileOpen, FitScreen, FormatListBulleted, Forward10, GridView, Image, Language, Link, LocationOn, NetworkCheck, OpenInBrowser, Pause, PermMedia, PlayArrow, Psychology, Replay, Replay10, Sort, TextFields, Translate, Tune, Visibility, VisibilityOff, ViewAgenda, VolumeMute, VolumeUp, ZoomIn, ZoomOut) }

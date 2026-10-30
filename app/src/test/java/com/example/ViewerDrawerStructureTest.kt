@@ -55,6 +55,6 @@ class ViewerDrawerStructureTest {
 
     @Test
     fun localVectorIconsAreAllConstructible() {
-        assertEquals(41, AppIcons.all.size)
+        assertEquals(42, AppIcons.all.size)
     }
 }

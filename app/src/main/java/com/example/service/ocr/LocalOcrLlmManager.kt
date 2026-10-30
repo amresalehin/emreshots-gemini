@@ -43,6 +43,8 @@ class LocalOcrLlmManager(
 
     val defaultModelName = "SmolLM2-135M-Instruct-Q2_K.gguf"
     val defaultDownloadUrl = "https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q2_K.gguf"
+    private val expectedModelSha256 = "741ad12b64088fedc17c33aacb22e48be1972ef36a39f03666dd68bd15614fb9"
+    private val minimumModelBytes = 80L * 1024L * 1024L
 
     val modelFile: File
         get() = File(modelsDir, defaultModelName)
@@ -133,27 +135,29 @@ class LocalOcrLlmManager(
     suspend fun downloadModel(onProgress: ((Float) -> Unit)? = null): Boolean = withContext(Dispatchers.IO) {
         if (_isDownloading.value) return@withContext false
         _isDownloading.value = true
-        _statusMessage.value = "Downloading small local AI (~88 MB)…"
+        _statusMessage.value = "Downloading optional local OCR AI (about 84 MB)…"
         val tempFile = File(modelsDir, "$defaultModelName.tmp")
 
         try {
+            tempFile.delete()
             val request = Request.Builder().url(defaultDownloadUrl).build()
             httpClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
                     _statusMessage.value = "Download failed: HTTP ${response.code}"
                     return@withContext false
                 }
-                val body = response.body ?: return@withContext false
+                val body = response.body ?: error("The model server returned an empty response.")
                 val totalLength = body.contentLength().coerceAtLeast(1L)
                 var bytesCopied = 0L
-
                 body.byteStream().use { input ->
                     FileOutputStream(tempFile).use { output ->
                         val buffer = ByteArray(64 * 1024)
-                        var bytes: Int
-                        while (input.read(buffer).also { bytes = it } >= 0) {
-                            output.write(buffer, 0, bytes)
-                            bytesCopied += bytes
+                        while (true) {
+                            val count = input.read(buffer)
+                            if (count < 0) break
+                            if (count == 0) continue
+                            output.write(buffer, 0, count)
+                            bytesCopied += count
                             val progress = (bytesCopied.toFloat() / totalLength).coerceIn(0f, 1f)
                             _downloadProgress.value = progress
                             onProgress?.invoke(progress)
@@ -162,22 +166,37 @@ class LocalOcrLlmManager(
                 }
             }
 
-            val finalFile = File(modelsDir, defaultModelName)
-            if (tempFile.exists() && tempFile.length() > 1024 * 1024) {
-                if (finalFile.exists()) finalFile.delete()
-                tempFile.renameTo(finalFile)
-                _isModelInstalled.value = true
-                _statusMessage.value = "Local AI installed and ready"
-                return@withContext true
+            // Reject truncated downloads, HTML error pages, and substituted model files.
+            if (!tempFile.isFile || tempFile.length() < minimumModelBytes ||
+                !isValidGguf(tempFile) ||
+                !sha256(tempFile).equals(expectedModelSha256, ignoreCase = true)
+            ) {
+                _statusMessage.value = "Downloaded model failed integrity verification."
+                tempFile.delete()
+                return@withContext false
             }
-            false
+
+            val finalFile = File(modelsDir, defaultModelName)
+            if (finalFile.exists() && !finalFile.delete()) error("Could not replace the previous local OCR model.")
+            if (!tempFile.renameTo(finalFile)) {
+                tempFile.copyTo(finalFile, overwrite = true)
+                tempFile.delete()
+            }
+            _isModelInstalled.value = isInstalledOnDisk()
+            if (!_isModelInstalled.value) {
+                finalFile.delete()
+                error("The installed local OCR model failed verification.")
+            }
+            _downloadProgress.value = 1f
+            onProgress?.invoke(1f)
+            _statusMessage.value = "Local OCR AI installed and verified"
+            true
         } catch (e: Exception) {
-            _statusMessage.value = "Download error: ${e.message}"
+            _statusMessage.value = "Download error: ${e.message ?: "unknown error"}"
             tempFile.delete()
             false
         } finally {
             _isDownloading.value = false
-            _downloadProgress.value = 0f
         }
     }
 

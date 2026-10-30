@@ -27,15 +27,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -326,12 +321,12 @@ internal fun ScreenshotDetailContent(
                             shape = RoundedCornerShape(18.dp)
                         ) {
                             if (isAnalyzing) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                            else Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                            else Icon(AppIcons.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
                             Text(if (screenshot.aiProcessed) "Re-analyze" else "AI description")
                         }
                         OutlinedButton(onClick = { if (inlineTools) showInlineOcr = !showInlineOcr else onShowOcrSheetChange(true) }, modifier = Modifier.weight(1f).testTag("btn_open_ocr_sheet"), shape = RoundedCornerShape(18.dp)) {
-                            Icon(Icons.Default.DocumentScanner, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(AppIcons.DocumentScanner, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
                             Text("Extract text")
                         }
@@ -345,7 +340,7 @@ internal fun ScreenshotDetailContent(
                             modifier = Modifier.fillMaxWidth().testTag("btn_open_exif_editor"),
                             shape = RoundedCornerShape(18.dp)
                         ) {
-                            Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(AppIcons.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.edit_exif))
                         }
@@ -440,10 +435,10 @@ internal fun ScreenshotDetailContent(
                                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                         clipboard.setPrimaryClip(ClipData.newPlainText("Link", link))
                                         viewModel.showMessage("Copied to clipboard!")
-                                    }) { Icon(Icons.Default.ContentCopy, contentDescription = "Copy link") }
+                                    }) { Icon(AppIcons.ContentCopy, contentDescription = "Copy link") }
                                     if (link.startsWith("http://") || link.startsWith("https://")) {
                                         IconButton(onClick = { runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link))) } }) {
-                                            Icon(Icons.Default.OpenInBrowser, contentDescription = "Open link")
+                                            Icon(AppIcons.OpenInBrowser, contentDescription = "Open link")
                                         }
                                     }
                                 }

@@ -152,7 +152,7 @@ internal fun ColumnScope.GalleryContent(
 PullToRefreshBox(
     isRefreshing = isRefreshing,
     onRefresh = {
-        if (hasMediaPermissions) viewModel.syncDeviceMedia()
+        if (hasMediaPermissions) viewModel.syncDeviceMedia(showRefreshIndicator = true)
         else permissionLauncher.launch(DeviceMediaScanner.getRequiredPermissions())
     },
     modifier = Modifier

@@ -141,6 +141,9 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onNavigateToSettings = {
                                     navController.navigate(Screen.Settings.route)
+                                },
+                                onNavigateToCollections = {
+                                    navController.navigate(Screen.Collections.route)
                                 }
                             )
                         }
@@ -153,6 +156,9 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onNavigateToSettings = {
                                     navController.navigate(Screen.Settings.route)
+                                },
+                                onNavigateToCollections = {
+                                    navController.navigate(Screen.Collections.route)
                                 },
                                 initialCollectionId = backStackEntry.arguments?.getString("collectionId")
                             )

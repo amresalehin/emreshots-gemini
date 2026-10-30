@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -192,245 +193,69 @@ TopAppBar(
                 modifier = Modifier.fillMaxWidth().focusRequester(searchFocusRequester).testTag("input_gallery_search")
             )
         } else {
-            Text(
-                text = "Gallery",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-    },
-    actions = {
-        if (!isSearchExpanded) {
-            IconButton(
-                onClick = { onSearchExpandedChange(true) },
-                modifier = Modifier.testTag("btn_toggle_search")
+            // Compact Photos / Albums segmented pill in the app-bar row (not a second row).
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f))
+                    .padding(3.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
-            }
-
-            // View mode is a frequent gallery control, so keep it one tap away.
-            Box {
-                IconButton(
-                    onClick = { onShowViewMenuChange(true) },
-                    modifier = Modifier.testTag("btn_view_options")
-                ) {
-                    Icon(AppIcons.GridView, contentDescription = stringResource(R.string.view))
-                }
-                DropdownMenu(
-                    expanded = showViewMenu,
-                    onDismissRequest = { onShowViewMenuChange(false) }
-                ) {
-                    GalleryViewMode.entries.forEach { mode ->
-                        DropdownMenuItem(
-                            text = { Text(mode.displayName) },
-                            leadingIcon = {
-                                if (mode == viewMode) {
-                                    Icon(Icons.Default.Check, contentDescription = null)
-                                }
-                            },
-                            onClick = {
-                                viewModel.setViewMode(mode)
-                                onShowViewMenuChange(false)
-                            },
-                            modifier = Modifier.testTag("gallery_view_option_" + mode.name.lowercase())
-                        )
-                    }
-                }
-            }
-
-            // Sort and grouping share one compact menu, separate from secondary actions.
-            Box {
-                IconButton(
-                    onClick = { onShowOrganizeMenuChange(true) },
-                    modifier = Modifier.testTag("btn_sort_group")
-                ) {
-                    Icon(AppIcons.Sort, contentDescription = stringResource(R.string.sort_by))
-                }
-                DropdownMenu(
-                    expanded = showOrganizeMenu,
-                    onDismissRequest = { onShowOrganizeMenuChange(false) }
-                ) {
-                    DropdownMenuItem(
-                        text = {
-                            Column {
-                                Text(stringResource(R.string.sort_by))
-                                Text(
-                                    sortOption.displayName,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        },
-                        leadingIcon = { Icon(AppIcons.Sort, contentDescription = null) },
-                        onClick = {
-                            onShowOrganizeMenuChange(false)
-                            onShowSortDialog(true)
-                        },
-                        modifier = Modifier.testTag("btn_sort_option")
-                    )
-                    DropdownMenuItem(
-                        text = {
-                            Column {
-                                Text(stringResource(R.string.group_by))
-                                Text(
-                                    groupByOption.displayName,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        },
-                        leadingIcon = { Icon(AppIcons.GridView, contentDescription = null) },
-                        onClick = {
-                            onShowOrganizeMenuChange(false)
-                            onShowGroupDialog(true)
-                        },
-                        modifier = Modifier.testTag("btn_group_by_option")
-                    )
-                }
-            }
-
-            IconButton(
-                onClick = onNavigateToSettings,
-                modifier = Modifier.testTag("btn_gallery_settings")
-            ) {
-                Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings))
-            }
-
-        }
-
-        Box {
-            IconButton(
-                onClick = { onShowMoreMenuChange(true) },
-                modifier = Modifier.testTag("btn_more_menu")
-            ) {
-                Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more_options))
-            }
-            DropdownMenu(expanded = showMoreMenu, onDismissRequest = { onShowMoreMenuChange(false) }) {
-                GalleryMenuToggle(
-                    label = stringResource(R.string.show_file_names),
-                    checked = showFileNames,
-                    onCheckedChange = viewModel::setShowFileNames
-                )
-                GalleryMenuToggle(
-                    label = stringResource(R.string.show_tags),
-                    checked = showTags,
-                    onCheckedChange = viewModel::setShowTags
-                )
-                androidx.compose.material3.HorizontalDivider()
-                DropdownMenuItem(
-                    text = {
-                        Column {
-                            Text(stringResource(R.string.ai_vision), fontWeight = FontWeight.SemiBold)
-                            Text(
-                                if (aiVisionPendingCount > 0) stringResource(R.string.media_waiting_for_analysis, aiVisionPendingCount) else stringResource(R.string.everything_is_analyzed),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    },
-                    leadingIcon = { Icon(AppIcons.AutoAwesome, contentDescription = null) },
-                    enabled = !isAnalyzing && aiVisionPendingCount > 0,
-                    onClick = {
-                        onShowMoreMenuChange(false)
-                        viewModel.batchAnalyzeScreenshots(allScreenshots.filter { !it.isVideo && !it.aiProcessed })
-                    },
-                    modifier = Modifier.testTag("menu_ai_vision")
-                )
-                DropdownMenuItem(
-                    text = {
-                        Column {
-                            Text(stringResource(R.string.ocr), fontWeight = FontWeight.SemiBold)
-                            Text(
-                                when {
-                                    !ocrEnabled -> stringResource(R.string.ocr_disabled_in_settings)
-                                    ocrPendingCount > 0 -> "stringResource(R.string.media_waiting_for_ocr, ocrPendingCount)"
-                                    else -> "All media has OCR text"
-                                },
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    enabled = ocrEnabled && !isExtractingOcr && ocrPendingCount > 0,
-                    onClick = {
-                        onShowMoreMenuChange(false)
-                        viewModel.batchExtractOcr(allScreenshots, onlyMissing = true)
-                    },
-                    modifier = Modifier.testTag("menu_ocr")
-                )
-                androidx.compose.material3.HorizontalDivider()
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.batch_rename_visible)) },
-                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
-                    onClick = { onShowMoreMenuChange(false); onShowBatchRenameDialog(true) },
-                    modifier = Modifier.testTag("btn_batch_rename")
-                )
-            }
-        }
-    },
-    scrollBehavior = scrollBehavior,
-    windowInsets = TopAppBarDefaults.windowInsets,
-    colors = TopAppBarDefaults.topAppBarColors(
-        containerColor = MaterialTheme.colorScheme.surface,
-        scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
-    )
-)
-    if (!isSearchExpanded) {
-        Row(
-            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val homeSelected = selectedCollectionId == null
-            Surface(
-                onClick = { onSelectedCollectionIdChange(null) },
-                shape = RoundedCornerShape(50),
-                color = if (homeSelected) MaterialTheme.colorScheme.inverseSurface else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
-                contentColor = if (homeSelected) MaterialTheme.colorScheme.inverseOnSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.testTag("tab_all_media")
-            ) {
-                Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Icon(Icons.Default.Home, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Text(stringResource(R.string.all_media), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-                    Text(allScreenshots.size.toString(), style = MaterialTheme.typography.labelSmall)
-                }
-            }
-            collections.forEach { collection ->
-                val selected = selectedCollectionId == collection.id
-                val count = allScreenshots.count { collection.id in it.collectionIds }
                 Surface(
-                    onClick = { onSelectedCollectionIdChange(collection.id) },
+                    onClick = { onSelectedCollectionIdChange(null) },
                     shape = RoundedCornerShape(50),
-                    color = if (selected) MaterialTheme.colorScheme.inverseSurface else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
-                    contentColor = if (selected) MaterialTheme.colorScheme.inverseOnSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.testTag("tab_collection_" + collection.id)
+                    color = if (selectedCollectionId == null) MaterialTheme.colorScheme.inverseSurface else Color.Transparent,
+                    contentColor = if (selectedCollectionId == null) MaterialTheme.colorScheme.inverseOnSurface else MaterialTheme.colorScheme.onSurfaceVariant
                 ) {
-                    Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Icon(AppIcons.Collections, contentDescription = null, modifier = Modifier.size(15.dp))
-                        Text(collection.name, style = MaterialTheme.typography.labelMedium, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium, maxLines = 1)
-                        Text(count.toString(), style = MaterialTheme.typography.labelSmall)
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Icon(Icons.Default.Home, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Text("Photos", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
                     }
                 }
-            }
-            if (availableFolders.isNotEmpty()) {
                 Box {
-                    Surface(onClick = { onShowFolderMenuChange(true) }, shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), contentColor = MaterialTheme.colorScheme.onSurfaceVariant) {
-                        Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                            Icon(AppIcons.Collections, contentDescription = null, modifier = Modifier.size(15.dp))
-                            Text(selectedFolder ?: "Folders", style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                    Surface(
+                        onClick = { onShowFolderMenuChange(true) },
+                        shape = RoundedCornerShape(50),
+                        color = if (selectedCollectionId != null) MaterialTheme.colorScheme.inverseSurface else Color.Transparent,
+                        contentColor = if (selectedCollectionId != null) MaterialTheme.colorScheme.inverseOnSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Icon(AppIcons.Collections, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Text("Albums", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
                         }
                     }
                     DropdownMenu(expanded = showFolderMenu, onDismissRequest = { onShowFolderMenuChange(false) }) {
-                        DropdownMenuItem(text = { Text(stringResource(R.string.all_media)) }, trailingIcon = { if (selectedFolder == null) Text("✓") }, onClick = { onSelectedFolderChange(null); onShowFolderMenuChange(false) })
-                        availableFolders.take(24).forEach { folder ->
-                            DropdownMenuItem(text = { Text(folder, maxLines = 1) }, trailingIcon = { if (selectedFolder == folder) Text("✓") }, onClick = { onSelectedFolderChange(folder); onShowFolderMenuChange(false) })
+                        if (collections.isEmpty()) {
+                            DropdownMenuItem(text = { Text("No albums yet") }, onClick = { onShowFolderMenuChange(false) }, enabled = false)
+                        } else {
+                            collections.forEach { collection ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(collection.name, modifier = Modifier.weight(1f), maxLines = 1)
+                                            Text(allScreenshots.count { collection.id in it.collectionIds }.toString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    },
+                                    leadingIcon = { if (selectedCollectionId == collection.id) Icon(Icons.Default.Check, contentDescription = null) },
+                                    onClick = { onSelectedCollectionIdChange(collection.id); onShowFolderMenuChange(false) }
+                                )
+                            }
                         }
                     }
                 }
             }
         }
-    }
+    },
+    actions = {
+    
 }
 
 

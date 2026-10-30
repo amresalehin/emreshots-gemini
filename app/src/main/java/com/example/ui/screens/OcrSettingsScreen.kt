@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -24,6 +26,8 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -61,6 +65,10 @@ fun OcrSettingsScreen(
     val installed by viewModel.installedOcrLanguages.collectAsStateWithLifecycle()
     val downloadProgress by viewModel.ocrLanguageDownloadProgress.collectAsStateWithLifecycle()
     val linksEnabled by viewModel.linksDetectionEnabled.collectAsStateWithLifecycle()
+    val localAiInstalled by viewModel.isLocalOcrLlmInstalled.collectAsStateWithLifecycle()
+    val localAiDownloading by viewModel.isDownloadingLocalOcrLlm.collectAsStateWithLifecycle()
+    val localAiProgress by viewModel.localOcrLlmDownloadProgress.collectAsStateWithLifecycle()
+    val localAiStatus by viewModel.localOcrLlmStatusMessage.collectAsStateWithLifecycle()
     var showLanguageSheet by remember { mutableStateOf(false) }
 
     val customPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -89,7 +97,7 @@ fun OcrSettingsScreen(
         }
     ) { inner ->
         Column(
-            modifier = Modifier.fillMaxSize().navigationBarsPadding().padding(inner).padding(16.dp),
+            modifier = Modifier.fillMaxSize().navigationBarsPadding().padding(inner).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Card(shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
@@ -123,6 +131,29 @@ fun OcrSettingsScreen(
                             modifier = Modifier.fillMaxWidth().height(48.dp)
                         ) {
                             Text(stringResource(R.string.import_custom_language_pack))
+                        }
+                    }
+                }
+                Card(shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Optional on-device OCR AI", fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "Adds local text cleanup, titles and tags after OCR. The base OCR engine works without this model. Download is about 84 MB and happens only when requested.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (localAiDownloading) {
+                            LinearProgressIndicator(progress = { localAiProgress }, modifier = Modifier.fillMaxWidth())
+                            Text("Downloading ${(localAiProgress * 100).toInt()}%", style = MaterialTheme.typography.bodySmall)
+                        } else if (localAiInstalled) {
+                            Text("Model installed and ready", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                        } else {
+                            Button(onClick = viewModel::downloadLocalOcrLlm, modifier = Modifier.fillMaxWidth()) {
+                                Text("Download local AI model · 84 MB")
+                            }
+                        }
+                        if (!localAiStatus.isNullOrBlank()) {
+                            Text(localAiStatus.orEmpty(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }

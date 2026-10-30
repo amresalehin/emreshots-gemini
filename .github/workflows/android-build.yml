@@ -58,30 +58,6 @@ jobs:
           test -s app/src/main/jniLibs/arm64-v8a/libperl.so
           test -s app/src/main/assets/perl5.tar
 
-      - name: Cache offline OCR model
-        uses: actions/cache@v4
-        with:
-          path: app/src/main/assets/models/SmolLM2-135M-Instruct-Q2_K.gguf
-          key: emreshots-ocr-smollm2-135m-q2-741ad12b64088fedc17c33aacb22e48be1972ef36a39f03666dd68bd15614fb9-v1
-
-      - name: Prepare bundled offline OCR LLM
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p app/src/main/assets/models
-          MODEL="app/src/main/assets/models/SmolLM2-135M-Instruct-Q2_K.gguf"
-          URL="https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q2_K.gguf"
-          SHA256="741ad12b64088fedc17c33aacb22e48be1972ef36a39f03666dd68bd15614fb9"
-          if [[ -s "$MODEL" ]] && echo "$SHA256  $MODEL" | sha256sum -c --status; then
-            echo "Using cached OCR model."
-          else
-            rm -f "$MODEL"
-            curl -fL --retry 4 --retry-all-errors --connect-timeout 30 --max-time 900 -o "$MODEL" "$URL"
-          fi
-          echo "$SHA256  $MODEL" | sha256sum -c -
-          test "$(stat -c %s "$MODEL")" -gt 80000000
-          echo "Bundled OCR LLM verified: $(du -h "$MODEL" | cut -f1)"
-
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
         with:
@@ -89,7 +65,7 @@ jobs:
           # Gradle User Home caching is enabled by default.
 
       - name: Build, test, and assemble release APK
-        run: gradle --build-cache --stacktrace build :app:assembleRelease
+        run: gradle --build-cache --configuration-cache --parallel --stacktrace :app:testDebugUnitTest :app:assembleRelease
 
       - name: Verify APK signature and alignment
         shell: bash

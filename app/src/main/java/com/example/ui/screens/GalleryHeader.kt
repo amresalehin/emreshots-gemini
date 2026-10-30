@@ -28,6 +28,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -47,6 +49,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -100,6 +103,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.amresalehin.emreshots.R
 import com.amresalehin.emreshots.data.model.GalleryViewMode
+import com.amresalehin.emreshots.data.model.CollectionItem
 import com.amresalehin.emreshots.data.model.ScreenshotItem
 import com.amresalehin.emreshots.data.model.MediaGroupBy
 import com.amresalehin.emreshots.data.model.MediaSortOption
@@ -125,6 +129,9 @@ internal fun GalleryHeader(
     onShowFolderMenuChange: (Boolean) -> Unit,
     selectedFolder: String?,
     onSelectedFolderChange: (String?) -> Unit,
+    collections: List<CollectionItem>,
+    selectedCollectionId: String?,
+    onSelectedCollectionIdChange: (String?) -> Unit,
     totalDisplayCount: Int,
     availableFolders: List<String>,
     showMoreMenu: Boolean,
@@ -150,7 +157,8 @@ internal fun GalleryHeader(
     onNavigateToSettings: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior
 ) {
-// Professional gallery header: search, view, sort, and compact overflow.
+// Gallery header with a persistent, horizontally scrollable collection pill switcher.
+Column {
 TopAppBar(
     title = {
         if (isSearchExpanded) {
@@ -184,33 +192,11 @@ TopAppBar(
                 modifier = Modifier.fillMaxWidth().focusRequester(searchFocusRequester).testTag("input_gallery_search")
             )
         } else {
-            Box {
-                Surface(
-                    onClick = { onShowFolderMenuChange(true) },
-                    shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(AppIcons.Collections, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(7.dp))
-                        Text(selectedFolder ?: stringResource(R.string.all_media), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                        Spacer(modifier = Modifier.width(5.dp))
-                        Text(totalDisplayCount.toString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-                DropdownMenu(expanded = showFolderMenu, onDismissRequest = { onShowFolderMenuChange(false) }) {
-                    DropdownMenuItem(text = { Text(stringResource(R.string.all_media)) }, trailingIcon = { if (selectedFolder == null) Text("✓") }, onClick = { onSelectedFolderChange(null); onShowFolderMenuChange(false) })
-                    if (availableFolders.isNotEmpty()) {
-                        androidx.compose.material3.HorizontalDivider()
-                        availableFolders.take(24).forEach { folder ->
-                            DropdownMenuItem(text = { Text(folder, maxLines = 1) }, trailingIcon = { if (selectedFolder == folder) Text("✓") }, onClick = { onSelectedFolderChange(folder); onShowFolderMenuChange(false) })
-                        }
-                    }
-                }
-            }
+            Text(
+                text = stringResource(R.string.all_media),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
         }
     },
     actions = {
@@ -390,6 +376,62 @@ TopAppBar(
         scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
     )
 )
+    if (!isSearchExpanded) {
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val homeSelected = selectedCollectionId == null
+            Surface(
+                onClick = { onSelectedCollectionIdChange(null) },
+                shape = RoundedCornerShape(50),
+                color = if (homeSelected) MaterialTheme.colorScheme.inverseSurface else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+                contentColor = if (homeSelected) MaterialTheme.colorScheme.inverseOnSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag("tab_all_media")
+            ) {
+                Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(Icons.Default.Home, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Text(stringResource(R.string.all_media), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                    Text(allScreenshots.size.toString(), style = MaterialTheme.typography.labelSmall)
+                }
+            }
+            collections.forEach { collection ->
+                val selected = selectedCollectionId == collection.id
+                val count = allScreenshots.count { collection.id in it.collectionIds }
+                Surface(
+                    onClick = { onSelectedCollectionIdChange(collection.id) },
+                    shape = RoundedCornerShape(50),
+                    color = if (selected) MaterialTheme.colorScheme.inverseSurface else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+                    contentColor = if (selected) MaterialTheme.colorScheme.inverseOnSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag("tab_collection_" + collection.id)
+                ) {
+                    Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Icon(AppIcons.Collections, contentDescription = null, modifier = Modifier.size(15.dp))
+                        Text(collection.name, style = MaterialTheme.typography.labelMedium, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium, maxLines = 1)
+                        Text(count.toString(), style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
+            if (availableFolders.isNotEmpty()) {
+                Box {
+                    Surface(onClick = { onShowFolderMenuChange(true) }, shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), contentColor = MaterialTheme.colorScheme.onSurfaceVariant) {
+                        Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Icon(AppIcons.Folder, contentDescription = null, modifier = Modifier.size(15.dp))
+                            Text(selectedFolder ?: stringResource(R.string.folder), style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                        }
+                    }
+                    DropdownMenu(expanded = showFolderMenu, onDismissRequest = { onShowFolderMenuChange(false) }) {
+                        DropdownMenuItem(text = { Text(stringResource(R.string.all_media)) }, trailingIcon = { if (selectedFolder == null) Text("✓") }, onClick = { onSelectedFolderChange(null); onShowFolderMenuChange(false) })
+                        availableFolders.take(24).forEach { folder ->
+                            DropdownMenuItem(text = { Text(folder, maxLines = 1) }, trailingIcon = { if (selectedFolder == folder) Text("✓") }, onClick = { onSelectedFolderChange(folder); onShowFolderMenuChange(false) })
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 
 }

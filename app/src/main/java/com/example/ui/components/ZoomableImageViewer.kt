@@ -5,6 +5,7 @@ import com.amresalehin.emreshots.R
 import com.amresalehin.emreshots.ui.theme.DangerRose
 import android.content.Context
 import android.content.Intent
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
@@ -38,6 +39,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.FitScreen
@@ -102,6 +104,17 @@ fun ZoomableImageViewer(
     var offsetY by remember { mutableFloatStateOf(0f) }
     // Keep viewer chrome hidden until the user taps the image.
     var showControls by remember { mutableStateOf(false) }
+    // One shared sheet state drives both image-swipe and handle gestures.
+    var drawerHeightFraction by remember(screenshot.id) { mutableFloatStateOf(0f) }
+
+    fun settleDrawer() {
+        drawerHeightFraction = listOf(0f, 0.62f, 0.86f)
+            .minBy { kotlin.math.abs(it - drawerHeightFraction) }
+    }
+
+    BackHandler(enabled = drawerHeightFraction > 0.04f) {
+        drawerHeightFraction = 0f
+    }
 
     fun resetZoom() {
         scale = 1f
@@ -113,7 +126,8 @@ fun ZoomableImageViewer(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
+            decorFitsSystemWindows = false,
+            dismissOnClickOutside = false
         )
     ) {
         Box(
@@ -140,54 +154,97 @@ fun ZoomableImageViewer(
                     .pointerInput(Unit) {
                         detectTapGestures(
                             onTap = {
-                                showControls = !showControls
+                                if (!screenshot.isVideo) showControls = !showControls
                             },
                             onDoubleTap = { tapOffset ->
-                                if (scale > 1.2f) {
-                                    resetZoom()
-                                } else {
-                                    scale = 2.5f
-                                    // Focus zoom towards double-tap location
-                                    offsetX = (size.width / 2f - tapOffset.x) * 1.5f
-                                    offsetY = (size.height / 2f - tapOffset.y) * 1.5f
+                                if (!screenshot.isVideo) {
+                                    if (scale > 1.2f) {
+                                        resetZoom()
+                                    } else {
+                                        scale = 2.5f
+                                        // Focus zoom towards double-tap location
+                                        offsetX = (size.width / 2f - tapOffset.x) * 1.5f
+                                        offsetY = (size.height / 2f - tapOffset.y) * 1.5f
+                                    }
                                 }
                             }
                         )
                     }
-                    .pointerInput(Unit) {
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            val newScale = (scale * zoom).coerceIn(0.9f, 6.0f)
-                            scale = newScale
+                    .pointerInput(screenshot.isVideo) {
+                        if (!screenshot.isVideo) {
+                            detectTransformGestures { _, pan, zoom, _ ->
+                                val newScale = (scale * zoom).coerceIn(0.9f, 6.0f)
+                                scale = newScale
 
-                            if (scale > 1f) {
-                                val maxOffsetX = (size.width * (scale - 1f)) / 2f
-                                val maxOffsetY = (size.height * (scale - 1f)) / 2f
-                                offsetX = (offsetX + pan.x * scale).coerceIn(-maxOffsetX, maxOffsetX)
-                                offsetY = (offsetY + pan.y * scale).coerceIn(-maxOffsetY, maxOffsetY)
-                            } else {
-                                offsetX = 0f
-                                offsetY = 0f
+                                if (scale > 1f) {
+                                    val maxOffsetX = (size.width * (scale - 1f)) / 2f
+                                    val maxOffsetY = (size.height * (scale - 1f)) / 2f
+                                    offsetX = (offsetX + pan.x * scale).coerceIn(-maxOffsetX, maxOffsetX)
+                                    offsetY = (offsetY + pan.y * scale).coerceIn(-maxOffsetY, maxOffsetY)
+                                } else {
+                                    offsetX = 0f
+                                    offsetY = 0f
+                                }
                             }
                         }
+                    }
+                    .pointerInput(drawerContent) {
+                        var totalVerticalDrag = 0f
+                        var startedWithDrawerClosed = drawerHeightFraction <= 0.04f
+                        detectVerticalDragGestures(
+                            onDragStart = {
+                                totalVerticalDrag = 0f
+                                startedWithDrawerClosed = drawerHeightFraction <= 0.04f
+                            },
+                            onVerticalDrag = { change, dragAmount ->
+                                if (drawerContent != null && scale <= 1.05f &&
+                                    (drawerHeightFraction > 0.04f || dragAmount < 0f)
+                                ) {
+                                    change.consume()
+                                    totalVerticalDrag += dragAmount
+                                    drawerHeightFraction = (drawerHeightFraction - dragAmount / size.height.coerceAtLeast(1).toFloat())
+                                        .coerceIn(0f, 0.86f)
+                                }
+                            },
+                            onDragEnd = {
+                                if (drawerContent != null && scale <= 1.05f) {
+                                    if (startedWithDrawerClosed && totalVerticalDrag < -48.dp.toPx()) {
+                                        drawerHeightFraction = 0.62f
+                                    } else if (drawerHeightFraction > 0.04f) {
+                                        settleDrawer()
+                                    }
+                                }
+                                totalVerticalDrag = 0f
+                            },
+                            onDragCancel = { totalVerticalDrag = 0f }
+                        )
                     },
                 contentAlignment = Alignment.Center
             ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(if (imageFile.exists()) imageFile else screenshot.uriString)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = screenshot.title,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer(
-                            scaleX = scale,
-                            scaleY = scale,
-                            translationX = offsetX,
-                            translationY = offsetY
-                        )
-                )
+                if (screenshot.isVideo) {
+                    InAppVideoPlayer(
+                        screenshot = screenshot,
+                        modifier = Modifier.fillMaxSize(),
+                        onTap = { showControls = !showControls }
+                    )
+                } else {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(if (imageFile.exists()) imageFile else screenshot.uriString)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = screenshot.title,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer(
+                                scaleX = scale,
+                                scaleY = scale,
+                                translationX = offsetX,
+                                translationY = offsetY
+                            )
+                    )
+                }
             }
 
             // Top HUD Bar
@@ -271,36 +328,6 @@ fun ZoomableImageViewer(
                                 }
                             }
 
-                            // Favorite Action
-                            IconButton(
-                                onClick = { onToggleFavorite(screenshot) },
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Icon(
-                                    imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                    contentDescription = stringResource(R.string.favorite),
-                                    tint = if (screenshot.isFavorite) DangerRose else Color.White
-                                )
-                            }
-
-                            // Share Action
-                            IconButton(
-                                onClick = {
-                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
-                                        putExtra(Intent.EXTRA_SUBJECT, screenshot.title)
-                                        putExtra(Intent.EXTRA_TEXT, "${screenshot.title}\n${screenshot.description}")
-                                    }
-                                    context.startActivity(Intent.createChooser(shareIntent, "Share Media"))
-                                },
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Share,
-                                    contentDescription = stringResource(R.string.share),
-                                    tint = Color.White
-                                )
-                            }
                             IconButton(onClick = onMore, modifier = Modifier.size(40.dp)) {
                                 Icon(Icons.Default.MoreVert, contentDescription = "More actions", tint = Color.White)
                             }
@@ -313,9 +340,8 @@ fun ZoomableImageViewer(
             // The drawer is completely hidden while closed. A transparent edge
             // gesture target remains at the bottom so an upward swipe can reveal it.
             if (drawerContent != null) {
-                var drawerHeightFraction by remember { mutableFloatStateOf(0f) }
                 BoxWithConstraints(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().navigationBarsPadding(),
                     contentAlignment = Alignment.BottomCenter
                 ) {
                     val density = androidx.compose.ui.platform.LocalDensity.current
@@ -340,10 +366,7 @@ fun ZoomableImageViewer(
                                                 drawerHeightFraction = (drawerHeightFraction - dragAmount / maxHeightPx)
                                                     .coerceIn(0f, 0.86f)
                                             },
-                                            onDragEnd = {
-                                                drawerHeightFraction = listOf(0f, 0.62f, 0.86f)
-                                                    .minBy { kotlin.math.abs(it - drawerHeightFraction) }
-                                            }
+                                            onDragEnd = { settleDrawer() }
                                         )
                                     },
                                 contentAlignment = Alignment.Center
@@ -367,24 +390,37 @@ fun ZoomableImageViewer(
                             }
                         }
                     } else {
-                        // Invisible, full-width swipe target; it draws nothing in the closed state.
+                        // Larger bottom edge target is a reliable fallback, positioned
+                        // above the system navigation/gesture area.
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(40.dp)
+                                .height(88.dp)
                                 .pointerInput(maxHeightPx) {
+                                    var totalVerticalDrag = 0f
+                                    var startedWithDrawerClosed = drawerHeightFraction <= 0.04f
                                     detectVerticalDragGestures(
+                                        onDragStart = {
+                                            totalVerticalDrag = 0f
+                                            startedWithDrawerClosed = drawerHeightFraction <= 0.04f
+                                        },
                                         onVerticalDrag = { change, dragAmount ->
-                                            change.consume()
-                                            drawerHeightFraction = (drawerHeightFraction - dragAmount / maxHeightPx)
-                                                .coerceIn(0f, 0.86f)
+                                            if (drawerContent != null && (drawerHeightFraction > 0.04f || dragAmount < 0f)) {
+                                                change.consume()
+                                                totalVerticalDrag += dragAmount
+                                                drawerHeightFraction = (drawerHeightFraction - dragAmount / maxHeightPx)
+                                                    .coerceIn(0f, 0.86f)
+                                            }
                                         },
                                         onDragEnd = {
-                                            if (drawerHeightFraction > 0f) {
-                                                drawerHeightFraction = listOf(0f, 0.62f, 0.86f)
-                                                    .minBy { kotlin.math.abs(it - drawerHeightFraction) }
+                                            if (startedWithDrawerClosed && totalVerticalDrag < -48.dp.toPx()) {
+                                                drawerHeightFraction = 0.62f
+                                            } else if (drawerHeightFraction > 0.04f) {
+                                                settleDrawer()
                                             }
-                                        }
+                                            totalVerticalDrag = 0f
+                                        },
+                                        onDragCancel = { totalVerticalDrag = 0f }
                                     )
                                 }
                         )
@@ -394,7 +430,7 @@ fun ZoomableImageViewer(
 
             // Bottom HUD Bar
             AnimatedVisibility(
-                visible = showControls && drawerContent == null,
+                visible = showControls && drawerHeightFraction <= 0.04f,
                 enter = fadeIn(),
                 exit = fadeOut(),
                 modifier = Modifier.align(Alignment.BottomCenter)
@@ -410,6 +446,51 @@ fun ZoomableImageViewer(
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().testTag("viewer_bottom_toolbar"),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                IconButton(onClick = { onToggleFavorite(screenshot) }) {
+                                    Icon(
+                                        imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                        contentDescription = if (screenshot.isFavorite) "Remove from favorites" else "Add to favorites",
+                                        tint = if (screenshot.isFavorite) DangerRose else Color.White
+                                    )
+                                }
+                                Text("Favorite", color = Color.White, fontSize = 12.sp)
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                IconButton(
+                                    onClick = {
+                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_SUBJECT, screenshot.title)
+                                            putExtra(Intent.EXTRA_TEXT, "${screenshot.title}\n${screenshot.description}")
+                                        }
+                                        runCatching {
+                                            context.startActivity(Intent.createChooser(shareIntent, "Share media"))
+                                        }
+                                    }
+                                ) {
+                                    Icon(Icons.Default.Share, contentDescription = stringResource(R.string.share), tint = Color.White)
+                                }
+                                Text("Share", color = Color.White, fontSize = 12.sp)
+                            }
+                            if (drawerContent != null) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    IconButton(onClick = {
+                                        drawerHeightFraction = 0.62f
+                                        showControls = false
+                                    }) {
+                                        Icon(Icons.Default.ExpandLess, contentDescription = "Show details", tint = Color.White)
+                                    }
+                                    Text("Details", color = Color.White, fontSize = 12.sp)
+                                }
+                            }
+                        }
+
                         // Quick metadata chips row
                         Row(
                             modifier = Modifier.fillMaxWidth(),

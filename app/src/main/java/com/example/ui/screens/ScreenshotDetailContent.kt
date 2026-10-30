@@ -142,7 +142,9 @@ internal fun ScreenshotDetailContent(
     var showMetadata by remember(screenshotId) { mutableStateOf(false) }
 
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp).navigationBarsPadding().testTag("viewer_details_drawer"),
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+            .then(if (showDrawerHandle) Modifier.navigationBarsPadding() else Modifier)
+            .testTag("viewer_details_drawer"),
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp

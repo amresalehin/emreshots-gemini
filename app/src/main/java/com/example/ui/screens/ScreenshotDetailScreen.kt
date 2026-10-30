@@ -360,7 +360,10 @@ fun ScreenshotDetailScreen(
     val configuration = LocalConfiguration.current
     val galleryHeight = (configuration.screenHeightDp.dp * 0.58f).coerceIn(300.dp, 560.dp)
 
-    Scaffold(
+    // The fullscreen viewer is the detail route's primary surface. Keep the
+    // legacy detail scaffold out of the composition until More is requested.
+    if (!showImageViewer) {
+        Scaffold(
         topBar = {
             TopAppBar(
                 title = {
@@ -578,7 +581,7 @@ fun ScreenshotDetailScreen(
                 InAppVideoPlayer(
                     screenshot = screenshot,
                     modifier = Modifier.fillMaxSize(),
-                    onTap = { }
+                    onTap = { showImageViewer = true }
                 )
             } else if (imageFile.exists() || !screenshot.uriString.isNullOrBlank()) {
                 AsyncImage(
@@ -632,6 +635,7 @@ fun ScreenshotDetailScreen(
                 onShowAddTagDialogChange = { showAddTagDialog = it }
             )
         }
+    }
     }
 
     if (showExifEditor) {

@@ -1,5 +1,6 @@
 package com.amresalehin.emreshots.ui.components
 
+import com.example.ui.icons.AppIcons
 import com.amresalehin.emreshots.R
 
 import androidx.compose.foundation.layout.Arrangement
@@ -17,12 +18,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DeleteSweep
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -75,7 +72,7 @@ fun ExifEditorDialog(
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Default.CameraAlt,
+                    imageVector = AppIcons.CameraAlt,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary
                 )
@@ -144,7 +141,7 @@ fun ExifEditorDialog(
                         .fillMaxWidth()
                         .testTag("btn_ai_sync_exif")
                 ) {
-                    Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(imageVector = AppIcons.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(R.string.auto_fill_with_ai_analysis))
                 }
@@ -227,7 +224,7 @@ fun ExifEditorDialog(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                imageVector = Icons.Default.LocationOn,
+                                imageVector = AppIcons.LocationOn,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(16.dp)
@@ -248,7 +245,7 @@ fun ExifEditorDialog(
                                 },
                                 modifier = Modifier.testTag("btn_clear_gps")
                             ) {
-                                Icon(Icons.Default.DeleteSweep, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Icon(AppIcons.DeleteSweep, contentDescription = null, modifier = Modifier.size(14.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(stringResource(R.string.clear_gps), fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
                             }

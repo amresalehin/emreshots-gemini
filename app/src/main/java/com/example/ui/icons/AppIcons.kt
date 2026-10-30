@@ -4,7 +4,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
-import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
 // Adapted from Google Material Design Icons SVG path data as Compose ImageVectors.
@@ -60,7 +59,7 @@ object AppIcons {
 private fun vectorIcon(name: String, autoMirror: Boolean, vararg pathData: String): ImageVector {
   val builder = ImageVector.Builder(name, 24.dp, 24.dp, 24f, 24f, autoMirror = autoMirror)
   pathData.forEach { data ->
-    builder.path(fill = SolidColor(Color.Black), pathData = PathParser().parsePathString(data).toNodes())
+    builder.addPath(pathData = PathParser().parsePathString(data).toNodes(), fill = SolidColor(Color.Black))
   }
   return builder.build()
 }

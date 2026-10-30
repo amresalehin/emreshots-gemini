@@ -74,7 +74,7 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-private fun DetailRow(label: String, value: String) {
+private fun DetailContentRow(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -271,7 +271,7 @@ internal fun ScreenshotDetailContent(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Location", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     if (exifData.latitude != null && exifData.longitude != null) {
-                        DetailRow("Coordinates", String.format(Locale.US, "%.5f, %.5f", exifData.latitude, exifData.longitude))
+                        DetailContentRow("Coordinates", String.format(Locale.US, "%.5f, %.5f", exifData.latitude, exifData.longitude))
                     } else {
                         Text("No location data", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -286,16 +286,16 @@ internal fun ScreenshotDetailContent(
                     }
                     if (showMetadata) {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            DetailRow("Media type", if (screenshot.isVideo) "Video" else "Image")
-                            DetailRow("File size", String.format(Locale.US, "%.2f MB", screenshot.fileSize / (1024.0 * 1024.0)))
-                            if (screenshot.width > 0 && screenshot.height > 0) DetailRow("Resolution", "${screenshot.width} × ${screenshot.height}")
-                            DetailRow("Date added", SimpleDateFormat("d MMM yyyy, h:mm a", Locale.getDefault()).format(Date(screenshot.addedOn)))
-                            DetailRow("Camera", exifData.cameraModel ?: exifData.cameraMake ?: "Unknown")
-                            if (exifData.dateTaken != null) DetailRow("Date taken", exifData.dateTaken)
-                            if (exifData.iso != null) DetailRow("ISO", exifData.iso.toString())
-                            if (exifData.fNumber != null) DetailRow("Aperture", "ƒ/${exifData.fNumber}")
-                            if (exifData.software != null) DetailRow("Software", exifData.software)
-                            if (screenshot.aiModelUsed != null) DetailRow("Analysis model", screenshot.aiModelUsed)
+                            DetailContentRow("Media type", if (screenshot.isVideo) "Video" else "Image")
+                            DetailContentRow("File size", String.format(Locale.US, "%.2f MB", screenshot.fileSize / (1024.0 * 1024.0)))
+                            if (screenshot.width > 0 && screenshot.height > 0) DetailContentRow("Resolution", "${screenshot.width} × ${screenshot.height}")
+                            DetailContentRow("Date added", SimpleDateFormat("d MMM yyyy, h:mm a", Locale.getDefault()).format(Date(screenshot.addedOn)))
+                            DetailContentRow("Camera", exifData.cameraModel ?: exifData.cameraMake ?: "Unknown")
+                            if (exifData.dateTaken != null) DetailContentRow("Date taken", exifData.dateTaken)
+                            if (exifData.iso != null) DetailContentRow("ISO", exifData.iso.toString())
+                            if (exifData.fNumber != null) DetailContentRow("Aperture", "ƒ/${exifData.fNumber}")
+                            if (exifData.software != null) DetailContentRow("Software", exifData.software)
+                            if (screenshot.aiModelUsed != null) DetailContentRow("Analysis model", screenshot.aiModelUsed)
                         }
                     }
                 }

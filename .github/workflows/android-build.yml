@@ -17,7 +17,46 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  unit-tests:
+    name: Debug unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "9.3.1"
+          cache-read-only: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: Run debug unit tests
+        run: >-
+          gradle --build-cache --configuration-cache --parallel
+          --console=plain --stacktrace --profile
+          :app:testDebugUnitTest
+
+      - name: Upload Gradle performance profile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-performance-profile-unit-tests
+          path: build/reports/profile/*.html
+          if-no-files-found: ignore
+          retention-days: 7
+
+  release-apk:
+    name: Release APK
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -65,40 +104,14 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: "9.3.1"
-          # The repository default is main-archive, but this workflow's release
-          # branch is main. Let trusted same-repository PRs cache within their
-          # PR scope and let pushes to main seed the cache used by future PRs.
-          # Fork PRs stay read-only so untrusted code cannot poison shared caches.
           cache-read-only: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
-          # Set this GitHub Actions secret to persist Gradle's encrypted
-          # project-local configuration cache between ephemeral runners.
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
-      - name: Build, test, and assemble release APK
-        shell: bash
-        env:
-          GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-        run: |
-          set -euo pipefail
-          GRADLE_ARGS=(
-            --build-cache
-            --parallel
-            --console=plain
-            --stacktrace
-            --profile
-          )
-
-          # Configuration cache only saves CI time when setup-gradle can
-          # securely restore it using a stable encryption key. Without that
-          # secret, avoid paying the cost of writing a cache that cannot be reused.
-          if [[ -n "${GRADLE_ENCRYPTION_KEY:-}" ]]; then
-            GRADLE_ARGS+=(--configuration-cache)
-          else
-            echo "GRADLE_ENCRYPTION_KEY is not configured; skipping the non-reusable CI configuration cache."
-            GRADLE_ARGS+=(--no-configuration-cache)
-          fi
-
-          gradle "${GRADLE_ARGS[@]}" :app:testDebugUnitTest :app:assembleRelease
+      - name: Assemble release APK
+        run: >-
+          gradle --build-cache --configuration-cache --parallel
+          --console=plain --stacktrace --profile
+          :app:assembleRelease
 
       - name: Verify APK signature and alignment
         shell: bash
@@ -118,7 +131,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: gradle-performance-profile
+          name: gradle-performance-profile-release
           path: build/reports/profile/*.html
           if-no-files-found: ignore
           retention-days: 7

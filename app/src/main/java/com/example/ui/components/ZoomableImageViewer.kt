@@ -39,7 +39,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
@@ -481,7 +480,7 @@ fun ZoomableImageViewer(
                                         drawerHeightFraction = 0.62f
                                         showControls = false
                                     }) {
-                                        Icon(Icons.Default.ExpandLess, contentDescription = "Show details", tint = Color.White)
+                                        Icon(AppIcons.ExpandLess, contentDescription = "Show details", tint = Color.White)
                                     }
                                     Text("Details", color = Color.White, fontSize = 12.sp)
                                 }

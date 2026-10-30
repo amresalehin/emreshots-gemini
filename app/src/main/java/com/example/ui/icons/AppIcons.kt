@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
 // Adapted from Google Material Design Icons SVG path data as Compose ImageVectors.
@@ -11,7 +12,7 @@ import androidx.compose.ui.unit.dp
 // Licensed under Apache-2.0; see third_party/material-design-icons/LICENSE.
 object AppIcons {
   // Accessing this list constructs every vector and is used by the unit test to validate all path data.
-  val all: List<ImageVector> by lazy { listOf(AddPhotoAlternate, Alarm, AutoAwesome, Backup, CameraAlt, CloudDone, CloudQueue, Collections, ContentCopy, Dashboard, DeleteSweep, DocumentScanner, Download, FileOpen, FitScreen, FormatListBulleted, Forward10, GridView, Image, Language, Link, LocationOn, NetworkCheck, OpenInBrowser, Pause, PermMedia, PlayArrow, Psychology, Replay, Replay10, Sort, TextFields, Translate, Tune, Visibility, VisibilityOff, ViewAgenda, VolumeMute, VolumeUp, ZoomIn, ZoomOut) }
+  val all: List<ImageVector> by lazy { listOf(AddPhotoAlternate, Alarm, AutoAwesome, Backup, CameraAlt, CloudDone, CloudQueue, Collections, ContentCopy, Dashboard, DeleteSweep, DocumentScanner, Download, ExpandLess, FileOpen, FitScreen, FormatListBulleted, Forward10, GridView, Image, Language, Link, LocationOn, NetworkCheck, OpenInBrowser, Pause, PermMedia, PlayArrow, Psychology, Replay, Replay10, Sort, TextFields, Translate, Tune, Visibility, VisibilityOff, ViewAgenda, VolumeMute, VolumeUp, ZoomIn, ZoomOut) }
   val AddPhotoAlternate: ImageVector by lazy { vectorIcon("AddPhotoAlternate", false, "M19 7v2.99s-1.99.01-2 0V7h-3s.01-1.99 0-2h3V2h2v3h3v2h-3zm-3 4V8h-3V5H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8h-3zM5 19l3-4 2 3 3-4 4 5H5z") }
   val Alarm: ImageVector by lazy { vectorIcon("Alarm", false, "M22 5.72l-4.6-3.86-1.29 1.53 4.6 3.86L22 5.72zM7.88 3.39L6.6 1.86 2 5.71l1.29 1.53 4.59-3.85zM12.5 8H11v6l4.75 2.85.75-1.23-4-2.37V8zM12 4c-4.97 0-9 4.03-9 9s4.02 9 9 9c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 16c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z") }
   val AutoAwesome: ImageVector by lazy { vectorIcon("AutoAwesome", false, "M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z") }
@@ -25,6 +26,7 @@ object AppIcons {
   val DeleteSweep: ImageVector by lazy { vectorIcon("DeleteSweep", false, "M15 16h4v2h-4zm0-8h7v2h-7zm0 4h6v2h-6zM3 18c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2V8H3v10zM14 5h-3l-1-1H6L5 5H2v2h12z") }
   val DocumentScanner: ImageVector by lazy { vectorIcon("DocumentScanner", false, "M7,3H4v3H2V1h5V3z M22,6V1h-5v2h3v3H22z M7,21H4v-3H2v5h5V21z M20,18v3h-3v2h5v-5H20z M19,18c0,1.1-0.9,2-2,2H7 c-1.1,0-2-0.9-2-2V6c0-1.1,0.9-2,2-2h10c1.1,0,2,0.9,2,2V18z M15,8H9v2h6V8z M15,11H9v2h6V11z M15,14H9v2h6V14z") }
   val Download: ImageVector by lazy { vectorIcon("Download", false, "M5,20h14v-2H5V20z M19,9h-4V3H9v6H5l7,7L19,9z") }
+  val ExpandLess: ImageVector by lazy { vectorIcon("ExpandLess", false, "M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z") }
   val FileOpen: ImageVector by lazy { vectorIcon("FileOpen", false, "M14,2H6C4.9,2,4,2.9,4,4v16c0,1.1,0.89,2,1.99,2H15v-8h5V8L14,2z M13,9V3.5L18.5,9H13z M17,21.66V16h5.66v2h-2.24 l2.95,2.95l-1.41,1.41L19,19.41l0,2.24H17") }
   val FitScreen: ImageVector by lazy { vectorIcon("FitScreen", false, "M17 4h3c1.1 0 2 .9 2 2v2h-2V6h-3V4zM4 8V6h3V4H4c-1.1 0-2 .9-2 2v2h2zm16 8v2h-3v2h3c1.1 0 2-.9 2-2v-2h-2zM7 18H4v-2H2v2c0 1.1.9 2 2 2h3v-2zM18 8H6v8h12V8z") }
   val FormatListBulleted: ImageVector by lazy { vectorIcon("FormatListBulleted", true, "M4 10.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zm0-6c-.83 0-1.5.67-1.5 1.5S3.17 7.5 4 7.5 5.5 6.83 5.5 6 4.83 4.5 4 4.5zm0 12c-.83 0-1.5.68-1.5 1.5s.68 1.5 1.5 1.5 1.5-.68 1.5-1.5-.67-1.5-1.5-1.5zM7 19h14v-2H7v2zm0-6h14v-2H7v2zm0-8v2h14V5H7z") }

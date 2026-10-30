@@ -1,5 +1,6 @@
 package com.amresalehin.emreshots.ui.components
 
+import com.example.ui.icons.AppIcons
 import com.amresalehin.emreshots.R
 
 import com.amresalehin.emreshots.ui.theme.DangerRose
@@ -22,10 +23,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -164,7 +163,7 @@ fun ScreenshotListItem(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.PlayArrow,
+                            imageVector = AppIcons.PlayArrow,
                             contentDescription = stringResource(R.string.video),
                             tint = Color.White,
                             modifier = Modifier.size(24.dp)
@@ -189,7 +188,7 @@ fun ScreenshotListItem(
                     if (screenshot.aiProcessed) {
                         Spacer(modifier = Modifier.width(6.dp))
                         Icon(
-                            imageVector = Icons.Default.AutoAwesome,
+                            imageVector = AppIcons.AutoAwesome,
                             contentDescription = stringResource(R.string.ai_label),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(14.dp)

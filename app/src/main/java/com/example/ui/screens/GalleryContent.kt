@@ -142,7 +142,7 @@ internal fun ColumnScope.GalleryContent(
     gridState: LazyGridState,
     staggeredGridState: LazyStaggeredGridState,
     navBarBottom: Dp,
-    isSyncingDeviceMedia: Boolean,
+    isRefreshing: Boolean,
     hasMediaPermissions: Boolean,
     permissionLauncher: ManagedActivityResultLauncher<Array<String>, Map<String, Boolean>>,
     mediaPickerLauncher: ManagedActivityResultLauncher<PickVisualMediaRequest, Uri?>,
@@ -150,7 +150,7 @@ internal fun ColumnScope.GalleryContent(
 ) {
 // Gallery content
 PullToRefreshBox(
-    isRefreshing = isSyncingDeviceMedia,
+    isRefreshing = isRefreshing,
     onRefresh = {
         if (hasMediaPermissions) viewModel.syncDeviceMedia()
         else permissionLauncher.launch(DeviceMediaScanner.getRequiredPermissions())

@@ -1,9 +1,11 @@
 package com.amresalehin.emreshots
 
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import com.example.ui.icons.AppIcons
 
 class ViewerDrawerStructureTest {
     @Test
@@ -51,4 +53,8 @@ class ViewerDrawerStructureTest {
         assertTrue(screen.contains("inlineTools = true"))
     }
 
+    @Test
+    fun localVectorIconsAreAllConstructible() {
+        assertEquals(41, AppIcons.all.size)
+    }
 }

@@ -119,7 +119,6 @@ import java.util.Locale
 @Composable
 internal fun BoxScope.GalleryActions(
     viewModel: ScreenshotsViewModel,
-    mediaPickerLauncher: ManagedActivityResultLauncher<PickVisualMediaRequest, Uri?>,
     showSortDialog: Boolean,
     onShowSortDialog: (Boolean) -> Unit,
     sortOption: MediaSortOption,
@@ -132,25 +131,7 @@ internal fun BoxScope.GalleryActions(
     onRenameTemplateChange: (String) -> Unit,
     groupedScreenshots: Map<String, List<ScreenshotItem>>
 ) {
-// Clean, Compact Floating Action Button
-FloatingActionButton(
-    onClick = {
-        mediaPickerLauncher.launch(
-            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
-        )
-    },
-    containerColor = MaterialTheme.colorScheme.primary,
-    contentColor = MaterialTheme.colorScheme.onPrimary,
-    shape = CircleShape,
-    modifier = Modifier
-        .align(Alignment.BottomEnd)
-        .navigationBarsPadding()
-        .padding(16.dp)
-        .size(56.dp)
-        .testTag("fab_import_screenshot")
-) {
-    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_media))
-}
+
 
     if (showSortDialog) {
 AlertDialog(

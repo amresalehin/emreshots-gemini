@@ -3,6 +3,8 @@ plugins {
   alias(libs.plugins.kotlin.compose)
   alias(libs.plugins.google.devtools.ksp)
 }
+val skipReleaseLint = providers.gradleProperty("skipReleaseLint").orNull.toBoolean()
+
 android {
   namespace = "com.amresalehin.emreshots"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
@@ -36,6 +38,11 @@ android {
         keyPassword = releaseKeyPassword
       }
     }
+  }
+
+  lint {
+    // Release lint stays enabled by default and in CI. Local profiling may opt out with -PskipReleaseLint=true.
+    checkReleaseBuilds = !skipReleaseLint
   }
 
   buildTypes {
@@ -89,7 +96,6 @@ dependencies {
   implementation(platform(libs.androidx.compose.bom))
   implementation(libs.androidx.activity.compose)
   implementation(libs.androidx.compose.material.icons.core)
-  implementation(libs.androidx.compose.material.icons.extended)
   implementation(libs.androidx.compose.material3)
   implementation(libs.androidx.compose.ui)
   implementation(libs.androidx.compose.ui.graphics)

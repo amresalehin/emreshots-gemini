@@ -6,6 +6,7 @@ import com.amresalehin.emreshots.R
 import com.amresalehin.emreshots.ui.theme.DangerRose
 import android.content.Context
 import android.content.Intent
+import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
@@ -145,6 +146,18 @@ fun ZoomableImageViewer(
                 // can keep the old status-bar inset and leave an empty strip
                 // above the viewer even though the bar itself is hidden.
                 WindowCompat.setDecorFitsSystemWindows(dialogWindow, false)
+
+                // Hiding the status bar through WindowInsetsController alone can leave
+                // Dialog windows measured below the former status-bar inset on some
+                // Android versions. FLAG_FULLSCREEN makes the Dialog occupy that space
+                // as well, so ContentScale.Fit gets the full display height.
+                val originalWindowFlags = dialogWindow.attributes.flags
+                dialogWindow.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+                dialogWindow.setLayout(
+                    WindowManager.LayoutParams.MATCH_PARENT,
+                    WindowManager.LayoutParams.MATCH_PARENT
+                )
+                dialogWindow.decorView.requestLayout()
                 ViewCompat.requestApplyInsets(dialogWindow.decorView)
 
                 val insetsController = WindowCompat.getInsetsController(
@@ -160,6 +173,13 @@ fun ZoomableImageViewer(
                 insetsController.hide(WindowInsetsCompat.Type.statusBars())
 
                 onDispose {
+                    // Restore the Dialog's original fullscreen flag before the viewer
+                    // window is dismissed; never leak immersive mode into other screens.
+                    if (originalWindowFlags and WindowManager.LayoutParams.FLAG_FULLSCREEN != 0) {
+                        dialogWindow.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+                    } else {
+                        dialogWindow.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+                    }
                     if (statusBarWasVisible) {
                         insetsController.show(WindowInsetsCompat.Type.statusBars())
                     }

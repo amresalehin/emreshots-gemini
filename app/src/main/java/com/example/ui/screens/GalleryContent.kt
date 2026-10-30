@@ -183,7 +183,7 @@ PullToRefreshBox(
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
-                    text = stringResource(R.string.import_media_to_get_started),
+                    text = "Your device media will appear here after indexing.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center

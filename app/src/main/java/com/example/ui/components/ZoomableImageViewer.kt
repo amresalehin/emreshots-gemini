@@ -49,6 +49,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -65,6 +66,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -74,6 +76,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.amresalehin.emreshots.data.model.ExifData
@@ -126,6 +133,35 @@ fun ZoomableImageViewer(
             dismissOnClickOutside = false
         )
     ) {
+        // The Dialog owns a separate window from the activity. Hide only its
+        // status bar so the media can use the entire display height.
+        val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
+
+        DisposableEffect(dialogWindow) {
+            if (dialogWindow == null) {
+                onDispose { }
+            } else {
+                val insetsController = WindowCompat.getInsetsController(
+                    dialogWindow,
+                    dialogWindow.decorView
+                )
+                val statusBarWasVisible = ViewCompat.getRootWindowInsets(dialogWindow.decorView)
+                    ?.isVisible(WindowInsetsCompat.Type.statusBars()) ?: true
+                val previousSystemBarsBehavior = insetsController.systemBarsBehavior
+
+                insetsController.systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                insetsController.hide(WindowInsetsCompat.Type.statusBars())
+
+                onDispose {
+                    if (statusBarWasVisible) {
+                        insetsController.show(WindowInsetsCompat.Type.statusBars())
+                    }
+                    insetsController.systemBarsBehavior = previousSystemBarsBehavior
+                }
+            }
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxSize()

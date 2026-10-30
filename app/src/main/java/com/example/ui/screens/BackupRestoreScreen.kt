@@ -1,5 +1,6 @@
 package com.amresalehin.emreshots.ui.screens
 
+import com.example.ui.icons.AppIcons
 import com.amresalehin.emreshots.R
 
 import androidx.activity.compose.BackHandler
@@ -17,8 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Backup
-import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -93,12 +92,12 @@ fun BackupRestoreScreen(
                     Text(lastBackupInfo ?: stringResource(R.string.no_backup_yet), style = MaterialTheme.typography.bodySmall)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = { exportLauncher.launch("emreshots-backup.json") }, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Default.Backup, contentDescription = null)
+                            Icon(AppIcons.Backup, contentDescription = null)
                             Spacer(Modifier.width(6.dp))
                             Text(stringResource(R.string.export_json))
                         }
                         OutlinedButton(onClick = { restoreLauncher.launch(arrayOf("application/json", "*/*")) }, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Default.CloudDone, contentDescription = null)
+                            Icon(AppIcons.CloudDone, contentDescription = null)
                             Spacer(Modifier.width(6.dp))
                             Text(stringResource(R.string.restore_json))
                         }

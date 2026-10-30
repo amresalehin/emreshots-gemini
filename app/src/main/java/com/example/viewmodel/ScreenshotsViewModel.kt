@@ -159,6 +159,8 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
 
     private val _isSyncingDeviceMedia = MutableStateFlow(false)
     val isSyncingDeviceMedia: StateFlow<Boolean> = _isSyncingDeviceMedia.asStateFlow()
+    private val _isPullToRefreshInProgress = MutableStateFlow(false)
+    val isPullToRefreshInProgress: StateFlow<Boolean> = _isPullToRefreshInProgress.asStateFlow()
     val isLowEndDevice = com.amresalehin.emreshots.service.perf.PerformanceManager.isLowEndDevice(application)
     val isLowRamDevice = com.amresalehin.emreshots.service.perf.PerformanceManager.isLowRamDevice(application)
 
@@ -507,9 +509,12 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun syncDeviceMedia(onComplete: ((Int) -> Unit)? = null) {
+    fun syncDeviceMedia(showRefreshIndicator: Boolean = false, onComplete: ((Int) -> Unit)? = null) {
+        if (_isSyncingDeviceMedia.value) return
         viewModelScope.launch(Dispatchers.IO) {
+            if (_isSyncingDeviceMedia.value) return@launch
             _isSyncingDeviceMedia.value = true
+            if (showRefreshIndicator) _isPullToRefreshInProgress.value = true
             try {
                 checkPermissions()
                 if (!_hasMediaPermissions.value) {
@@ -524,6 +529,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
             } finally {
                 
                 _isSyncingDeviceMedia.value = false
+                if (showRefreshIndicator) _isPullToRefreshInProgress.value = false
             }
         }
     }

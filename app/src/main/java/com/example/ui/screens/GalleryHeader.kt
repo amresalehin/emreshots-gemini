@@ -29,8 +29,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -50,7 +48,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -158,8 +155,7 @@ internal fun GalleryHeader(
     onNavigateToSettings: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior
 ) {
-// Gallery header with a persistent, horizontally scrollable collection pill switcher.
-Column {
+// Gallery header: the Photos / Albums switcher occupies the former title slot.
 TopAppBar(
     title = {
         if (isSearchExpanded) {
@@ -212,7 +208,7 @@ TopAppBar(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
-                        Icon(Icons.Default.Home, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(AppIcons.Image, contentDescription = null, modifier = Modifier.size(16.dp))
                         Text("Photos", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
                     }
                 }
@@ -431,8 +427,6 @@ TopAppBar(
         scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
     )
 )
-
-
 
 }
 

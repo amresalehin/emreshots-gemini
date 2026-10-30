@@ -43,6 +43,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
@@ -231,7 +232,7 @@ TopAppBar(
                             text = { Text(mode.displayName) },
                             leadingIcon = {
                                 if (mode == viewMode) {
-                                    Icon(AppIcons.Check, contentDescription = null)
+                                    Icon(Icons.Default.Check, contentDescription = null)
                                 }
                             },
                             onClick = {

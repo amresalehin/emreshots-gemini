@@ -115,7 +115,8 @@ internal fun ScreenshotDetailContent(
     onEditNotesChange: (String) -> Unit,
     showAddTagDialog: Boolean,
     onShowAddTagDialogChange: (Boolean) -> Unit,
-    showDrawerHandle: Boolean = true
+    showDrawerHandle: Boolean = true,
+    inlineTools: Boolean = false
 ) {
     if (!hasMediaLocationPermission) {
         Surface(
@@ -140,6 +141,18 @@ internal fun ScreenshotDetailContent(
 
     var selectedDetailsTab by remember(screenshotId) { mutableStateOf("Overview") }
     var showMetadata by remember(screenshotId) { mutableStateOf(false) }
+    var showInlineOcr by remember(screenshotId) { mutableStateOf(false) }
+    var showInlineExif by remember(screenshotId) { mutableStateOf(false) }
+    var inlineOcrText by remember(screenshotId, screenshot.ocrText) { mutableStateOf(screenshot.ocrText.orEmpty()) }
+    var exifDescription by remember(screenshotId, exifData.imageDescription) { mutableStateOf(exifData.imageDescription.orEmpty()) }
+    var exifComment by remember(screenshotId, exifData.userComment) { mutableStateOf(exifData.userComment.orEmpty()) }
+    var exifMake by remember(screenshotId, exifData.cameraMake) { mutableStateOf(exifData.cameraMake.orEmpty()) }
+    var exifModel by remember(screenshotId, exifData.cameraModel) { mutableStateOf(exifData.cameraModel.orEmpty()) }
+    var exifSoftware by remember(screenshotId, exifData.software) { mutableStateOf(exifData.software.orEmpty()) }
+    var exifArtist by remember(screenshotId, exifData.artist) { mutableStateOf(exifData.artist.orEmpty()) }
+    var exifDate by remember(screenshotId, exifData.dateTaken) { mutableStateOf(exifData.dateTaken.orEmpty()) }
+    var exifLatitude by remember(screenshotId, exifData.latitude) { mutableStateOf(exifData.latitude?.toString().orEmpty()) }
+    var exifLongitude by remember(screenshotId, exifData.longitude) { mutableStateOf(exifData.longitude?.toString().orEmpty()) }
 
     Surface(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
@@ -316,7 +329,7 @@ internal fun ScreenshotDetailContent(
                             Spacer(Modifier.width(6.dp))
                             Text(if (screenshot.aiProcessed) "Re-analyze" else "AI description")
                         }
-                        OutlinedButton(onClick = { onShowOcrSheetChange(true) }, modifier = Modifier.weight(1f).testTag("btn_open_ocr_sheet"), shape = RoundedCornerShape(18.dp)) {
+                        OutlinedButton(onClick = { if (inlineTools) showInlineOcr = !showInlineOcr else onShowOcrSheetChange(true) }, modifier = Modifier.weight(1f).testTag("btn_open_ocr_sheet"), shape = RoundedCornerShape(18.dp)) {
                             Icon(Icons.Default.DocumentScanner, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
                             Text("Extract text")
@@ -326,7 +339,7 @@ internal fun ScreenshotDetailContent(
                         OutlinedButton(
                             onClick = {
                                 if (!hasMediaLocationPermission) permissionLauncher.launch(DeviceMediaScanner.getRequiredPermissions())
-                                onShowExifEditorChange(true)
+                                if (inlineTools) showInlineExif = !showInlineExif else onShowExifEditorChange(true)
                             },
                             modifier = Modifier.fillMaxWidth().testTag("btn_open_exif_editor"),
                             shape = RoundedCornerShape(18.dp)
@@ -340,12 +353,72 @@ internal fun ScreenshotDetailContent(
                         Text("OCR text", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                         if (!screenshot.ocrText.isNullOrBlank()) {
                             Text(screenshot.ocrText, style = MaterialTheme.typography.bodyMedium, maxLines = 5)
-                            TextButton(onClick = { onShowOcrSheetChange(true) }) { Text("View or edit extracted text") }
+                            TextButton(onClick = { if (inlineTools) showInlineOcr = true else onShowOcrSheetChange(true) }) { Text("View or edit extracted text") }
                         } else {
                             Text("No text extracted yet", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            TextButton(onClick = { onShowOcrSheetChange(true) }) { Text("Extract text") }
+                            TextButton(onClick = { if (inlineTools) showInlineOcr = true else onShowOcrSheetChange(true) }) { Text("Extract text") }
                         }
                     }
+                    if (inlineTools && showInlineOcr) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth().testTag("inline_ocr_editor")) {
+                            Text("Extract text", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                            OutlinedTextField(inlineOcrText, { inlineOcrText = it }, modifier = Modifier.fillMaxWidth().testTag("input_inline_ocr"), minLines = 4, maxLines = 8, label = { Text("Recognized text") })
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = {
+                                    viewModel.extractOcr(screenshot) { extracted ->
+                                        if (!extracted.isNullOrBlank()) {
+                                            inlineOcrText = extracted
+                                            viewModel.updateScreenshot(screenshot.copy(ocrText = extracted))
+                                        }
+                                    }
+                                }, modifier = Modifier.weight(1f)) { Text("Run OCR") }
+                                OutlinedButton(onClick = {
+                                    viewModel.updateScreenshot(screenshot.copy(ocrText = inlineOcrText))
+                                    showInlineOcr = false
+                                }, modifier = Modifier.weight(1f)) { Text("Save text") }
+                            }
+                            TextButton(onClick = { showInlineOcr = false }) { Text("Close") }
+                        }
+                    }
+
+                    if (inlineTools && showInlineExif) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth().testTag("inline_exif_editor")) {
+                            Text("Edit EXIF metadata", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                            Text("Changes are written to the media file.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            OutlinedTextField(exifDescription, { exifDescription = it }, label = { Text("Image description") }, modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(exifComment, { exifComment = it }, label = { Text("Comment") }, minLines = 2, modifier = Modifier.fillMaxWidth())
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedTextField(exifMake, { exifMake = it }, label = { Text("Camera make") }, modifier = Modifier.weight(1f))
+                                OutlinedTextField(exifModel, { exifModel = it }, label = { Text("Camera model") }, modifier = Modifier.weight(1f))
+                            }
+                            OutlinedTextField(exifSoftware, { exifSoftware = it }, label = { Text("Software") }, modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(exifArtist, { exifArtist = it }, label = { Text("Artist") }, modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(exifDate, { exifDate = it }, label = { Text("Date taken") }, modifier = Modifier.fillMaxWidth())
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedTextField(exifLatitude, { exifLatitude = it }, label = { Text("Latitude") }, modifier = Modifier.weight(1f))
+                                OutlinedTextField(exifLongitude, { exifLongitude = it }, label = { Text("Longitude") }, modifier = Modifier.weight(1f))
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = {
+                                    val lat = exifLatitude.toDoubleOrNull()?.takeIf { it in -90.0..90.0 }
+                                    val lon = exifLongitude.toDoubleOrNull()?.takeIf { it in -180.0..180.0 }
+                                    viewModel.saveExif(screenshot, exifData.copy(
+                                        imageDescription = exifDescription.ifBlank { null },
+                                        userComment = exifComment.ifBlank { null },
+                                        cameraMake = exifMake.ifBlank { null },
+                                        cameraModel = exifModel.ifBlank { null },
+                                        software = exifSoftware.ifBlank { null },
+                                        artist = exifArtist.ifBlank { null },
+                                        dateTaken = exifDate.ifBlank { null },
+                                        latitude = if (lat != null && lon != null) lat else null,
+                                        longitude = if (lat != null && lon != null) lon else null
+                                    )) { success -> if (success) showInlineExif = false }
+                                }, modifier = Modifier.weight(1f)) { Text("Save EXIF") }
+                                OutlinedButton(onClick = { showInlineExif = false }, modifier = Modifier.weight(1f)) { Text("Cancel") }
+                            }
+                        }
+                    }
+
                     if (screenshot.links.isNotEmpty()) {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("Detected links", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)

@@ -215,6 +215,13 @@ TopAppBar(
     },
     actions = {
         if (!isSearchExpanded) {
+            IconButton(
+                onClick = { onSearchExpandedChange(true) },
+                modifier = Modifier.testTag("btn_toggle_search")
+            ) {
+                Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
+            }
+
             // View mode is a frequent gallery control, so keep it one tap away.
             Box {
                 IconButton(
@@ -303,12 +310,6 @@ TopAppBar(
                 Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings))
             }
 
-            IconButton(
-                onClick = { onSearchExpandedChange(true) },
-                modifier = Modifier.testTag("btn_toggle_search")
-            ) {
-                Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
-            }
         }
 
         Box {

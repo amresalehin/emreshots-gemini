@@ -1,5 +1,6 @@
 package com.amresalehin.emreshots.ui.screens
 
+import com.example.ui.icons.AppIcons
 import com.amresalehin.emreshots.R
 
 import android.content.ClipData
@@ -44,21 +45,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Alarm
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Collections
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -466,7 +459,7 @@ fun ScreenshotDetailScreen(
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.ocr)) },
-                                leadingIcon = { Icon(Icons.Default.DocumentScanner, contentDescription = null) },
+                                leadingIcon = { Icon(AppIcons.DocumentScanner, contentDescription = null) },
                                 onClick = {
                                     showOverflowMenu = false
                                     showOcrSheet = true
@@ -475,7 +468,7 @@ fun ScreenshotDetailScreen(
                             if (!screenshot.isVideo) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.edit_exif)) },
-                                    leadingIcon = { Icon(Icons.Default.CameraAlt, contentDescription = null) },
+                                    leadingIcon = { Icon(AppIcons.CameraAlt, contentDescription = null) },
                                     onClick = {
                                         showOverflowMenu = false
                                         if (!hasMediaLocationPermission) {
@@ -489,7 +482,7 @@ fun ScreenshotDetailScreen(
                             }
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.collections)) },
-                                leadingIcon = { Icon(Icons.Default.Collections, contentDescription = null) },
+                                leadingIcon = { Icon(AppIcons.Collections, contentDescription = null) },
                                 onClick = {
                                     showOverflowMenu = false
                                     showCollectionsDialog = true
@@ -506,7 +499,7 @@ fun ScreenshotDetailScreen(
                                         }
                                     )
                                 },
-                                leadingIcon = { Icon(Icons.Default.Alarm, contentDescription = null) },
+                                leadingIcon = { Icon(AppIcons.Alarm, contentDescription = null) },
                                 onClick = {
                                     showOverflowMenu = false
                                     showReminderDialog = true

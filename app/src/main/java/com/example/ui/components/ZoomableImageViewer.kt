@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -141,6 +140,13 @@ fun ZoomableImageViewer(
             if (dialogWindow == null) {
                 onDispose { }
             } else {
+                // A Dialog has its own Window. Explicitly opt that Window into
+                // edge-to-edge before hiding the status bar; otherwise Android
+                // can keep the old status-bar inset and leave an empty strip
+                // above the viewer even though the bar itself is hidden.
+                WindowCompat.setDecorFitsSystemWindows(dialogWindow, false)
+                ViewCompat.requestApplyInsets(dialogWindow.decorView)
+
                 val insetsController = WindowCompat.getInsetsController(
                     dialogWindow,
                     dialogWindow.decorView
@@ -293,7 +299,6 @@ fun ZoomableImageViewer(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .statusBarsPadding()
                             .padding(horizontal = 12.dp, vertical = 8.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically

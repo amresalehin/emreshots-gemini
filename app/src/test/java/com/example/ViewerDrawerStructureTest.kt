@@ -39,4 +39,16 @@ class ViewerDrawerStructureTest {
         assertFalse(source.contains("People carousel"))
         assertFalse(source.contains("Face recognition"))
     }
+    @Test
+    fun fullscreenDrawerUsesInlineOcrAndExifEditors() {
+        val content = File("src/main/java/com/example/ui/screens/ScreenshotDetailContent.kt").readText()
+        val screen = File("src/main/java/com/example/ui/screens/ScreenshotDetailScreen.kt").readText()
+        assertTrue(content.contains("inlineTools: Boolean = false"))
+        assertTrue(content.contains("inline_ocr_editor"))
+        assertTrue(content.contains("inline_exif_editor"))
+        assertTrue(content.contains("if (inlineTools) showInlineOcr"))
+        assertTrue(content.contains("if (inlineTools) showInlineExif"))
+        assertTrue(screen.contains("inlineTools = true"))
+    }
+
 }

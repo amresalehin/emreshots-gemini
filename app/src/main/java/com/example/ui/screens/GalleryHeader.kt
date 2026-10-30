@@ -50,6 +50,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -193,7 +194,7 @@ TopAppBar(
             )
         } else {
             Text(
-                text = stringResource(R.string.all_media),
+                text = "Gallery",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
@@ -417,8 +418,8 @@ TopAppBar(
                 Box {
                     Surface(onClick = { onShowFolderMenuChange(true) }, shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), contentColor = MaterialTheme.colorScheme.onSurfaceVariant) {
                         Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                            Icon(AppIcons.Folder, contentDescription = null, modifier = Modifier.size(15.dp))
-                            Text(selectedFolder ?: stringResource(R.string.folder), style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                            Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(15.dp))
+                            Text(selectedFolder ?: "Folders", style = MaterialTheme.typography.labelMedium, maxLines = 1)
                         }
                     }
                     DropdownMenu(expanded = showFolderMenu, onDismissRequest = { onShowFolderMenuChange(false) }) {

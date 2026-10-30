@@ -39,23 +39,13 @@ import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridS
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
-import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AddPhotoAlternate
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Collections
-import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PermMedia
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ViewAgenda
-import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -197,7 +187,7 @@ TopAppBar(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.Collections, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(AppIcons.Collections, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(7.dp))
                         Text(selectedFolder ?: stringResource(R.string.all_media), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
                         Spacer(modifier = Modifier.width(5.dp))
@@ -247,7 +237,7 @@ TopAppBar(
                             )
                         }
                     },
-                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null) },
+                    leadingIcon = { Icon(AppIcons.Sort, contentDescription = null) },
                     onClick = { onShowMoreMenuChange(false); onShowSortDialog(true) },
                     modifier = Modifier.testTag("btn_sort_option")
                 )
@@ -267,7 +257,7 @@ TopAppBar(
                             )
                         }
                     },
-                    leadingIcon = { Icon(Icons.Default.GridView, contentDescription = null) },
+                    leadingIcon = { Icon(AppIcons.GridView, contentDescription = null) },
                     onClick = { onShowMoreMenuChange(false); onShowGroupDialog(true) },
                     modifier = Modifier.testTag("btn_group_by_option")
                 )
@@ -314,7 +304,7 @@ TopAppBar(
                             )
                         }
                     },
-                    leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
+                    leadingIcon = { Icon(AppIcons.AutoAwesome, contentDescription = null) },
                     enabled = !isAnalyzing && aiVisionPendingCount > 0,
                     onClick = {
                         onShowMoreMenuChange(false)

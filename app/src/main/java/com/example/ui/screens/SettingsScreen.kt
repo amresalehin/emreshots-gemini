@@ -20,13 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Backup
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.CloudDone
-import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.CardDefaults
@@ -84,13 +78,13 @@ fun SettingsScreen(
             Text(stringResource(R.string.workspace), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             Text(stringResource(R.string.workspace_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-            SettingsDestination(Icons.Default.AutoAwesome, stringResource(R.string.ai_studio), "AI analysis quality and direct EXIF writing", onOpenAiStudio)
-            SettingsDestination(Icons.Default.CloudDone, stringResource(R.string.cloud_providers), "Endpoints, credentials, models, and connection tests", onOpenCloudProviders)
-            SettingsDestination(Icons.Default.CameraAlt, stringResource(R.string.on_device_vision), "Local GGUF mode, model selection, and imports", onOpenOnDeviceVision)
-            SettingsDestination(Icons.Default.TextFields, stringResource(R.string.ocr_and_text), "OCR extraction, language packs, and link detection", onOpenOcr)
+            SettingsDestination(AppIcons.AutoAwesome, stringResource(R.string.ai_studio), "AI analysis quality and direct EXIF writing", onOpenAiStudio)
+            SettingsDestination(AppIcons.CloudDone, stringResource(R.string.cloud_providers), "Endpoints, credentials, models, and connection tests", onOpenCloudProviders)
+            SettingsDestination(AppIcons.CameraAlt, stringResource(R.string.on_device_vision), "Local GGUF mode, model selection, and imports", onOpenOnDeviceVision)
+            SettingsDestination(AppIcons.TextFields, stringResource(R.string.ocr_and_text), "OCR extraction, language packs, and link detection", onOpenOcr)
             SettingsDestination(Icons.Default.Refresh, stringResource(R.string.library_processing), "Indexing, retries, smart tags, and media sync", onOpenProcessing)
-            SettingsDestination(Icons.Default.Backup, stringResource(R.string.backup_and_restore), "Export and restore library data", onOpenBackupRestore)
-            SettingsDestination(Icons.Default.Collections, stringResource(R.string.collections), "Create and remove media collections", onOpenCollections)
+            SettingsDestination(AppIcons.Backup, stringResource(R.string.backup_and_restore), "Export and restore library data", onOpenBackupRestore)
+            SettingsDestination(AppIcons.Collections, stringResource(R.string.collections), "Create and remove media collections", onOpenCollections)
         }
     }
 }

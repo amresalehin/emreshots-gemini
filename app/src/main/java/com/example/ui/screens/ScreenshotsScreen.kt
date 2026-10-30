@@ -146,6 +146,8 @@ fun ScreenshotsScreen(
     var selectedCollectionId by remember(initialCollectionId) { mutableStateOf(initialCollectionId) }
     var showCollectionMenu by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
+    var showViewMenu by remember { mutableStateOf(false) }
+    var showOrganizeMenu by remember { mutableStateOf(false) }
     val searchFocusRequester = remember { FocusRequester() }
     var showBatchRenameDialog by remember { mutableStateOf(false) }
     var renameTemplate by remember { mutableStateOf("Media_{date}_{index}") }
@@ -229,6 +231,10 @@ fun ScreenshotsScreen(
                 availableFolders = availableFolders,
                 showMoreMenu = showMoreMenu,
                 onShowMoreMenuChange = { showMoreMenu = it },
+                showViewMenu = showViewMenu,
+                onShowViewMenuChange = { showViewMenu = it },
+                showOrganizeMenu = showOrganizeMenu,
+                onShowOrganizeMenuChange = { showOrganizeMenu = it },
                 sortOption = sortOption,
                 onShowSortDialog = { showSortDialog = it },
                 groupByOption = groupByOption,

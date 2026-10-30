@@ -1,5 +1,6 @@
 package com.amresalehin.emreshots.ui.components
 
+import com.example.ui.icons.AppIcons
 import com.amresalehin.emreshots.R
 
 import com.amresalehin.emreshots.ui.theme.DangerRose
@@ -25,10 +26,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -172,7 +171,7 @@ fun ScreenshotFeedCard(
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.play_video), tint = Color.White, modifier = Modifier.size(14.dp))
+                                    Icon(AppIcons.PlayArrow, contentDescription = stringResource(R.string.play_video), tint = Color.White, modifier = Modifier.size(14.dp))
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         text = formatFeedDuration(screenshot.durationMs),
@@ -193,7 +192,7 @@ fun ScreenshotFeedCard(
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(Icons.Default.AutoAwesome, contentDescription = stringResource(R.string.ai_indexed), tint = Color.White, modifier = Modifier.size(12.dp))
+                                    Icon(AppIcons.AutoAwesome, contentDescription = stringResource(R.string.ai_indexed), tint = Color.White, modifier = Modifier.size(12.dp))
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(stringResource(R.string.ai_indexed), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 }

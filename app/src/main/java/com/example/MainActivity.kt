@@ -4,6 +4,22 @@
 package com.amresalehin.emreshots
 
 import android.os.Bundle
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberSaveable
+import com.amresalehin.emreshots.service.media.DeviceMediaScanner
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -17,6 +33,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -51,6 +68,50 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             EmreShotsTheme {
+                val preferences = remember { getSharedPreferences("emre_setup", MODE_PRIVATE) }
+                var setupComplete by rememberSaveable {
+                    mutableStateOf(
+                        preferences.getBoolean("media_setup_complete", false) &&
+                            DeviceMediaScanner.hasPermissions(this@MainActivity)
+                    )
+                }
+                // Existing installations with full access do not need to repeat onboarding.
+                LaunchedEffect(Unit) {
+                    if (DeviceMediaScanner.hasPermissions(this@MainActivity)) {
+                        preferences.edit().putBoolean("media_setup_complete", true).apply()
+                        setupComplete = true
+                    }
+                }
+                val mediaPermissionLauncher = rememberLauncherForActivityResult(
+                    ActivityResultContracts.RequestMultiplePermissions()
+                ) {
+                    val granted = DeviceMediaScanner.hasPermissions(this@MainActivity)
+                    viewModel.onPermissionsResult(granted)
+                    if (granted) {
+                        preferences.edit().putBoolean("media_setup_complete", true).apply()
+                        setupComplete = true
+                    }
+                }
+                if (!setupComplete) {
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text("Welcome to Emre Gallery", style = MaterialTheme.typography.headlineMedium)
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            "To display and organize your complete gallery, allow access to all photos and videos. Choose \"Allow all\" when Android asks.",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Spacer(Modifier.height(24.dp))
+                        Button(onClick = {
+                            mediaPermissionLauncher.launch(DeviceMediaScanner.getRequiredPermissions())
+                        }) {
+                            Text("Allow full media access")
+                        }
+                    }
+                } else {
                 val navController = rememberNavController()
                 val snackbarHostState = remember { SnackbarHostState() }
                 val snackbarMessage by viewModel.snackbarMessage.collectAsStateWithLifecycle()
@@ -187,6 +248,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+                }
         }
     }
 }

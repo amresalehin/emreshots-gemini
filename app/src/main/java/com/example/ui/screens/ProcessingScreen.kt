@@ -68,7 +68,10 @@ fun ProcessingScreen(
     val progress = if (state.total > 0) state.progress else if (screenshots.isEmpty()) 0f else screenshots.count { it.aiProcessed }.toFloat() / screenshots.size.toFloat()
     var showRetryInfo by remember { mutableStateOf(false) }
 
-    if (onNavigateBack != null) BackHandler(onBack = onNavigateBack)
+    if (onNavigateBack != null) {
+        BackHandler(enabled = showRetryInfo) { showRetryInfo = false }
+        BackHandler(enabled = !showRetryInfo, onBack = onNavigateBack)
+    }
 
     Scaffold(
         topBar = {

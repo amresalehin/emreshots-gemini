@@ -1,5 +1,6 @@
 package com.amresalehin.emreshots.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -158,6 +159,33 @@ fun ScreenshotsScreen(
 
     LaunchedEffect(isSearchExpanded) {
         if (isSearchExpanded) searchFocusRequester.requestFocus()
+    }
+
+    // Comprehensive nested back navigation handling
+    BackHandler(enabled = isSearchExpanded) {
+        isSearchExpanded = false
+        viewModel.setSearchQuery("")
+    }
+    BackHandler(enabled = !isSearchExpanded && showBatchRenameDialog) {
+        showBatchRenameDialog = false
+    }
+    BackHandler(enabled = !isSearchExpanded && !showBatchRenameDialog && showSortDialog) {
+        showSortDialog = false
+    }
+    BackHandler(enabled = !isSearchExpanded && !showBatchRenameDialog && !showSortDialog && showGroupDialog) {
+        showGroupDialog = false
+    }
+    BackHandler(enabled = !isSearchExpanded && !showBatchRenameDialog && !showSortDialog && !showGroupDialog && showFolderMenu) {
+        showFolderMenu = false
+    }
+    BackHandler(enabled = !isSearchExpanded && !showBatchRenameDialog && !showSortDialog && !showGroupDialog && !showFolderMenu && selectedCollectionId != null) {
+        selectedCollectionId = null
+    }
+    BackHandler(enabled = !isSearchExpanded && !showBatchRenameDialog && !showSortDialog && !showGroupDialog && !showFolderMenu && selectedCollectionId == null && selectedFolder != null) {
+        selectedFolder = null
+    }
+    BackHandler(enabled = !isSearchExpanded && !showBatchRenameDialog && !showSortDialog && !showGroupDialog && !showFolderMenu && selectedCollectionId == null && selectedFolder == null && selectedMediaType != null) {
+        selectedMediaType = null
     }
 
     val gridState = rememberLazyGridState()

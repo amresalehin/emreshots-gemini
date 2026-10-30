@@ -37,11 +37,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.border
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -129,11 +128,12 @@ fun ScreenshotDetailScreen(
     val hasMediaLocationPermission by viewModel.hasMediaLocationPermission.collectAsStateWithLifecycle()
     val pendingIntentSender by viewModel.pendingWriteIntentSender.collectAsStateWithLifecycle()
 
-    val screenshot = allScreenshots.find { it.id == screenshotId }
-    val currentIndex = allScreenshots.indexOfFirst { it.id == screenshotId }
+    var currentActiveId by remember(screenshotId) { mutableStateOf(screenshotId) }
+    val screenshot = allScreenshots.find { it.id == currentActiveId }
+    val currentIndex = allScreenshots.indexOfFirst { it.id == currentActiveId }
     val previousScreenshotId = allScreenshots.getOrNull(currentIndex - 1)?.id
     val nextScreenshotId = allScreenshots.getOrNull(currentIndex + 1)?.id
-    val exifData = exifDataMap[screenshotId] ?: ExifData()
+    val exifData = exifDataMap[currentActiveId] ?: ExifData()
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -162,8 +162,6 @@ fun ScreenshotDetailScreen(
         }
     }
 
-    BackHandler(onBack = onNavigateBack)
-
     var showExifEditor by remember { mutableStateOf(false) }
     var showOcrSheet by remember { mutableStateOf(false) }
     val ocrSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -171,19 +169,22 @@ fun ScreenshotDetailScreen(
     val isExtractingOcr by viewModel.isExtractingOcr.collectAsStateWithLifecycle()
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
-    var showOverflowMenu by remember { mutableStateOf(false) }
+    var showEditDetailsDialog by remember { mutableStateOf(false) }
     val detailScrollState = rememberScrollState()
     var showAddTagDialog by remember { mutableStateOf(false) }
     var newTagInput by remember { mutableStateOf("") }
     var showCollectionsDialog by remember { mutableStateOf(false) }
     var showReminderDialog by remember { mutableStateOf(false) }
-    var showImageViewer by remember { mutableStateOf(true) }
     val collections by viewModel.collections.collectAsStateWithLifecycle()
 
     var isEditingDetails by remember { mutableStateOf(false) }
     var editTitle by remember { mutableStateOf("") }
     var editDescription by remember { mutableStateOf("") }
     var editNotes by remember { mutableStateOf("") }
+
+    BackHandler(enabled = isEditingDetails) {
+        isEditingDetails = false
+    }
 
     LaunchedEffect(screenshot) {
         if (screenshot != null) {
@@ -223,6 +224,7 @@ fun ScreenshotDetailScreen(
     }
 
     if (showCollectionsDialog) {
+        val activeScreenshot = allScreenshots.find { it.id == currentActiveId } ?: screenshot
         AlertDialog(
             onDismissRequest = { showCollectionsDialog = false },
             title = { Text(stringResource(R.string.collections)) },
@@ -236,20 +238,20 @@ fun ScreenshotDetailScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
-                                        if (screenshot.collectionIds.contains(collection.id)) {
-                                            viewModel.removeScreenshotFromCollection(screenshot.id, collection.id)
+                                        if (activeScreenshot.collectionIds.contains(collection.id)) {
+                                            viewModel.removeScreenshotFromCollection(activeScreenshot.id, collection.id)
                                         } else {
-                                            viewModel.addScreenshotToCollection(screenshot.id, collection.id)
+                                            viewModel.addScreenshotToCollection(activeScreenshot.id, collection.id)
                                         }
                                     }
                                     .padding(vertical = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Checkbox(
-                                    checked = screenshot.collectionIds.contains(collection.id),
+                                    checked = activeScreenshot.collectionIds.contains(collection.id),
                                     onCheckedChange = { checked ->
-                                        if (checked) viewModel.addScreenshotToCollection(screenshot.id, collection.id)
-                                        else viewModel.removeScreenshotFromCollection(screenshot.id, collection.id)
+                                        if (checked) viewModel.addScreenshotToCollection(activeScreenshot.id, collection.id)
+                                        else viewModel.removeScreenshotFromCollection(activeScreenshot.id, collection.id)
                                     }
                                 )
                                 Spacer(Modifier.width(8.dp))
@@ -266,16 +268,17 @@ fun ScreenshotDetailScreen(
     }
 
     if (showReminderDialog) {
+        val activeScreenshot = allScreenshots.find { it.id == currentActiveId } ?: screenshot
         AlertDialog(
             onDismissRequest = { showReminderDialog = false },
             title = { Text(stringResource(R.string.reminder)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        if (screenshot.reminderTime != null) {
+                        if (activeScreenshot.reminderTime != null) {
                             stringResource(
                                 R.string.reminder_scheduled_for,
-                                SimpleDateFormat("EEE, MMM d · h:mm a", Locale.getDefault()).format(Date(screenshot.reminderTime))
+                                SimpleDateFormat("EEE, MMM d · h:mm a", Locale.getDefault()).format(Date(activeScreenshot.reminderTime))
                             )
                         } else {
                             stringResource(R.string.reminder_choose_time)
@@ -291,7 +294,7 @@ fun ScreenshotDetailScreen(
                                 set(Calendar.SECOND, 0)
                                 set(Calendar.MILLISECOND, 0)
                             }
-                            viewModel.setReminder(screenshot, calendar.timeInMillis, "Review: " + screenshot.title)
+                            viewModel.setReminder(activeScreenshot, calendar.timeInMillis, "Review: " + activeScreenshot.title)
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                             showReminderDialog = false
                         },
@@ -306,7 +309,7 @@ fun ScreenshotDetailScreen(
                                 set(Calendar.SECOND, 0)
                                 set(Calendar.MILLISECOND, 0)
                             }
-                            viewModel.setReminder(screenshot, calendar.timeInMillis, "Review: " + screenshot.title)
+                            viewModel.setReminder(activeScreenshot, calendar.timeInMillis, "Review: " + activeScreenshot.title)
                             showReminderDialog = false
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -324,7 +327,7 @@ fun ScreenshotDetailScreen(
                                                 set(year, month, day, hour, minute, 0)
                                                 set(Calendar.MILLISECOND, 0)
                                             }
-                                            viewModel.setReminder(screenshot, picked.timeInMillis, "Review: " + screenshot.title)
+                                            viewModel.setReminder(activeScreenshot, picked.timeInMillis, "Review: " + activeScreenshot.title)
                                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                                             showReminderDialog = false
                                         },
@@ -353,256 +356,33 @@ fun ScreenshotDetailScreen(
     val configuration = LocalConfiguration.current
     val galleryHeight = (configuration.screenHeightDp.dp * 0.58f).coerceIn(300.dp, 560.dp)
 
-    // The fullscreen viewer is the detail route's primary surface. Keep the
-    // legacy detail scaffold out of the composition until More is requested.
-    if (!showImageViewer) {
-        Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        if (screenshot.isVideo) stringResource(R.string.video) else stringResource(R.string.photo),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("btn_detail_back")) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = { viewModel.toggleFavorite(screenshot) },
-                        modifier = Modifier.testTag("btn_detail_favorite")
-                    ) {
-                        Icon(
-                            imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = if (screenshot.isFavorite) stringResource(R.string.remove_from_favorites) else stringResource(R.string.add_to_favorites),
-                            tint = if (screenshot.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Box {
-                        IconButton(
-                            onClick = { showOverflowMenu = true },
-                            modifier = Modifier.testTag("btn_detail_overflow")
-                        ) {
-                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more_actions))
-                        }
-                        DropdownMenu(
-                            expanded = showOverflowMenu,
-                            onDismissRequest = { showOverflowMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(if (isEditingDetails) stringResource(R.string.finish_editing) else stringResource(R.string.edit_details)) },
-                                leadingIcon = {
-                                    Icon(
-                                        if (isEditingDetails) Icons.Default.Check else Icons.Default.Edit,
-                                        contentDescription = null
-                                    )
-                                },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    if (isEditingDetails) {
-                                        viewModel.updateScreenshot(
-                                            screenshot.copy(
-                                                title = editTitle.ifBlank { screenshot.title },
-                                                description = editDescription,
-                                                notes = editNotes.ifBlank { null }
-                                            )
-                                        )
-                                        isEditingDetails = false
-                                    } else {
-                                        isEditingDetails = true
-                                    }
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.share)) },
-                                leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    val uri = screenshot.uriString?.let(Uri::parse)
-                                    if (uri == null) {
-                                        viewModel.showMessage(context.getString(R.string.sharing_unavailable_for_item))
-                                    } else {
-                                        runCatching {
-                                            val type = context.contentResolver.getType(uri)
-                                                ?: if (screenshot.isVideo) "video/*" else "image/*"
-                                            val intent = Intent(Intent.ACTION_SEND).apply {
-                                                this.type = type
-                                                putExtra(Intent.EXTRA_STREAM, uri)
-                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                            }
-                                            context.startActivity(Intent.createChooser(intent, context.getString(R.string.share_media)))
-                                        }.onFailure {
-                                            viewModel.showMessage(context.getString(R.string.unable_to_share_item))
-                                        }
-                                    }
-                                },
-                                modifier = Modifier.testTag("btn_detail_share")
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
-                                },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    showDeleteConfirm = true
-                                },
-                                modifier = Modifier.testTag("btn_detail_delete")
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.ocr)) },
-                                leadingIcon = { Icon(AppIcons.DocumentScanner, contentDescription = null) },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    showOcrSheet = true
-                                }
-                            )
-                            if (!screenshot.isVideo) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.edit_exif)) },
-                                    leadingIcon = { Icon(AppIcons.CameraAlt, contentDescription = null) },
-                                    onClick = {
-                                        showOverflowMenu = false
-                                        if (!hasMediaLocationPermission) {
-                                            permissionLauncher.launch(
-                                                com.amresalehin.emreshots.service.media.DeviceMediaScanner.getRequiredPermissions()
-                                            )
-                                        }
-                                        showExifEditor = true
-                                    }
-                                )
-                            }
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.collections)) },
-                                leadingIcon = { Icon(AppIcons.Collections, contentDescription = null) },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    showCollectionsDialog = true
-                                },
-                                modifier = Modifier.testTag("menu_detail_collections")
-                            )
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        if (screenshot.reminderTime != null) {
-                                            stringResource(R.string.edit_reminder)
-                                        } else {
-                                            stringResource(R.string.set_reminder)
-                                        }
-                                    )
-                                },
-                                leadingIcon = { Icon(AppIcons.Alarm, contentDescription = null) },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    showReminderDialog = true
-                                },
-                                modifier = Modifier.testTag("menu_detail_reminder")
-                            )
-                            if (screenshot.reminderTime != null) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.remove_reminder)) },
-                                    leadingIcon = { Icon(Icons.Default.Close, contentDescription = null) },
-                                    onClick = {
-                                        showOverflowMenu = false
-                                        viewModel.removeReminder(screenshot)
-                                    },
-                                    modifier = Modifier.testTag("menu_detail_remove_reminder")
-                                )
-                            }
-                        }
-
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(detailScrollState)
-        ) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 12.dp)
-                    .height(galleryHeight)
-                    .border(
-                        1.dp,
-                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f),
-                        MaterialTheme.shapes.extraLarge
-                    )
-                    .clip(MaterialTheme.shapes.extraLarge)
-                    .pointerInput(screenshotId) {
-                        var totalDrag = 0f
-                        var triggered = false
-                        detectHorizontalDragGestures(
-                            onHorizontalDrag = { _, dragAmount ->
-                                totalDrag += dragAmount
-                                if (!triggered && kotlin.math.abs(totalDrag) >= 120f) {
-                                    triggered = true
-                                    if (totalDrag < 0) nextScreenshotId?.let(onNavigateToScreenshot)
-                                    else previousScreenshotId?.let(onNavigateToScreenshot)
-                                }
-                            },
-                            onDragEnd = {
-                                totalDrag = 0f
-                                triggered = false
-                            },
-                            onDragCancel = {
-                                totalDrag = 0f
-                                triggered = false
-                            }
-                        )
-                    },
-                shape = MaterialTheme.shapes.extraLarge,
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                tonalElevation = 0.dp
-            ) {
-            if (screenshot.isVideo) {
-                InAppVideoPlayer(
-                    screenshot = screenshot,
-                    modifier = Modifier.fillMaxSize(),
-                    onTap = { showImageViewer = true }
-                )
-            } else if (imageFile.exists() || !screenshot.uriString.isNullOrBlank()) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(if (imageFile.exists()) imageFile else screenshot.uriString)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = screenshot.title,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .pointerInput(Unit) {
-                            detectTapGestures(onTap = { showImageViewer = true })
-                        }
-                )
+    // Fullscreen media viewer is the primary surface. No nested containers.
+    val initialIdx = remember(allScreenshots, screenshotId) {
+        allScreenshots.indexOfFirst { it.id == screenshotId }.coerceAtLeast(0)
+    }
+    ZoomableImageViewer(
+        screenshots = allScreenshots,
+        initialIndex = initialIdx,
+        onIndexChanged = { newIdx ->
+            allScreenshots.getOrNull(newIdx)?.let { item ->
+                currentActiveId = item.id
+                viewModel.loadExif(item)
+                editTitle = item.title
+                editDescription = item.description
+                editNotes = item.notes ?: ""
             }
-
-
-        }
-
-        Spacer(modifier = Modifier.height(1.dp))
-
+        },
+        exifDataMap = exifDataMap,
+        onDismiss = onNavigateBack,
+        onToggleFavorite = { viewModel.toggleFavorite(it) },
+        drawerContent = { item ->
+            val itemFile = File(item.filePath)
             ScreenshotDetailContent(
                 viewModel = viewModel,
-                screenshot = screenshot,
-                screenshotId = screenshotId,
+                screenshot = item,
+                screenshotId = item.id,
                 context = context,
-                imageFile = imageFile,
+                imageFile = itemFile,
                 galleryHeight = galleryHeight,
                 detailScrollState = detailScrollState,
                 previousScreenshotId = previousScreenshotId,
@@ -610,7 +390,7 @@ fun ScreenshotDetailScreen(
                 onNavigateToScreenshot = onNavigateToScreenshot,
                 hasMediaLocationPermission = hasMediaLocationPermission,
                 permissionLauncher = permissionLauncher,
-                exifData = exifData,
+                exifData = exifDataMap[item.id] ?: ExifData(),
                 isAnalyzing = isAnalyzing,
                 isExtractingOcr = isExtractingOcr,
                 showOcrSheet = showOcrSheet,
@@ -626,24 +406,196 @@ fun ScreenshotDetailScreen(
                 editNotes = editNotes,
                 onEditNotesChange = { editNotes = it },
                 showAddTagDialog = showAddTagDialog,
-                onShowAddTagDialogChange = { showAddTagDialog = it }
+                onShowAddTagDialogChange = { showAddTagDialog = it },
+                showDrawerHandle = false,
+                inlineTools = true
             )
+        },
+        overflowMenuContent = { currentItem, dismissMenu ->
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.edit_details)) },
+                leadingIcon = {
+                    Icon(Icons.Default.Edit, contentDescription = null)
+                },
+                onClick = {
+                    dismissMenu()
+                    editTitle = currentItem.title
+                    editDescription = currentItem.description
+                    editNotes = currentItem.notes ?: ""
+                    showEditDetailsDialog = true
+                }
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.share)) },
+                leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) },
+                onClick = {
+                    dismissMenu()
+                    val uri = currentItem.uriString?.let(Uri::parse)
+                    if (uri == null) {
+                        viewModel.showMessage(context.getString(R.string.sharing_unavailable_for_item))
+                    } else {
+                        runCatching {
+                            val type = context.contentResolver.getType(uri)
+                                ?: if (currentItem.isVideo) "video/*" else "image/*"
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                this.type = type
+                                putExtra(Intent.EXTRA_STREAM, uri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(Intent.createChooser(intent, context.getString(R.string.share_media)))
+                        }.onFailure {
+                            viewModel.showMessage(context.getString(R.string.unable_to_share_item))
+                        }
+                    }
+                },
+                modifier = Modifier.testTag("btn_detail_share")
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                },
+                onClick = {
+                    dismissMenu()
+                    showDeleteConfirm = true
+                },
+                modifier = Modifier.testTag("btn_detail_delete")
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.ocr)) },
+                leadingIcon = { Icon(AppIcons.DocumentScanner, contentDescription = null) },
+                onClick = {
+                    dismissMenu()
+                    showOcrSheet = true
+                }
+            )
+            if (!currentItem.isVideo) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.edit_exif)) },
+                    leadingIcon = { Icon(AppIcons.CameraAlt, contentDescription = null) },
+                    onClick = {
+                        dismissMenu()
+                        if (!hasMediaLocationPermission) {
+                            permissionLauncher.launch(
+                                com.amresalehin.emreshots.service.media.DeviceMediaScanner.getRequiredPermissions()
+                            )
+                        }
+                        showExifEditor = true
+                    }
+                )
+            }
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.collections)) },
+                leadingIcon = { Icon(AppIcons.Collections, contentDescription = null) },
+                onClick = {
+                    dismissMenu()
+                    showCollectionsDialog = true
+                },
+                modifier = Modifier.testTag("menu_detail_collections")
+            )
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        if (currentItem.reminderTime != null) {
+                            stringResource(R.string.edit_reminder)
+                        } else {
+                            stringResource(R.string.set_reminder)
+                        }
+                    )
+                },
+                leadingIcon = { Icon(AppIcons.Alarm, contentDescription = null) },
+                onClick = {
+                    dismissMenu()
+                    showReminderDialog = true
+                },
+                modifier = Modifier.testTag("menu_detail_reminder")
+            )
+            if (currentItem.reminderTime != null) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.remove_reminder)) },
+                    leadingIcon = { Icon(Icons.Default.Close, contentDescription = null) },
+                    onClick = {
+                        dismissMenu()
+                        viewModel.removeReminder(currentItem)
+                    },
+                    modifier = Modifier.testTag("menu_detail_remove_reminder")
+                )
+            }
         }
-    }
+    )
+
+    if (showEditDetailsDialog) {
+        val activeItem = allScreenshots.find { it.id == currentActiveId } ?: screenshot
+        AlertDialog(
+            onDismissRequest = { showEditDetailsDialog = false },
+            title = { Text(stringResource(R.string.edit_details)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = editTitle,
+                        onValueChange = { editTitle = it },
+                        label = { Text("Title") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editDescription,
+                        onValueChange = { editDescription = it },
+                        label = { Text("Description") },
+                        minLines = 2,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editNotes,
+                        onValueChange = { editNotes = it },
+                        label = { Text("Personal notes") },
+                        minLines = 2,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.updateScreenshot(
+                            activeItem.copy(
+                                title = editTitle.ifBlank { activeItem.title },
+                                description = editDescription,
+                                notes = editNotes.ifBlank { null }
+                            )
+                        )
+                        showEditDetailsDialog = false
+                    }
+                ) {
+                    Text(stringResource(R.string.done))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditDetailsDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
     }
 
     if (showExifEditor) {
+        val activeItem = allScreenshots.find { it.id == currentActiveId } ?: screenshot
+        val activeExif = exifDataMap[activeItem.id] ?: ExifData()
         ExifEditorDialog(
-            initialData = exifData,
-            screenshot = screenshot,
+            initialData = activeExif,
+            screenshot = activeItem,
             onDismiss = { showExifEditor = false },
             onSave = { updated ->
-                viewModel.saveExif(screenshot, updated) { success ->
+                viewModel.saveExif(activeItem, updated) { success ->
                     if (success) showExifEditor = false
                 }
             },
             onApplyAiQuick = {
-                viewModel.applyAiExif(screenshot)
+                viewModel.applyAiExif(activeItem)
                 showExifEditor = false
             }
         )
@@ -651,6 +603,7 @@ fun ScreenshotDetailScreen(
 
     // Add Tag Dialog
     if (showAddTagDialog) {
+        val activeItem = allScreenshots.find { it.id == currentActiveId } ?: screenshot
         AlertDialog(
             onDismissRequest = { showAddTagDialog = false },
             title = { Text(stringResource(R.string.add_tag)) },
@@ -667,7 +620,7 @@ fun ScreenshotDetailScreen(
                 Button(
                     onClick = {
                         if (newTagInput.isNotBlank()) {
-                            viewModel.addTag(screenshot, newTagInput)
+                            viewModel.addTag(activeItem, newTagInput)
                             newTagInput = ""
                             showAddTagDialog = false
                         }
@@ -686,6 +639,7 @@ fun ScreenshotDetailScreen(
 
     // Delete Confirmation Dialog
     if (showDeleteConfirm) {
+        val activeItem = allScreenshots.find { it.id == currentActiveId } ?: screenshot
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
             title = { Text(stringResource(R.string.delete_media_question)) },
@@ -693,7 +647,7 @@ fun ScreenshotDetailScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.deleteScreenshot(screenshot)
+                        viewModel.deleteScreenshot(activeItem)
                         showDeleteConfirm = false
                         onNavigateBack()
                     },
@@ -711,67 +665,21 @@ fun ScreenshotDetailScreen(
     }
 
     if (showOcrSheet) {
+        val activeItem = allScreenshots.find { it.id == currentActiveId } ?: screenshot
         OcrAiSheet(
             sheetState = ocrSheetState,
-            screenshot = screenshot,
+            screenshot = activeItem,
             isExtractingOcr = isExtractingOcr,
             isAiProcessing = isAnalyzing,
-            onExtractOcr = { onText -> viewModel.extractOcr(screenshot) { fixed -> if (!fixed.isNullOrBlank()) onText(fixed) } },
+            onExtractOcr = { onText -> viewModel.extractOcr(activeItem) { fixed -> if (!fixed.isNullOrBlank()) onText(fixed) } },
             onWriteToMetadata = { text, title, desc, tags ->
-                viewModel.writeOcrAndAiToMetadata(screenshot, text, title, desc, tags)
+                viewModel.writeOcrAndAiToMetadata(activeItem, text, title, desc, tags)
             },
             onDismiss = {
                 coroutineScope.launch {
                     ocrSheetState.hide()
                     showOcrSheet = false
                 }
-            }
-        )
-    }
-    if (showImageViewer) {
-        ZoomableImageViewer(
-            screenshot = screenshot,
-            exifData = exifData,
-            onDismiss = onNavigateBack,
-            onToggleFavorite = { viewModel.toggleFavorite(it) },
-            drawerContent = {
-                ScreenshotDetailContent(
-                viewModel = viewModel,
-                screenshot = screenshot,
-                screenshotId = screenshotId,
-                context = context,
-                imageFile = imageFile,
-                galleryHeight = galleryHeight,
-                detailScrollState = detailScrollState,
-                previousScreenshotId = previousScreenshotId,
-                nextScreenshotId = nextScreenshotId,
-                onNavigateToScreenshot = onNavigateToScreenshot,
-                hasMediaLocationPermission = hasMediaLocationPermission,
-                permissionLauncher = permissionLauncher,
-                exifData = exifData,
-                isAnalyzing = isAnalyzing,
-                isExtractingOcr = isExtractingOcr,
-                showOcrSheet = showOcrSheet,
-                onShowOcrSheetChange = { showOcrSheet = it },
-                showExifEditor = showExifEditor,
-                onShowExifEditorChange = { showExifEditor = it },
-                isEditingDetails = isEditingDetails,
-                onEditingDetailsChange = { isEditingDetails = it },
-                editTitle = editTitle,
-                onEditTitleChange = { editTitle = it },
-                editDescription = editDescription,
-                onEditDescriptionChange = { editDescription = it },
-                editNotes = editNotes,
-                onEditNotesChange = { editNotes = it },
-                showAddTagDialog = showAddTagDialog,
-                onShowAddTagDialogChange = { showAddTagDialog = it },
-                    showDrawerHandle = false,
-                    inlineTools = true
-                )
-            },
-            onMore = {
-                showImageViewer = false
-                showOverflowMenu = true
             }
         )
     }

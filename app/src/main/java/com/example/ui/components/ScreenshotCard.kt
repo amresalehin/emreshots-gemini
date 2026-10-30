@@ -6,9 +6,13 @@ import com.amresalehin.emreshots.R
 import com.amresalehin.emreshots.ui.theme.DangerRose
 import android.graphics.Bitmap
 import android.net.Uri
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -57,6 +61,7 @@ import com.amresalehin.emreshots.data.model.ScreenshotItem
 import com.amresalehin.emreshots.service.media.VideoThumbnailHelper
 import java.io.File
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ScreenshotCard(
     screenshot: ScreenshotItem,
@@ -106,11 +111,19 @@ fun ScreenshotCard(
         builder.build()
     }
 
+    val haptic = LocalHapticFeedback.current
+
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.large)
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onToggleFavorite()
+                }
+            )
             .testTag("screenshot_card_${screenshot.id}"),
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceVariant,

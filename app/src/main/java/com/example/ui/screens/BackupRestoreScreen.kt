@@ -64,7 +64,8 @@ fun BackupRestoreScreen(
         if (uri != null) pendingRestoreUri = uri
     }
 
-    BackHandler(onBack = onNavigateBack)
+    BackHandler(enabled = pendingRestoreUri != null) { pendingRestoreUri = null }
+    BackHandler(enabled = pendingRestoreUri == null, onBack = onNavigateBack)
 
     Scaffold(
         topBar = {

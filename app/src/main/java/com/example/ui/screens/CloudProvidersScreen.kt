@@ -89,16 +89,20 @@ fun CloudProvidersScreen(
     viewModel: ScreenshotsViewModel,
     onNavigateBack: (() -> Unit)? = null
 ) {
-    if (onNavigateBack != null) {
-        BackHandler(onBack = onNavigateBack)
-    }
-
     val providers by viewModel.providers.collectAsStateWithLifecycle()
     val activeProvider by viewModel.activeProvider.collectAsStateWithLifecycle()
 
     var showEditDialog by remember { mutableStateOf(false) }
     var editingProvider by remember { mutableStateOf<CustomCloudProvider?>(null) }
     var testingProviderId by remember { mutableStateOf<String?>(null) }
+
+    if (onNavigateBack != null) {
+        BackHandler(enabled = showEditDialog) {
+            showEditDialog = false
+            editingProvider = null
+        }
+        BackHandler(enabled = !showEditDialog, onBack = onNavigateBack)
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {

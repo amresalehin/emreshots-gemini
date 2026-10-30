@@ -80,7 +80,10 @@ fun OcrSettingsScreen(
         }
     }
 
-    BackHandler(onBack = onNavigateBack)
+    BackHandler(enabled = showLanguageSheet) {
+        showLanguageSheet = false
+    }
+    BackHandler(enabled = !showLanguageSheet, onBack = onNavigateBack)
 
     Scaffold(
         topBar = {

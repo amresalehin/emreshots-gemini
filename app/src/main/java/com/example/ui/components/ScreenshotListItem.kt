@@ -6,9 +6,13 @@ import com.amresalehin.emreshots.R
 import com.amresalehin.emreshots.ui.theme.DangerRose
 import android.graphics.Bitmap
 import android.net.Uri
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,6 +66,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ScreenshotListItem(
     screenshot: ScreenshotItem,
@@ -113,11 +118,19 @@ fun ScreenshotListItem(
     val dateStr = com.amresalehin.emreshots.ui.util.DateUtils.formatShortDate(screenshot.addedOn)
     val sizeStr = if (screenshot.fileSize > 0) "${screenshot.fileSize / 1024} KB" else ""
 
+    val haptic = LocalHapticFeedback.current
+
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.medium)
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onToggleFavorite()
+                }
+            )
             .testTag("list_item_${screenshot.id}"),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant

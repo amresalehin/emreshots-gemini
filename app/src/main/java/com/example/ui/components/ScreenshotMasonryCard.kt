@@ -6,9 +6,13 @@ import com.amresalehin.emreshots.R
 import com.amresalehin.emreshots.ui.theme.DangerRose
 import android.graphics.Bitmap
 import android.net.Uri
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,6 +66,7 @@ import com.amresalehin.emreshots.service.media.VideoThumbnailHelper
 import java.io.File
 import kotlin.math.abs
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ScreenshotMasonryCard(
     screenshot: ScreenshotItem,
@@ -121,11 +126,19 @@ fun ScreenshotMasonryCard(
         builder.build()
     }
 
+    val haptic = LocalHapticFeedback.current
+
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.large)
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onToggleFavorite()
+                }
+            )
             .testTag("screenshot_masonry_card_${screenshot.id}"),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(

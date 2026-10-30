@@ -62,7 +62,11 @@ fun CollectionsScreen(
     var showCreate by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
 
-    BackHandler(onBack = onNavigateBack)
+    BackHandler(enabled = showCreate) {
+        showCreate = false
+        name = ""
+    }
+    BackHandler(enabled = !showCreate, onBack = onNavigateBack)
 
     Scaffold(
         topBar = {

@@ -4,6 +4,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -100,19 +101,35 @@ fun GalleryScrollBar(
     BoxWithConstraints(
         modifier = modifier
             .fillMaxHeight()
-            .width(48.dp) // Accessible touch target
+            .width(48.dp)
             .testTag("gallery_scrollbar")
     ) {
         val trackHeightPx = with(density) { maxHeight.toPx() }
         val thumbHeightDp = 52.dp
         val thumbHeightPx = with(density) { thumbHeightDp.toPx() }
-        val availableTrackPx = (trackHeightPx - thumbHeightPx).coerceAtLeast(0f)
+        val availableTrackPx = (trackHeightPx - thumbHeightPx).coerceAtLeast(1f)
 
         val thumbOffsetY = (effectiveFraction * availableTrackPx).roundToInt()
 
-        // Only the thumb is interactive. The track never intercepts taps,
-        // preventing accidental jumps while browsing the gallery.
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(totalItemsCount, availableTrackPx) {
+                    detectTapGestures(
+                        onTap = { offset ->
+                            val fraction = ((offset.y - thumbHeightPx / 2f) / availableTrackPx).coerceIn(0f, 1f)
+                            dragProgress = fraction
+                            val targetItem = ((totalItemsCount - 1) * fraction)
+                                .roundToInt()
+                                .coerceIn(0, totalItemsCount - 1)
+                            coroutineScope.launch {
+                                gridState?.scrollToItem(targetItem)
+                                staggeredGridState?.scrollToItem(targetItem)
+                            }
+                        }
+                    )
+                }
+        ) {
             // Subtle track line
             Box(
                 modifier = Modifier
@@ -136,7 +153,7 @@ fun GalleryScrollBar(
                     Surface(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(end = 18.dp)
+                            .padding(end = 22.dp)
                             .offset(y = 8.dp)
                             .shadow(4.dp, RoundedCornerShape(16.dp)),
                         shape = RoundedCornerShape(16.dp),
@@ -153,12 +170,11 @@ fun GalleryScrollBar(
                     }
                 }
 
-                // Small, dedicated drag target; surrounding gallery remains touch-transparent.
+                // Generous full-width hit target for vertical drag gestures
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(end = 2.dp)
-                        .size(width = 20.dp, height = thumbHeightDp)
+                        .size(width = 48.dp, height = thumbHeightDp)
                         .pointerInput(totalItemsCount, availableTrackPx) {
                             detectVerticalDragGestures(
                                 onDragStart = {
@@ -170,7 +186,7 @@ fun GalleryScrollBar(
                                 onVerticalDrag = { change, dragAmount ->
                                     change.consume()
                                     dragProgress = (
-                                        dragProgress + dragAmount / availableTrackPx.coerceAtLeast(1f)
+                                        dragProgress + dragAmount / availableTrackPx
                                     ).coerceIn(0f, 1f)
                                     val targetItem = ((totalItemsCount - 1) * dragProgress)
                                         .roundToInt()
@@ -186,6 +202,7 @@ fun GalleryScrollBar(
                     Box(
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
+                            .padding(end = 2.dp)
                             .size(width = thumbWidth, height = thumbHeightDp)
                             .alpha(thumbAlpha)
                             .clip(CircleShape)

@@ -11,6 +11,10 @@ import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -269,6 +273,33 @@ PullToRefreshBox(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier
                     .fillMaxSize()
+                    .pointerInput(gridColumns, viewMode) {
+                        if (viewMode != GalleryViewMode.GRID) return@pointerInput
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false)
+                            var zoomAccumulator = 1f
+                            do {
+                                val event = awaitPointerEvent()
+                                if (event.changes.size >= 2) {
+                                    val zoom = event.calculateZoom()
+                                    zoomAccumulator *= zoom
+                                    if (zoomAccumulator > 1.30f) {
+                                        if (gridColumns > 2) {
+                                            viewModel.setGridColumns(gridColumns - 1)
+                                            event.changes.forEach { it.consume() }
+                                            break
+                                        }
+                                    } else if (zoomAccumulator < 0.75f) {
+                                        if (gridColumns < 5) {
+                                            viewModel.setGridColumns(gridColumns + 1)
+                                            event.changes.forEach { it.consume() }
+                                            break
+                                        }
+                                    }
+                                }
+                            } while (event.changes.any { it.pressed })
+                        }
+                    }
                     .testTag("grid_screenshots")
             ) {
                 displayGroups.forEach { (header, items) ->

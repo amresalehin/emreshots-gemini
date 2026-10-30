@@ -112,6 +112,7 @@ fun ScreenshotsScreen(
     viewModel: ScreenshotsViewModel,
     onNavigateToDetail: (String) -> Unit,
     onNavigateToSettings: () -> Unit = {},
+    onNavigateToCollections: () -> Unit = {},
     initialCollectionId: String? = null
 ) {
     val context = LocalContext.current
@@ -213,6 +214,7 @@ fun ScreenshotsScreen(
                 collections = collections,
                 selectedCollectionId = selectedCollectionId,
                 onSelectedCollectionIdChange = { selectedCollectionId = it },
+                onNavigateToCollections = onNavigateToCollections,
                 totalDisplayCount = totalDisplayCount,
                 availableFolders = availableFolders,
                 showMoreMenu = showMoreMenu,

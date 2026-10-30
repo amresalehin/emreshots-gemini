@@ -137,7 +137,6 @@ fun ScreenshotsScreen(
     val isPullToRefreshInProgress by viewModel.isPullToRefreshInProgress.collectAsStateWithLifecycle()
 
     var isSearchExpanded by remember { mutableStateOf(false) }
-    var hidePermissionBanner by remember { mutableStateOf(false) }
     var showSortDialog by remember { mutableStateOf(false) }
     var showGroupDialog by remember { mutableStateOf(false) }
     var showFolderMenu by remember { mutableStateOf(false) }
@@ -167,21 +166,6 @@ fun ScreenshotsScreen(
             groupByOption != MediaGroupBy.NONE ||
             viewMode != GalleryViewMode.GRID ||
             ((viewMode == GalleryViewMode.GRID || viewMode == GalleryViewMode.MASONRY) && gridColumns != 2)
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissionsMap ->
-        val isGranted = permissionsMap.values.any { it }
-        viewModel.onPermissionsResult(isGranted)
-    }
-
-    val mediaPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        if (uri != null) {
-            viewModel.importMediaFromUri(uri)
-        }
-    }
 
     val videoCount = allScreenshots.count { it.isVideo }
     val photoCount = allScreenshots.size - videoCount
@@ -264,10 +248,6 @@ fun ScreenshotsScreen(
             )
 
             GalleryStatusSection(
-                hasMediaPermissions = hasMediaPermissions,
-                hidePermissionBanner = hidePermissionBanner,
-                onHidePermissionBanner = { hidePermissionBanner = it },
-                permissionLauncher = permissionLauncher,
                 isAnalyzing = isAnalyzing,
                 isExtractingOcr = isExtractingOcr,
                 statusText = statusText,
@@ -289,9 +269,6 @@ fun ScreenshotsScreen(
                 staggeredGridState = staggeredGridState,
                 navBarBottom = navBarBottom,
                 isRefreshing = isPullToRefreshInProgress,
-                hasMediaPermissions = hasMediaPermissions,
-                permissionLauncher = permissionLauncher,
-                mediaPickerLauncher = mediaPickerLauncher,
                 onNavigateToDetail = onNavigateToDetail
             )
 
@@ -299,7 +276,6 @@ fun ScreenshotsScreen(
 
         GalleryActions(
             viewModel = viewModel,
-            mediaPickerLauncher = mediaPickerLauncher,
             showSortDialog = showSortDialog,
             onShowSortDialog = { showSortDialog = it },
             sortOption = sortOption,

@@ -8,6 +8,8 @@ import androidx.compose.ui.unit.dp
 
 // Minimal Material vector set used by this app; avoids the full extended icon catalogue.
 object AppIcons {
+  // Accessing this list constructs every vector and is used by the unit test to validate all path data.
+  val all: List<ImageVector> by lazy { listOf(AddPhotoAlternate, Alarm, AutoAwesome, Backup, CameraAlt, CloudDone, CloudQueue, Collections, ContentCopy, Dashboard, DeleteSweep, DocumentScanner, Download, FileOpen, FitScreen, FormatListBulleted, Forward10, GridView, Image, Language, Link, LocationOn, NetworkCheck, OpenInBrowser, Pause, PermMedia, PlayArrow, Psychology, Replay, Replay10, Sort, TextFields, Translate, Tune, Visibility, VisibilityOff, ViewAgenda, VolumeMute, VolumeUp, ZoomIn, ZoomOut) }
   val AddPhotoAlternate: ImageVector by lazy { vectorIcon("AddPhotoAlternate", false, "M19 7v2.99s-1.99.01-2 0V7h-3s.01-1.99 0-2h3V2h2v3h3v2h-3zm-3 4V8h-3V5H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8h-3zM5 19l3-4 2 3 3-4 4 5H5z") }
   val Alarm: ImageVector by lazy { vectorIcon("Alarm", false, "M22 5.72l-4.6-3.86-1.29 1.53 4.6 3.86L22 5.72zM7.88 3.39L6.6 1.86 2 5.71l1.29 1.53 4.59-3.85zM12.5 8H11v6l4.75 2.85.75-1.23-4-2.37V8zM12 4c-4.97 0-9 4.03-9 9s4.02 9 9 9c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 16c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z") }
   val AutoAwesome: ImageVector by lazy { vectorIcon("AutoAwesome", false, "M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z") }

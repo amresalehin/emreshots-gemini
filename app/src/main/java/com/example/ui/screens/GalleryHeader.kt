@@ -130,6 +130,7 @@ internal fun GalleryHeader(
     collections: List<CollectionItem>,
     selectedCollectionId: String?,
     onSelectedCollectionIdChange: (String?) -> Unit,
+    onNavigateToCollections: () -> Unit,
     totalDisplayCount: Int,
     availableFolders: List<String>,
     showMoreMenu: Boolean,
@@ -212,39 +213,19 @@ TopAppBar(
                         Text("Photos", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
                     }
                 }
-                Box {
-                    Surface(
-                        onClick = { onShowFolderMenuChange(true) },
-                        shape = RoundedCornerShape(50),
-                        color = if (selectedCollectionId != null) MaterialTheme.colorScheme.inverseSurface else Color.Transparent,
-                        contentColor = if (selectedCollectionId != null) MaterialTheme.colorScheme.inverseOnSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                Surface(
+                    onClick = onNavigateToCollections,
+                    shape = RoundedCornerShape(50),
+                    color = Color.Transparent,
+                    contentColor = if (selectedCollectionId != null) MaterialTheme.colorScheme.inverseOnSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp)
-                        ) {
-                            Icon(AppIcons.Collections, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Text("Albums", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                        }
-                    }
-                    DropdownMenu(expanded = showFolderMenu, onDismissRequest = { onShowFolderMenuChange(false) }) {
-                        if (collections.isEmpty()) {
-                            DropdownMenuItem(text = { Text("No albums yet") }, onClick = { onShowFolderMenuChange(false) }, enabled = false)
-                        } else {
-                            collections.forEach { collection ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text(collection.name, modifier = Modifier.weight(1f), maxLines = 1)
-                                            Text(allScreenshots.count { collection.id in it.collectionIds }.toString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        }
-                                    },
-                                    leadingIcon = { if (selectedCollectionId == collection.id) Icon(Icons.Default.Check, contentDescription = null) },
-                                    onClick = { onSelectedCollectionIdChange(collection.id); onShowFolderMenuChange(false) }
-                                )
-                            }
-                        }
+                        Icon(AppIcons.Collections, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Text("Albums", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
                     }
                 }
             }

@@ -1,5 +1,6 @@
 package com.amresalehin.emreshots.ui.components
 
+import com.example.ui.icons.AppIcons
 import com.amresalehin.emreshots.R
 
 import android.content.ClipData
@@ -24,11 +25,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -111,7 +108,7 @@ fun OcrAiSheet(
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
-                                imageVector = Icons.Default.DocumentScanner,
+                                imageVector = AppIcons.DocumentScanner,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp)
@@ -166,7 +163,7 @@ fun OcrAiSheet(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(stringResource(R.string.extracting_text), fontSize = 13.sp)
                     } else {
-                        Icon(Icons.Default.DocumentScanner, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(AppIcons.DocumentScanner, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(if (ocrTextState.isBlank()) stringResource(R.string.local_ocr) else stringResource(R.string.rescan_local_ocr), fontSize = 13.sp)
                     }
@@ -181,7 +178,7 @@ fun OcrAiSheet(
                         shape = MaterialTheme.shapes.medium,
                         modifier = Modifier.testTag("btn_copy_ocr")
                     ) {
-                        Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(AppIcons.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(stringResource(R.string.copy), fontSize = 13.sp)
                     }
@@ -228,7 +225,7 @@ fun OcrAiSheet(
                     Column(modifier = Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                imageVector = Icons.Default.CameraAlt,
+                                imageVector = AppIcons.CameraAlt,
                                 contentDescription = null,
                                 tint = if (writeDirectlyToMetadata) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(16.dp)
@@ -278,7 +275,7 @@ fun OcrAiSheet(
                         .fillMaxWidth()
                         .testTag("btn_write_metadata_now")
                 ) {
-                    Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(AppIcons.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(stringResource(R.string.save_ocr_and_insights))
                 }

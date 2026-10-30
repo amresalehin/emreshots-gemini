@@ -1,5 +1,6 @@
 package com.amresalehin.emreshots.ui.components
 
+import com.example.ui.icons.AppIcons
 import com.amresalehin.emreshots.R
 
 import android.media.MediaPlayer
@@ -22,14 +23,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeMute
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Replay
-import androidx.compose.material.icons.filled.Replay10
-import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -219,7 +212,7 @@ private fun VideoPlayerSurface(
                         .background(Color.Black.copy(alpha = 0.52f), CircleShape)
                 ) {
                     Icon(
-                        imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeMute else Icons.AutoMirrored.Filled.VolumeUp,
+                        imageVector = if (isMuted) AppIcons.VolumeMute else AppIcons.VolumeUp,
                         contentDescription = if (isMuted) stringResource(R.string.unmute) else stringResource(R.string.mute),
                         tint = Color.White
                     )
@@ -241,7 +234,7 @@ private fun VideoPlayerSurface(
                         },
                         modifier = Modifier.size(46.dp)
                     ) {
-                        Icon(Icons.Default.Replay10, contentDescription = stringResource(R.string.rewind_10_seconds), tint = Color.White, modifier = Modifier.size(30.dp))
+                        Icon(AppIcons.Replay10, contentDescription = stringResource(R.string.rewind_10_seconds), tint = Color.White, modifier = Modifier.size(30.dp))
                     }
 
                     Surface(
@@ -269,9 +262,9 @@ private fun VideoPlayerSurface(
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = when {
-                                    isCompleted -> Icons.Default.Replay
-                                    isPlaying -> Icons.Default.Pause
-                                    else -> Icons.Default.PlayArrow
+                                    isCompleted -> AppIcons.Replay
+                                    isPlaying -> AppIcons.Pause
+                                    else -> AppIcons.PlayArrow
                                 },
                                 contentDescription = if (isPlaying) stringResource(R.string.pause) else stringResource(R.string.play),
                                 tint = Color.White,
@@ -291,7 +284,7 @@ private fun VideoPlayerSurface(
                         },
                         modifier = Modifier.size(46.dp)
                     ) {
-                        Icon(Icons.Default.Forward10, contentDescription = stringResource(R.string.forward_10_seconds), tint = Color.White, modifier = Modifier.size(30.dp))
+                        Icon(AppIcons.Forward10, contentDescription = stringResource(R.string.forward_10_seconds), tint = Color.White, modifier = Modifier.size(30.dp))
                     }
                 }
 

@@ -77,8 +77,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
-import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import coil.compose.AsyncImage
@@ -133,27 +133,16 @@ fun ZoomableImageViewer(
             dismissOnClickOutside = false
         )
     ) {
-        // The Dialog owns a separate window from the activity. Hide only its
-        // status bar so the media can use the entire display height.
+        // The Dialog has its own Window. DialogProperties(decorFitsSystemWindows = false)
+        // makes its Compose content edge-to-edge; only control status-bar visibility here.
+        // Do not combine FLAG_FULLSCREEN with manual layout/inset re-requests: that can
+        // leave a stale status-bar-sized top gap on some Android versions.
         val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
 
         DisposableEffect(dialogWindow) {
             if (dialogWindow == null) {
                 onDispose { }
             } else {
-                // A Dialog has its own Window. Explicitly opt that Window into
-                // edge-to-edge before hiding the status bar; otherwise Android
-                // can keep the old status-bar inset and leave an empty strip
-                // above the viewer even though the bar itself is hidden.
-                WindowCompat.setDecorFitsSystemWindows(dialogWindow, false)
-
-                // Hiding the status bar through WindowInsetsController alone can leave
-                // Dialog windows measured below the former status-bar inset on some
-                // Android versions. FLAG_FULLSCREEN makes the Dialog occupy that space
-                // as well, so ContentScale.Fit gets the full display height.
-                val originalWindowFlags = dialogWindow.attributes.flags
-                dialogWindow.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-
                 val insetsController = WindowCompat.getInsetsController(
                     dialogWindow,
                     dialogWindow.decorView
@@ -166,31 +155,14 @@ fun ZoomableImageViewer(
                     WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                 insetsController.hide(WindowInsetsCompat.Type.statusBars())
 
-                // Hiding the status bar is asynchronous. Re-apply insets and request
-                // measurement AFTER the visibility change so Compose remeasures the
-                // viewer root against the expanded fullscreen window, not the old
-                // status-bar-inset height.
+                // Compose's Dialog already sizes this window to the available parent bounds.
+                // Keep it explicitly MATCH_PARENT without changing fullscreen/layout flags.
                 dialogWindow.setLayout(
                     WindowManager.LayoutParams.MATCH_PARENT,
                     WindowManager.LayoutParams.MATCH_PARENT
                 )
-                dialogWindow.decorView.post {
-                    ViewCompat.requestApplyInsets(dialogWindow.decorView)
-                    dialogWindow.decorView.requestLayout()
-                    dialogWindow.setLayout(
-                        WindowManager.LayoutParams.MATCH_PARENT,
-                        WindowManager.LayoutParams.MATCH_PARENT
-                    )
-                }
 
                 onDispose {
-                    // Restore the Dialog's original fullscreen flag before the viewer
-                    // window is dismissed; never leak immersive mode into other screens.
-                    if (originalWindowFlags and WindowManager.LayoutParams.FLAG_FULLSCREEN != 0) {
-                        dialogWindow.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-                    } else {
-                        dialogWindow.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-                    }
                     if (statusBarWasVisible) {
                         insetsController.show(WindowInsetsCompat.Type.statusBars())
                     }

@@ -128,6 +128,10 @@ internal fun GalleryHeader(
     availableFolders: List<String>,
     showMoreMenu: Boolean,
     onShowMoreMenuChange: (Boolean) -> Unit,
+    showViewMenu: Boolean,
+    onShowViewMenuChange: (Boolean) -> Unit,
+    showOrganizeMenu: Boolean,
+    onShowOrganizeMenuChange: (Boolean) -> Unit,
     sortOption: MediaSortOption,
     onShowSortDialog: (Boolean) -> Unit,
     groupByOption: MediaGroupBy,
@@ -210,7 +214,98 @@ TopAppBar(
     },
     actions = {
         if (!isSearchExpanded) {
-            IconButton(onClick = { onSearchExpandedChange(true) }, modifier = Modifier.testTag("btn_toggle_search")) {
+            // View mode is a frequent gallery control, so keep it one tap away.
+            Box {
+                IconButton(
+                    onClick = { onShowViewMenuChange(true) },
+                    modifier = Modifier.testTag("btn_view_options")
+                ) {
+                    Icon(AppIcons.GridView, contentDescription = stringResource(R.string.view))
+                }
+                DropdownMenu(
+                    expanded = showViewMenu,
+                    onDismissRequest = { onShowViewMenuChange(false) }
+                ) {
+                    GalleryViewMode.entries.forEach { mode ->
+                        DropdownMenuItem(
+                            text = { Text(mode.displayName) },
+                            leadingIcon = {
+                                if (mode == viewMode) {
+                                    Icon(AppIcons.Check, contentDescription = null)
+                                }
+                            },
+                            onClick = {
+                                viewModel.setViewMode(mode)
+                                onShowViewMenuChange(false)
+                            },
+                            modifier = Modifier.testTag("gallery_view_option_" + mode.name.lowercase())
+                        )
+                    }
+                }
+            }
+
+            // Sort and grouping share one compact menu, separate from secondary actions.
+            Box {
+                IconButton(
+                    onClick = { onShowOrganizeMenuChange(true) },
+                    modifier = Modifier.testTag("btn_sort_group")
+                ) {
+                    Icon(AppIcons.Sort, contentDescription = stringResource(R.string.sort_by))
+                }
+                DropdownMenu(
+                    expanded = showOrganizeMenu,
+                    onDismissRequest = { onShowOrganizeMenuChange(false) }
+                ) {
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text(stringResource(R.string.sort_by))
+                                Text(
+                                    sortOption.displayName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        },
+                        leadingIcon = { Icon(AppIcons.Sort, contentDescription = null) },
+                        onClick = {
+                            onShowOrganizeMenuChange(false)
+                            onShowSortDialog(true)
+                        },
+                        modifier = Modifier.testTag("btn_sort_option")
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text(stringResource(R.string.group_by))
+                                Text(
+                                    groupByOption.displayName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        },
+                        leadingIcon = { Icon(AppIcons.GridView, contentDescription = null) },
+                        onClick = {
+                            onShowOrganizeMenuChange(false)
+                            onShowGroupDialog(true)
+                        },
+                        modifier = Modifier.testTag("btn_group_by_option")
+                    )
+                }
+            }
+
+            IconButton(
+                onClick = onNavigateToSettings,
+                modifier = Modifier.testTag("btn_gallery_settings")
+            ) {
+                Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings))
+            }
+
+            IconButton(
+                onClick = { onSearchExpandedChange(true) },
+                modifier = Modifier.testTag("btn_toggle_search")
+            ) {
                 Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
             }
         }
@@ -223,67 +318,6 @@ TopAppBar(
                 Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more_options))
             }
             DropdownMenu(expanded = showMoreMenu, onDismissRequest = { onShowMoreMenuChange(false) }) {
-                DropdownMenuItem(
-                    text = {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(stringResource(R.string.sort_by))
-                            Spacer(Modifier.width(16.dp))
-                            Text(
-                                text = sortOption.displayName,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    },
-                    leadingIcon = { Icon(AppIcons.Sort, contentDescription = null) },
-                    onClick = { onShowMoreMenuChange(false); onShowSortDialog(true) },
-                    modifier = Modifier.testTag("btn_sort_option")
-                )
-                DropdownMenuItem(
-                    text = {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(stringResource(R.string.group_by))
-                            Spacer(Modifier.width(16.dp))
-                            Text(
-                                text = groupByOption.displayName,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    },
-                    leadingIcon = { Icon(AppIcons.GridView, contentDescription = null) },
-                    onClick = { onShowMoreMenuChange(false); onShowGroupDialog(true) },
-                    modifier = Modifier.testTag("btn_group_by_option")
-                )
-                androidx.compose.material3.HorizontalDivider()
-                Column(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.view),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                    )
-                    GalleryMenuChoiceRow(
-                        options = GalleryViewMode.entries.map { it.displayName },
-                        selected = viewMode.displayName,
-                        onSelected = { selected ->
-                            GalleryViewMode.entries
-                                .firstOrNull { it.displayName == selected }
-                                ?.let(viewModel::setViewMode)
-                        },
-                        twoRows = true
-                    )
-                }
                 GalleryMenuToggle(
                     label = stringResource(R.string.show_file_names),
                     checked = showFileNames,
@@ -343,11 +377,6 @@ TopAppBar(
                     leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
                     onClick = { onShowMoreMenuChange(false); onShowBatchRenameDialog(true) },
                     modifier = Modifier.testTag("btn_batch_rename")
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.settings)) },
-                    leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                    onClick = { onShowMoreMenuChange(false); onNavigateToSettings() }
                 )
             }
         }

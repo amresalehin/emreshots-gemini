@@ -153,12 +153,6 @@ fun ZoomableImageViewer(
                 // as well, so ContentScale.Fit gets the full display height.
                 val originalWindowFlags = dialogWindow.attributes.flags
                 dialogWindow.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-                dialogWindow.setLayout(
-                    WindowManager.LayoutParams.MATCH_PARENT,
-                    WindowManager.LayoutParams.MATCH_PARENT
-                )
-                dialogWindow.decorView.requestLayout()
-                ViewCompat.requestApplyInsets(dialogWindow.decorView)
 
                 val insetsController = WindowCompat.getInsetsController(
                     dialogWindow,
@@ -171,6 +165,23 @@ fun ZoomableImageViewer(
                 insetsController.systemBarsBehavior =
                     WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                 insetsController.hide(WindowInsetsCompat.Type.statusBars())
+
+                // Hiding the status bar is asynchronous. Re-apply insets and request
+                // measurement AFTER the visibility change so Compose remeasures the
+                // viewer root against the expanded fullscreen window, not the old
+                // status-bar-inset height.
+                dialogWindow.setLayout(
+                    WindowManager.LayoutParams.MATCH_PARENT,
+                    WindowManager.LayoutParams.MATCH_PARENT
+                )
+                dialogWindow.decorView.post {
+                    ViewCompat.requestApplyInsets(dialogWindow.decorView)
+                    dialogWindow.decorView.requestLayout()
+                    dialogWindow.setLayout(
+                        WindowManager.LayoutParams.MATCH_PARENT,
+                        WindowManager.LayoutParams.MATCH_PARENT
+                    )
+                }
 
                 onDispose {
                     // Restore the Dialog's original fullscreen flag before the viewer

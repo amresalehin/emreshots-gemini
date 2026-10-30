@@ -114,79 +114,11 @@ import java.util.Locale
 
 @Composable
 internal fun GalleryStatusSection(
-    hasMediaPermissions: Boolean,
-    hidePermissionBanner: Boolean,
-    onHidePermissionBanner: (Boolean) -> Unit,
-    permissionLauncher: ManagedActivityResultLauncher<Array<String>, Map<String, Boolean>>,
     isAnalyzing: Boolean,
     isExtractingOcr: Boolean,
     statusText: String?,
     ocrStatusText: String?
 ) {
-// Compact, non-intrusive permission card (only if not granted and not dismissed)
-if (!hasMediaPermissions && !hidePermissionBanner) {
-    Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
-        shape = MaterialTheme.shapes.medium,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .testTag("banner_permission_request")
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = AppIcons.PermMedia,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.grant_media_access_to_sync_all_photos),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Button(
-                    onClick = {
-                        permissionLauncher.launch(DeviceMediaScanner.getRequiredPermissions())
-                    },
-                    shape = MaterialTheme.shapes.medium,
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
-                    modifier = Modifier
-                        .height(48.dp)
-                        .testTag("btn_grant_media_permission")
-                ) {
-                    Text(stringResource(R.string.allow), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-                IconButton(
-                    onClick = { onHidePermissionBanner(true) },
-                    modifier = Modifier
-                        .size(48.dp)
-                        .testTag("btn_dismiss_media_permission")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = stringResource(R.string.dismiss),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
 // Unified background processing indicator: sync, local OCR, and AI enrichment/indexing.
 val galleryProcessing = isAnalyzing || isExtractingOcr || statusText != null
 if (galleryProcessing) {

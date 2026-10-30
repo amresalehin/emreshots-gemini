@@ -134,17 +134,13 @@ internal fun ColumnScope.GalleryContent(
     staggeredGridState: LazyStaggeredGridState,
     navBarBottom: Dp,
     isRefreshing: Boolean,
-    hasMediaPermissions: Boolean,
-    permissionLauncher: ManagedActivityResultLauncher<Array<String>, Map<String, Boolean>>,
-    mediaPickerLauncher: ManagedActivityResultLauncher<PickVisualMediaRequest, Uri?>,
     onNavigateToDetail: (String) -> Unit
 ) {
 // Gallery content
 PullToRefreshBox(
     isRefreshing = isRefreshing,
     onRefresh = {
-        if (hasMediaPermissions) viewModel.syncDeviceMedia(showRefreshIndicator = true)
-        else permissionLauncher.launch(DeviceMediaScanner.getRequiredPermissions())
+        viewModel.syncDeviceMedia(showRefreshIndicator = true)
     },
     modifier = Modifier
         .weight(1f)
@@ -195,19 +191,7 @@ PullToRefreshBox(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                Button(
-                    onClick = {
-                        mediaPickerLauncher.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
-                        )
-                    },
-                    shape = MaterialTheme.shapes.large,
-                    modifier = Modifier.testTag("btn_empty_import")
-                ) {
-                    Icon(AppIcons.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(stringResource(R.string.pick_photos_or_videos))
-                }
+
             }
         }
     } else {

@@ -1,5 +1,6 @@
 package com.amresalehin.emreshots.ui.screens
 
+import com.example.ui.icons.AppIcons
 import com.amresalehin.emreshots.R
 
 import androidx.activity.compose.BackHandler
@@ -20,7 +21,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -141,7 +141,7 @@ fun OnDeviceVisionScreen(
                             modifier = Modifier.height(48.dp),
                             shape = MaterialTheme.shapes.medium
                         ) {
-                            Icon(Icons.Default.FileOpen, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(AppIcons.FileOpen, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
                             Text(stringResource(R.string.import_action))
                         }

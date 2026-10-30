@@ -1,5 +1,6 @@
 package com.amresalehin.emreshots.ui.screens
 
+import com.example.ui.icons.AppIcons
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -15,11 +16,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -113,7 +111,7 @@ fun ProcessingScreen(
                     Card(shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.AutoAwesome, contentDescription = stringResource(R.string.ai_analysis), tint = MaterialTheme.colorScheme.primary)
+                                Icon(AppIcons.AutoAwesome, contentDescription = stringResource(R.string.ai_analysis), tint = MaterialTheme.colorScheme.primary)
                                 Spacer(Modifier.weight(1f))
                                 Text(state.currentModel.ifBlank { stringResource(R.string.ai_label) }, style = MaterialTheme.typography.labelMedium)
                             }
@@ -132,12 +130,12 @@ fun ProcessingScreen(
                     if (!state.isIndexing) {
                         val unprocessed = screenshots.filter { !it.aiProcessed }
                         Button(onClick = { viewModel.batchAnalyzeScreenshots(unprocessed) }, enabled = unprocessed.isNotEmpty(), modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.process_pending))
+                            Icon(AppIcons.PlayArrow, contentDescription = stringResource(R.string.process_pending))
                             Text(stringResource(R.string.process_pending))
                         }
                     } else {
                         OutlinedButton(onClick = { viewModel.cancelIndexing() }, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Default.Pause, contentDescription = null)
+                            Icon(AppIcons.Pause, contentDescription = null)
                             Text(stringResource(R.string.stop))
                         }
                     }

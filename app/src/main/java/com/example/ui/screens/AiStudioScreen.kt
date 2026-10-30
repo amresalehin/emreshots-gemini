@@ -1,5 +1,6 @@
 package com.amresalehin.emreshots.ui.screens
 
+import com.example.ui.icons.AppIcons
 import com.amresalehin.emreshots.R
 
 import androidx.compose.foundation.layout.Arrangement
@@ -20,11 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.CloudDone
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -122,7 +118,7 @@ fun AiStudioScreen(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                imageVector = Icons.Default.CloudDone,
+                                imageVector = AppIcons.CloudDone,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary
                             )
@@ -142,7 +138,7 @@ fun AiStudioScreen(
                                 .height(32.dp)
                                 .testTag("btn_configure_providers")
                         ) {
-                            Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Icon(AppIcons.Tune, contentDescription = null, modifier = Modifier.size(14.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(stringResource(R.string.switch_provider), fontSize = 11.sp)
                         }
@@ -210,7 +206,7 @@ fun AiStudioScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Default.CameraAlt,
+                            imageVector = AppIcons.CameraAlt,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(24.dp)
@@ -290,7 +286,7 @@ fun AiStudioScreen(
                             if (isAnalyzing) {
                                 CircularProgressIndicator(modifier = Modifier.size(14.dp), color = MaterialTheme.colorScheme.onPrimary)
                             } else {
-                                Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Icon(AppIcons.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
                             }
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(stringResource(R.string.indexed_count, untaggedCount), fontSize = 12.sp)
@@ -306,7 +302,7 @@ fun AiStudioScreen(
                                 .weight(1f)
                                 .testTag("btn_batch_all")
                         ) {
-                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(AppIcons.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(stringResource(R.string.reindex_all), fontSize = 12.sp)
                         }

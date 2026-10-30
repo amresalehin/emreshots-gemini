@@ -770,7 +770,8 @@ fun ScreenshotDetailScreen(
                 onEditNotesChange = { editNotes = it },
                 showAddTagDialog = showAddTagDialog,
                 onShowAddTagDialogChange = { showAddTagDialog = it },
-                    showDrawerHandle = false
+                    showDrawerHandle = false,
+                    inlineTools = true
                 )
             },
             onMore = {

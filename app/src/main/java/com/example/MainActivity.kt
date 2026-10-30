@@ -18,7 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.amresalehin.emreshots.service.media.DeviceMediaScanner
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent

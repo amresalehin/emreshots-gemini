@@ -1,5 +1,6 @@
 package com.amresalehin.emreshots.ui.components
 
+import com.example.ui.icons.AppIcons
 import com.amresalehin.emreshots.R
 
 import com.amresalehin.emreshots.ui.theme.DangerRose
@@ -21,13 +22,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Alarm
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -160,7 +156,7 @@ fun ScreenshotCard(
                             modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.AutoAwesome,
+                                imageVector = AppIcons.AutoAwesome,
                                 contentDescription = stringResource(R.string.ai_analyzed),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(11.dp)
@@ -185,7 +181,7 @@ fun ScreenshotCard(
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
-                                imageVector = Icons.Default.Alarm,
+                                imageVector = AppIcons.Alarm,
                                 contentDescription = stringResource(R.string.reminder),
                                 tint = Color.White,
                                 modifier = Modifier.size(11.dp)
@@ -293,7 +289,7 @@ fun ScreenshotCard(
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.PlayArrow,
+                            imageVector = AppIcons.PlayArrow,
                             contentDescription = stringResource(R.string.play_video),
                             tint = Color.White,
                             modifier = Modifier.size(12.dp)
@@ -320,7 +316,7 @@ fun ScreenshotCard(
                         modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Link,
+                            imageVector = AppIcons.Link,
                             contentDescription = stringResource(R.string.links),
                             tint = Color.White,
                             modifier = Modifier.size(11.dp)

@@ -101,6 +101,7 @@ internal fun ScreenshotDetailContent(
     permissionLauncher: ManagedActivityResultLauncher<Array<String>, Map<String, Boolean>>,
     exifData: ExifData,
     isAnalyzing: Boolean,
+    isExtractingOcr: Boolean = false,
     showOcrSheet: Boolean,
     onShowOcrSheetChange: (Boolean) -> Unit,
     showExifEditor: Boolean,
@@ -371,11 +372,21 @@ internal fun ScreenshotDetailContent(
                                             viewModel.updateScreenshot(screenshot.copy(ocrText = extracted))
                                         }
                                     }
-                                }, modifier = Modifier.weight(1f)) { Text("Run OCR") }
+                                }, modifier = Modifier.weight(1f), enabled = !isExtractingOcr) { if (isExtractingOcr) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp) else Text("Run OCR") }
                                 OutlinedButton(onClick = {
                                     viewModel.updateScreenshot(screenshot.copy(ocrText = inlineOcrText))
                                     showInlineOcr = false
                                 }, modifier = Modifier.weight(1f)) { Text("Save text") }
+                            }
+                            if (inlineOcrText.isNotBlank()) {
+                                OutlinedButton(
+                                    onClick = {
+                                        viewModel.writeOcrAndAiToMetadata(
+                                            screenshot, inlineOcrText, screenshot.title, screenshot.description, screenshot.tags
+                                        )
+                                    },
+                                    modifier = Modifier.fillMaxWidth().testTag("btn_inline_write_ocr_metadata")
+                                ) { Text("Write OCR and insights to metadata") }
                             }
                             TextButton(onClick = { showInlineOcr = false }) { Text("Close") }
                         }

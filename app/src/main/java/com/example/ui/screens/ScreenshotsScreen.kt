@@ -144,7 +144,6 @@ fun ScreenshotsScreen(
     var selectedMediaType by remember { mutableStateOf<String?>(null) }
     var selectedFolder by remember { mutableStateOf<String?>(null) }
     var selectedCollectionId by remember(initialCollectionId) { mutableStateOf(initialCollectionId) }
-    var showCollectionMenu by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
     var showViewMenu by remember { mutableStateOf(false) }
     var showOrganizeMenu by remember { mutableStateOf(false) }
@@ -227,6 +226,9 @@ fun ScreenshotsScreen(
                 onShowFolderMenuChange = { showFolderMenu = it },
                 selectedFolder = selectedFolder,
                 onSelectedFolderChange = { selectedFolder = it },
+                collections = collections,
+                selectedCollectionId = selectedCollectionId,
+                onSelectedCollectionIdChange = { selectedCollectionId = it },
                 totalDisplayCount = totalDisplayCount,
                 availableFolders = availableFolders,
                 showMoreMenu = showMoreMenu,
@@ -256,11 +258,6 @@ fun ScreenshotsScreen(
             GalleryFilters(
                 viewModel = viewModel,
                 selectedFilter = selectedFilter,
-                collections = collections,
-                selectedCollectionId = selectedCollectionId,
-                onSelectedCollectionIdChange = { selectedCollectionId = it },
-                showCollectionMenu = showCollectionMenu,
-                onShowCollectionMenuChange = { showCollectionMenu = it },
                 availableFileTypes = availableFileTypes,
                 selectedMediaType = selectedMediaType,
                 onSelectedMediaTypeChange = { selectedMediaType = it }

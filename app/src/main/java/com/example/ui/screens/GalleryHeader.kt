@@ -255,8 +255,183 @@ TopAppBar(
         }
     },
     actions = {
-    
-}
+        if (!isSearchExpanded) {
+            IconButton(
+                onClick = { onSearchExpandedChange(true) },
+                modifier = Modifier.testTag("btn_toggle_search")
+            ) {
+                Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
+            }
+
+            // View mode is a frequent gallery control, so keep it one tap away.
+            Box {
+                IconButton(
+                    onClick = { onShowViewMenuChange(true) },
+                    modifier = Modifier.testTag("btn_view_options")
+                ) {
+                    Icon(AppIcons.GridView, contentDescription = stringResource(R.string.view))
+                }
+                DropdownMenu(
+                    expanded = showViewMenu,
+                    onDismissRequest = { onShowViewMenuChange(false) }
+                ) {
+                    GalleryViewMode.entries.forEach { mode ->
+                        DropdownMenuItem(
+                            text = { Text(mode.displayName) },
+                            leadingIcon = {
+                                if (mode == viewMode) {
+                                    Icon(Icons.Default.Check, contentDescription = null)
+                                }
+                            },
+                            onClick = {
+                                viewModel.setViewMode(mode)
+                                onShowViewMenuChange(false)
+                            },
+                            modifier = Modifier.testTag("gallery_view_option_" + mode.name.lowercase())
+                        )
+                    }
+                }
+            }
+
+            // Sort and grouping share one compact menu, separate from secondary actions.
+            Box {
+                IconButton(
+                    onClick = { onShowOrganizeMenuChange(true) },
+                    modifier = Modifier.testTag("btn_sort_group")
+                ) {
+                    Icon(AppIcons.Sort, contentDescription = stringResource(R.string.sort_by))
+                }
+                DropdownMenu(
+                    expanded = showOrganizeMenu,
+                    onDismissRequest = { onShowOrganizeMenuChange(false) }
+                ) {
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text(stringResource(R.string.sort_by))
+                                Text(
+                                    sortOption.displayName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        },
+                        leadingIcon = { Icon(AppIcons.Sort, contentDescription = null) },
+                        onClick = {
+                            onShowOrganizeMenuChange(false)
+                            onShowSortDialog(true)
+                        },
+                        modifier = Modifier.testTag("btn_sort_option")
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text(stringResource(R.string.group_by))
+                                Text(
+                                    groupByOption.displayName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        },
+                        leadingIcon = { Icon(AppIcons.GridView, contentDescription = null) },
+                        onClick = {
+                            onShowOrganizeMenuChange(false)
+                            onShowGroupDialog(true)
+                        },
+                        modifier = Modifier.testTag("btn_group_by_option")
+                    )
+                }
+            }
+
+            IconButton(
+                onClick = onNavigateToSettings,
+                modifier = Modifier.testTag("btn_gallery_settings")
+            ) {
+                Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings))
+            }
+
+        }
+
+        Box {
+            IconButton(
+                onClick = { onShowMoreMenuChange(true) },
+                modifier = Modifier.testTag("btn_more_menu")
+            ) {
+                Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more_options))
+            }
+            DropdownMenu(expanded = showMoreMenu, onDismissRequest = { onShowMoreMenuChange(false) }) {
+                GalleryMenuToggle(
+                    label = stringResource(R.string.show_file_names),
+                    checked = showFileNames,
+                    onCheckedChange = viewModel::setShowFileNames
+                )
+                GalleryMenuToggle(
+                    label = stringResource(R.string.show_tags),
+                    checked = showTags,
+                    onCheckedChange = viewModel::setShowTags
+                )
+                androidx.compose.material3.HorizontalDivider()
+                DropdownMenuItem(
+                    text = {
+                        Column {
+                            Text(stringResource(R.string.ai_vision), fontWeight = FontWeight.SemiBold)
+                            Text(
+                                if (aiVisionPendingCount > 0) stringResource(R.string.media_waiting_for_analysis, aiVisionPendingCount) else stringResource(R.string.everything_is_analyzed),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    leadingIcon = { Icon(AppIcons.AutoAwesome, contentDescription = null) },
+                    enabled = !isAnalyzing && aiVisionPendingCount > 0,
+                    onClick = {
+                        onShowMoreMenuChange(false)
+                        viewModel.batchAnalyzeScreenshots(allScreenshots.filter { !it.isVideo && !it.aiProcessed })
+                    },
+                    modifier = Modifier.testTag("menu_ai_vision")
+                )
+                DropdownMenuItem(
+                    text = {
+                        Column {
+                            Text(stringResource(R.string.ocr), fontWeight = FontWeight.SemiBold)
+                            Text(
+                                when {
+                                    !ocrEnabled -> stringResource(R.string.ocr_disabled_in_settings)
+                                    ocrPendingCount > 0 -> "stringResource(R.string.media_waiting_for_ocr, ocrPendingCount)"
+                                    else -> "All media has OCR text"
+                                },
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    enabled = ocrEnabled && !isExtractingOcr && ocrPendingCount > 0,
+                    onClick = {
+                        onShowMoreMenuChange(false)
+                        viewModel.batchExtractOcr(allScreenshots, onlyMissing = true)
+                    },
+                    modifier = Modifier.testTag("menu_ocr")
+                )
+                androidx.compose.material3.HorizontalDivider()
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.batch_rename_visible)) },
+                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                    onClick = { onShowMoreMenuChange(false); onShowBatchRenameDialog(true) },
+                    modifier = Modifier.testTag("btn_batch_rename")
+                )
+            }
+        }
+    },
+    scrollBehavior = scrollBehavior,
+    windowInsets = TopAppBarDefaults.windowInsets,
+    colors = TopAppBarDefaults.topAppBarColors(
+        containerColor = MaterialTheme.colorScheme.surface,
+        scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+    )
+)
+
 
 
 }

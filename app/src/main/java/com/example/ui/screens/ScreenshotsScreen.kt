@@ -145,10 +145,9 @@ fun ScreenshotsScreen(
     val ocrEnabled by viewModel.ocrEnabled.collectAsStateWithLifecycle()
     val showFileNames by viewModel.showFileNames.collectAsStateWithLifecycle()
     val showTags by viewModel.showTags.collectAsStateWithLifecycle()
-    val isSyncingDeviceMedia by viewModel.isSyncingDeviceMedia.collectAsStateWithLifecycle()
+    val isPullToRefreshInProgress by viewModel.isPullToRefreshInProgress.collectAsStateWithLifecycle()
 
     var isSearchExpanded by remember { mutableStateOf(false) }
-    var isPullToRefreshActive by remember { mutableStateOf(false) }
     var hidePermissionBanner by remember { mutableStateOf(false) }
     var showSortDialog by remember { mutableStateOf(false) }
     var showGroupDialog by remember { mutableStateOf(false) }
@@ -161,13 +160,6 @@ fun ScreenshotsScreen(
     val searchFocusRequester = remember { FocusRequester() }
     var showBatchRenameDialog by remember { mutableStateOf(false) }
     var renameTemplate by remember { mutableStateOf("Media_{date}_{index}") }
-    // Automatic background sync must not trigger the pull-to-refresh animation.
-    LaunchedEffect(isSyncingDeviceMedia, isPullToRefreshActive) {
-        if (isPullToRefreshActive && !isSyncingDeviceMedia) {
-            isPullToRefreshActive = false
-        }
-    }
-
     LaunchedEffect(autoSyncDeviceMedia, hasMediaPermissions) {
         if (autoSyncDeviceMedia && hasMediaPermissions) {
             viewModel.syncDeviceMedia()
@@ -304,7 +296,7 @@ fun ScreenshotsScreen(
                 gridState = gridState,
                 staggeredGridState = staggeredGridState,
                 navBarBottom = navBarBottom,
-                isRefreshing = isPullToRefreshActive && isSyncingDeviceMedia,
+                isRefreshing = isPullToRefreshInProgress,
                 hasMediaPermissions = hasMediaPermissions,
                 permissionLauncher = permissionLauncher,
                 mediaPickerLauncher = mediaPickerLauncher,

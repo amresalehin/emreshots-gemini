@@ -55,6 +55,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.amresalehin.emreshots.service.ocr.TessLanguage
+import com.amresalehin.emreshots.ui.theme.EmrehShapes
+import com.amresalehin.emreshots.ui.theme.tactileBorder
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,7 +93,7 @@ fun OcrLanguageManagerSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         dragHandle = null,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        shape = EmrehShapes.BottomSheet
     ) {
         Column(
             modifier = Modifier
@@ -149,6 +151,7 @@ fun OcrLanguageManagerSheet(
                 onValueChange = { searchQuery = it },
                 modifier = Modifier
                     .fillMaxWidth()
+                    .tactileBorder(shape = EmrehShapes.SearchPill)
                     .testTag("ocr_language_search_input"),
                 placeholder = { Text("Search by language or code (e.g. Spanish, tur, 日本語)…") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
@@ -160,7 +163,7 @@ fun OcrLanguageManagerSheet(
                     }
                 },
                 singleLine = true,
-                shape = RoundedCornerShape(14.dp)
+                shape = EmrehShapes.SearchPill
             )
 
             Spacer(Modifier.height(10.dp))
@@ -175,19 +178,21 @@ fun OcrLanguageManagerSheet(
                     FilterChip(
                         selected = !filterInstalledOnly,
                         onClick = { filterInstalledOnly = false },
+                        shape = EmrehShapes.Pill,
                         label = { Text("All (${allLanguages.size})") }
                     )
                     FilterChip(
                         selected = filterInstalledOnly,
                         onClick = { filterInstalledOnly = true },
+                        shape = EmrehShapes.Pill,
                         label = { Text("Installed (${installedLanguageCodes.size})") }
                     )
                 }
 
                 OutlinedButton(
                     onClick = onImportCustom,
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                    shape = EmrehShapes.Pill,
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                     modifier = Modifier.testTag("import_tessdata_button")
                 ) {
                     Icon(Icons.Default.FileOpen, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -272,11 +277,12 @@ private fun LanguageItemCard(
     onDelete: () -> Unit
 ) {
     Surface(
-        shape = RoundedCornerShape(14.dp),
+        shape = EmrehShapes.Medium,
         color = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
         else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
         modifier = Modifier
             .fillMaxWidth()
+            .tactileBorder(shape = EmrehShapes.Medium)
             .clickable(enabled = isInstalled, onClick = onSelect)
     ) {
         Row(
@@ -296,7 +302,7 @@ private fun LanguageItemCard(
                     if (isActive) {
                         Spacer(Modifier.width(8.dp))
                         Surface(
-                            shape = RoundedCornerShape(6.dp),
+                            shape = EmrehShapes.Badge,
                             color = MaterialTheme.colorScheme.primary
                         ) {
                             Text(
@@ -373,8 +379,8 @@ private fun LanguageItemCard(
                 else -> {
                     Button(
                         onClick = onDownload,
-                        shape = RoundedCornerShape(10.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                        shape = EmrehShapes.Pill,
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                     ) {
                         Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))

@@ -5,20 +5,16 @@ import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -42,14 +38,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -58,6 +52,9 @@ import coil.request.ImageRequest
 import coil.request.videoFrameMillis
 import com.amresalehin.emreshots.data.model.ScreenshotItem
 import com.amresalehin.emreshots.service.media.VideoThumbnailHelper
+import com.amresalehin.emreshots.ui.theme.EmrehShapes
+import com.amresalehin.emreshots.ui.theme.EmrehSpacing
+import com.amresalehin.emreshots.ui.theme.tactileBorder
 import java.io.File
 import kotlin.math.abs
 
@@ -72,12 +69,12 @@ fun ScreenshotMasonryCard(
 ) {
     val context = LocalContext.current
 
-    // Compute dynamic, organic masonry aspect ratio
+    // Dynamic, organic masonry aspect ratio
     val dynamicAspectRatio = remember(screenshot.id, screenshot.width, screenshot.height) {
         if (screenshot.width > 0 && screenshot.height > 0) {
-            (screenshot.width.toFloat() / screenshot.height.toFloat()).coerceIn(0.25f, 4f)
+            (screenshot.width.toFloat() / screenshot.height.toFloat()).coerceIn(0.45f, 2.2f)
         } else {
-            val variants = floatArrayOf(0.72f, 0.88f, 1.15f, 1.35f, 0.95f)
+            val variants = floatArrayOf(0.75f, 0.9f, 1.15f, 1.3f, 1.0f)
             variants[abs(screenshot.id.hashCode()) % variants.size]
         }
     }
@@ -123,28 +120,28 @@ fun ScreenshotMasonryCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(EmrehShapes.Card)
             .clickable(onClick = onClick)
             .testTag("screenshot_masonry_card_${screenshot.id}"),
-        shape = RoundedCornerShape(16.dp),
+        shape = EmrehShapes.Card,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        border = tactileBorder(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(dynamicAspectRatio)
-                .background(Color.Black.copy(alpha = 0.1f))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
         ) {
-            // Display video thumbnail directly from cache/retriever if ready, or via Coil's VideoFrameDecoder
+            // Media
             if (screenshot.isVideo && videoThumbnailBitmap != null) {
                 Image(
                     bitmap = videoThumbnailBitmap!!.asImageBitmap(),
                     contentDescription = screenshot.title,
-                    contentScale = ContentScale.Fit,
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
@@ -156,17 +153,18 @@ fun ScreenshotMasonryCard(
                 )
             }
 
-            // Top Badges Row (AI sparkle + reminder indicator)
+            // Top Badges
             Row(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(6.dp),
+                    .padding(EmrehSpacing.sm),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (screenshot.aiProcessed) {
                     Surface(
                         color = Color.Black.copy(alpha = 0.6f),
-                        shape = RoundedCornerShape(6.dp)
+                        shape = EmrehShapes.ExtraSmall,
+                        border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.White.copy(alpha = 0.2f))
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -176,12 +174,12 @@ fun ScreenshotMasonryCard(
                                 imageVector = Icons.Default.AutoAwesome,
                                 contentDescription = "AI Analyzed",
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(11.dp)
+                                modifier = Modifier.size(10.dp)
                             )
                             Spacer(modifier = Modifier.width(3.dp))
                             Text(
                                 text = "AI",
-                                fontSize = 9.sp,
+                                fontSize = 8.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )
@@ -192,7 +190,7 @@ fun ScreenshotMasonryCard(
                 if (screenshot.reminderTime != null) {
                     Spacer(modifier = Modifier.width(4.dp))
                     Surface(
-                        color = Color(0xFFF43F5E).copy(alpha = 0.85f),
+                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f),
                         shape = CircleShape,
                         modifier = Modifier.size(18.dp)
                     ) {
@@ -200,124 +198,98 @@ fun ScreenshotMasonryCard(
                             Icon(
                                 imageVector = Icons.Default.Alarm,
                                 contentDescription = "Reminder",
-                                tint = Color.White,
-                                modifier = Modifier.size(11.dp)
+                                tint = MaterialTheme.colorScheme.onSecondary,
+                                modifier = Modifier.size(10.dp)
                             )
                         }
                     }
                 }
             }
 
-            // Top Right Favorite Button
+            // Top Right: Tactile Favorite
             IconButton(
                 onClick = onToggleFavorite,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(2.dp)
                     .size(36.dp)
-                    .testTag("btn_fav_${screenshot.id}")
             ) {
-                if (screenshot.isFavorite) {
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.Black.copy(alpha = 0.45f),
-                        modifier = Modifier.size(28.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.Favorite,
-                                contentDescription = "Favorite",
-                                tint = Color(0xFFF43F5E),
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
+                Surface(
+                    shape = CircleShape,
+                    color = Color.Black.copy(alpha = 0.35f),
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.White.copy(alpha = 0.2f)),
+                    modifier = Modifier.size(26.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = "Favorite",
+                            tint = if (screenshot.isFavorite) MaterialTheme.colorScheme.secondary else Color.White.copy(alpha = 0.8f),
+                            modifier = Modifier.size(14.dp)
+                        )
                     }
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.FavoriteBorder,
-                        contentDescription = "Add to Favorites",
-                        tint = Color.White.copy(alpha = 0.5f),
-                        modifier = Modifier.size(16.dp)
-                    )
                 }
             }
 
-            // Bottom Gradient Scrim & Metadata
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f))
+            // Bottom Badges
+            if (screenshot.isVideo) {
+                val secs = (screenshot.durationMs / 1000) % 60
+                val mins = (screenshot.durationMs / 1000) / 60
+                val durStr = if (screenshot.durationMs > 0) String.format("%d:%02d", mins, secs) else "Video"
+
+                Surface(
+                    color = Color.Black.copy(alpha = 0.65f),
+                    shape = EmrehShapes.ExtraSmall,
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.White.copy(alpha = 0.2f)),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(EmrehSpacing.sm)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(11.dp)
                         )
-                    )
-                    .padding(horizontal = 8.dp, vertical = 6.dp)
-            ) {
-                Column {
-                    if (showFileName && screenshot.title.isNotBlank()) {
+                        Spacer(modifier = Modifier.width(2.dp))
                         Text(
-                            text = screenshot.title,
+                            text = durStr,
                             color = Color.White,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
-
+                }
+            } else if (screenshot.links.isNotEmpty()) {
+                Surface(
+                    color = Color.Black.copy(alpha = 0.6f),
+                    shape = EmrehShapes.ExtraSmall,
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.White.copy(alpha = 0.2f)),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(EmrehSpacing.sm)
+                ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                     ) {
-                        if (screenshot.isVideo) {
-                            val secs = (screenshot.durationMs / 1000) % 60
-                            val mins = (screenshot.durationMs / 1000) / 60
-                            val durStr = if (screenshot.durationMs > 0) String.format("%d:%02d", mins, secs) else "Video"
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.PlayArrow,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Spacer(modifier = Modifier.width(2.dp))
-                                Text(
-                                    text = durStr,
-                                    color = Color.White,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        } else if (screenshot.links.isNotEmpty()) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.Link,
-                                    contentDescription = null,
-                                    tint = Color.White.copy(alpha = 0.8f),
-                                    modifier = Modifier.size(11.dp)
-                                )
-                                Spacer(modifier = Modifier.width(2.dp))
-                                Text(
-                                    text = "${screenshot.links.size}",
-                                    color = Color.White.copy(alpha = 0.8f),
-                                    fontSize = 10.sp
-                                )
-                            }
-                        } else {
-                            Spacer(modifier = Modifier.width(1.dp))
-                        }
-
-                        if (showTags && screenshot.tags.isNotEmpty()) {
-                            Text(
-                                text = "#${screenshot.tags.first()}",
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.Link,
+                            contentDescription = "Links",
+                            tint = Color.White,
+                            modifier = Modifier.size(10.dp)
+                        )
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Text(
+                            text = "${screenshot.links.size}",
+                            color = Color.White,
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }

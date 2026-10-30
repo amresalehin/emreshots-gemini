@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,6 +46,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.amresalehin.emreshots.ui.theme.EmrehShapes
+import com.amresalehin.emreshots.ui.theme.EmrehSpacing
+import com.amresalehin.emreshots.ui.theme.tactileBorder
 import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,11 +89,13 @@ fun ProcessingScreen(
         ) {
             item {
                 Card(
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                    shape = EmrehShapes.Card,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)),
+                    border = tactileBorder(),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("SCREENSHOT INTELLIGENCE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        Text("SCREENSHOT INTELLIGENCE", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
                         Text(if (state.isIndexing) "Analyzing your library…" else "Your library is ready for analysis", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                         Text(if (state.total > 0) "$completed completed · $failed failed · $remaining remaining" else "${screenshots.count { it.aiProcessed }} analyzed · $remaining remaining", style = MaterialTheme.typography.bodyMedium)
                         LinearProgressIndicator(
@@ -104,7 +110,12 @@ fun ProcessingScreen(
             }
             if (state.isIndexing || isAnalyzing) {
                 item {
-                    Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                    Card(
+                        shape = EmrehShapes.Card,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        border = tactileBorder(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                    ) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
@@ -113,7 +124,10 @@ fun ProcessingScreen(
                             }
                             Text(state.currentItemTitle.ifBlank { "Preparing…" }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             Text("Item ${state.current.coerceAtLeast(0)} of ${state.total}", style = MaterialTheme.typography.bodySmall)
-                            OutlinedButton(onClick = { viewModel.cancelIndexing() }) {
+                            OutlinedButton(
+                                onClick = { viewModel.cancelIndexing() },
+                                shape = EmrehShapes.Pill
+                            ) {
                                 Icon(Icons.Default.Close, contentDescription = null)
                                 Text("Cancel")
                             }
@@ -125,26 +139,46 @@ fun ProcessingScreen(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (!state.isIndexing) {
                         val unprocessed = screenshots.filter { !it.aiProcessed }
-                        Button(onClick = { viewModel.batchAnalyzeScreenshots(unprocessed) }, enabled = unprocessed.isNotEmpty(), modifier = Modifier.weight(1f)) {
+                        Button(
+                            onClick = { viewModel.batchAnalyzeScreenshots(unprocessed) },
+                            enabled = unprocessed.isNotEmpty(),
+                            shape = EmrehShapes.Pill,
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Icon(Icons.Default.PlayArrow, contentDescription = null)
                             Text("Process pending")
                         }
                     } else {
-                        OutlinedButton(onClick = { viewModel.cancelIndexing() }, modifier = Modifier.weight(1f)) {
+                        OutlinedButton(
+                            onClick = { viewModel.cancelIndexing() },
+                            shape = EmrehShapes.Pill,
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Icon(Icons.Default.Pause, contentDescription = null)
                             Text("Stop")
                         }
                     }
-                    OutlinedButton(onClick = { showRetryInfo = true }, enabled = failed > 0 && !state.isIndexing, modifier = Modifier.weight(1f)) {
+                    OutlinedButton(
+                        onClick = { showRetryInfo = true },
+                        enabled = failed > 0 && !state.isIndexing,
+                        shape = EmrehShapes.Pill,
+                        modifier = Modifier.weight(1f)
+                    ) {
                         Icon(Icons.Default.Refresh, contentDescription = null)
                         Text("Retry failed")
                     }
                 }
             }
             item {
-                Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Card(
+                    shape = EmrehShapes.Card,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = tactileBorder(),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Queue summary", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("Queue summary", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         Text("Completed: $completed")
                         Text("Failed: $failed")
                         Text("Remaining: $remaining")

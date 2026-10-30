@@ -91,6 +91,9 @@ import com.amresalehin.emreshots.service.ai.OnDeviceVisionService
 import com.amresalehin.emreshots.service.backup.RestoreMode
 import com.amresalehin.emreshots.service.ocr.TessLanguage
 import com.amresalehin.emreshots.ui.components.OcrLanguageManagerSheet
+import com.amresalehin.emreshots.ui.theme.EmrehShapes
+import com.amresalehin.emreshots.ui.theme.EmrehSpacing
+import com.amresalehin.emreshots.ui.theme.tactileBorder
 import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 import kotlinx.coroutines.launch
 
@@ -484,24 +487,25 @@ private fun SettingsSimpleCard(
     title: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(EmrehSpacing.xs)) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 4.dp)
+            modifier = Modifier.padding(start = EmrehSpacing.xs, bottom = 2.dp)
         )
         Card(
-            shape = RoundedCornerShape(18.dp),
+            shape = EmrehShapes.Card,
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface
             ),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = tactileBorder(),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                modifier = Modifier.padding(horizontal = EmrehSpacing.lg, vertical = EmrehSpacing.sm),
                 content = content
             )
         }
@@ -519,21 +523,21 @@ private fun SettingsRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(EmrehShapes.Medium)
             .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
+            .padding(vertical = EmrehSpacing.sm),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Surface(
-            shape = RoundedCornerShape(10.dp),
+            shape = EmrehShapes.Small,
             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
-            modifier = Modifier.size(36.dp)
+            modifier = Modifier.size(38.dp)
         ) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
             }
         }
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(EmrehSpacing.md))
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -553,15 +557,15 @@ private fun SettingsToggleRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(EmrehShapes.Medium)
             .clickable { onCheckedChange(!checked) }
-            .padding(vertical = 8.dp),
+            .padding(vertical = EmrehSpacing.sm),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Surface(
-            shape = RoundedCornerShape(10.dp),
+            shape = EmrehShapes.Small,
             color = if (checked) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            modifier = Modifier.size(36.dp)
+            modifier = Modifier.size(38.dp)
         ) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Icon(
@@ -572,7 +576,7 @@ private fun SettingsToggleRow(
                 )
             }
         }
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(EmrehSpacing.md))
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -593,7 +597,8 @@ private fun QualitySegmentedChoice(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), EmrehShapes.Pill)
+            .tactileBorder(shape = EmrehShapes.Pill, width = 0.5.dp)
             .padding(3.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
@@ -603,14 +608,14 @@ private fun QualitySegmentedChoice(
                 onClick = { onSelected(option) },
                 color = if (isActive) MaterialTheme.colorScheme.primary else Color.Transparent,
                 contentColor = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                shape = RoundedCornerShape(10.dp),
+                shape = EmrehShapes.Pill,
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = option,
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.labelMedium,
-                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
+                    fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Medium,
                     modifier = Modifier.padding(vertical = 7.dp)
                 )
             }

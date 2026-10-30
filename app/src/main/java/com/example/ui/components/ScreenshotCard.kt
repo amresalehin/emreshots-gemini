@@ -6,7 +6,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -16,13 +15,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
@@ -39,14 +36,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -55,6 +50,9 @@ import coil.request.ImageRequest
 import coil.request.videoFrameMillis
 import com.amresalehin.emreshots.data.model.ScreenshotItem
 import com.amresalehin.emreshots.service.media.VideoThumbnailHelper
+import com.amresalehin.emreshots.ui.theme.EmrehShapes
+import com.amresalehin.emreshots.ui.theme.EmrehSpacing
+import com.amresalehin.emreshots.ui.theme.tactileBorder
 import java.io.File
 
 @Composable
@@ -104,23 +102,24 @@ fun ScreenshotCard(
         builder.build()
     }
 
+    // Soft, tactile Emreh Card with 20dp curvature and subtle border
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(EmrehShapes.Card)
             .clickable(onClick = onClick)
             .testTag("screenshot_card_${screenshot.id}"),
-        shape = RoundedCornerShape(16.dp),
+        shape = EmrehShapes.Card,
         color = MaterialTheme.colorScheme.surfaceVariant,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-        tonalElevation = 2.dp
+        border = tactileBorder(width = 1.dp),
+        tonalElevation = 1.dp
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(0.92f)
         ) {
-            // Media Image / Video Thumbnail
+            // Media Image / Video Thumbnail (Content-first, preserved ratio)
             if (screenshot.isVideo && videoThumbnailBitmap != null) {
                 Image(
                     bitmap = videoThumbnailBitmap!!.asImageBitmap(),
@@ -137,21 +136,22 @@ fun ScreenshotCard(
                 )
             }
 
-            // Top Badges Row (AI sparkle + reminder indicator)
+            // Top Badges Row (AI sparkle + reminder indicator with restrained tactile styling)
             Row(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(6.dp),
+                    .padding(EmrehSpacing.sm),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (screenshot.aiProcessed) {
                     Surface(
-                        color = Color.Black.copy(alpha = 0.55f),
-                        shape = RoundedCornerShape(6.dp)
+                        color = Color.Black.copy(alpha = 0.6f),
+                        shape = EmrehShapes.ExtraSmall,
+                        border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.White.copy(alpha = 0.2f))
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.AutoAwesome,
@@ -173,15 +173,15 @@ fun ScreenshotCard(
                 if (screenshot.reminderTime != null) {
                     Spacer(modifier = Modifier.width(4.dp))
                     Surface(
-                        color = Color(0xFFF43F5E).copy(alpha = 0.85f),
+                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f),
                         shape = CircleShape,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(20.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Default.Alarm,
                                 contentDescription = "Reminder",
-                                tint = Color.White,
+                                tint = MaterialTheme.colorScheme.onSecondary,
                                 modifier = Modifier.size(11.dp)
                             )
                         }
@@ -189,42 +189,50 @@ fun ScreenshotCard(
                 }
             }
 
-            // Top Right: Minimal Favorite Toggle
+            // Top Right: Tactile Favorite Toggle
             IconButton(
                 onClick = onToggleFavorite,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(2.dp)
-                    .size(36.dp)
+                    .size(40.dp)
                     .testTag("btn_fav_${screenshot.id}")
             ) {
                 if (screenshot.isFavorite) {
                     Surface(
                         shape = CircleShape,
-                        color = Color.Black.copy(alpha = 0.4f),
+                        color = Color.Black.copy(alpha = 0.45f),
+                        border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.White.copy(alpha = 0.2f)),
                         modifier = Modifier.size(28.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Default.Favorite,
                                 contentDescription = "Favorite",
-                                tint = Color(0xFFF43F5E),
-                                modifier = Modifier.size(16.dp)
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(15.dp)
                             )
                         }
                     }
                 } else {
-                    // Subtle tap target that doesn't distract visually
-                    Icon(
-                        imageVector = Icons.Default.FavoriteBorder,
-                        contentDescription = "Add to Favorites",
-                        tint = Color.White.copy(alpha = 0.4f),
-                        modifier = Modifier.size(16.dp)
-                    )
+                    Surface(
+                        shape = CircleShape,
+                        color = Color.Black.copy(alpha = 0.25f),
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.FavoriteBorder,
+                                contentDescription = "Add to Favorites",
+                                tint = Color.White.copy(alpha = 0.75f),
+                                modifier = Modifier.size(15.dp)
+                            )
+                        }
+                    }
                 }
             }
 
-            // Bottom Badges: Video Duration Pill or Links Pill (Minimal & Clean)
+            // Bottom Badges: Video Duration Pill or Links Pill (Tactile & Clean)
             if (screenshot.isVideo) {
                 val secs = (screenshot.durationMs / 1000) % 60
                 val mins = (screenshot.durationMs / 1000) / 60
@@ -232,10 +240,11 @@ fun ScreenshotCard(
 
                 Surface(
                     color = Color.Black.copy(alpha = 0.65f),
-                    shape = RoundedCornerShape(6.dp),
+                    shape = EmrehShapes.ExtraSmall,
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.White.copy(alpha = 0.2f)),
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(6.dp)
+                        .padding(EmrehSpacing.sm)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -247,26 +256,27 @@ fun ScreenshotCard(
                             tint = Color.White,
                             modifier = Modifier.size(12.dp)
                         )
-                        Spacer(modifier = Modifier.width(2.dp))
+                        Spacer(modifier = Modifier.width(3.dp))
                         Text(
                             text = durStr,
                             color = Color.White,
                             fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                 }
             } else if (screenshot.links.isNotEmpty()) {
                 Surface(
-                    color = Color.Black.copy(alpha = 0.55f),
-                    shape = RoundedCornerShape(6.dp),
+                    color = Color.Black.copy(alpha = 0.6f),
+                    shape = EmrehShapes.ExtraSmall,
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.White.copy(alpha = 0.2f)),
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(6.dp)
+                        .padding(EmrehSpacing.sm)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Link,
@@ -274,7 +284,7 @@ fun ScreenshotCard(
                             tint = Color.White,
                             modifier = Modifier.size(11.dp)
                         )
-                        Spacer(modifier = Modifier.width(2.dp))
+                        Spacer(modifier = Modifier.width(3.dp))
                         Text(
                             text = "${screenshot.links.size}",
                             color = Color.White,

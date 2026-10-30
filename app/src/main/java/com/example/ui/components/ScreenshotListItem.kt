@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Favorite
@@ -54,10 +53,10 @@ import coil.request.ImageRequest
 import coil.request.videoFrameMillis
 import com.amresalehin.emreshots.data.model.ScreenshotItem
 import com.amresalehin.emreshots.service.media.VideoThumbnailHelper
+import com.amresalehin.emreshots.ui.theme.EmrehShapes
+import com.amresalehin.emreshots.ui.theme.EmrehSpacing
+import com.amresalehin.emreshots.ui.theme.tactileBorder
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @Composable
 fun ScreenshotListItem(
@@ -98,7 +97,7 @@ fun ScreenshotListItem(
         val builder = ImageRequest.Builder(context)
             .data(imageModel)
             .crossfade(true)
-            .size(160, 160) // Small bounded size for list thumbnails
+            .size(160, 160)
 
         if (screenshot.isVideo) {
             builder.decoderFactory(VideoFrameDecoder.Factory())
@@ -113,28 +112,28 @@ fun ScreenshotListItem(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(EmrehShapes.Medium)
             .clickable(onClick = onClick)
             .testTag("list_item_${screenshot.id}"),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-        shape = RoundedCornerShape(14.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        border = tactileBorder(),
+        shape = EmrehShapes.Medium,
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(10.dp),
+                .padding(EmrehSpacing.md),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Thumbnail
+            // Squircle Thumbnail
             Box(
                 modifier = Modifier
                     .size(68.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color.Black.copy(alpha = 0.15f))
+                    .clip(EmrehShapes.Small)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 if (screenshot.isVideo && videoThumbnailBitmap != null) {
                     Image(
@@ -153,81 +152,121 @@ fun ScreenshotListItem(
                 }
 
                 if (screenshot.isVideo) {
-                    Box(
+                    Surface(
+                        color = Color.Black.copy(alpha = 0.65f),
+                        shape = EmrehShapes.ExtraSmall,
                         modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.35f)),
-                        contentAlignment = Alignment.Center
+                            .align(Alignment.BottomEnd)
+                            .padding(2.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.PlayArrow,
-                            contentDescription = "Video",
+                            contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(12.dp)
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(EmrehSpacing.md))
 
-            // Details Column
-            Column(modifier = Modifier.weight(1f)) {
-                if (showFileName) Row(verticalAlignment = Alignment.CenterVertically) {
+            // Metadata Column
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     Text(
-                        text = screenshot.title.ifBlank { "Untitled" },
+                        text = if (screenshot.title.isNotBlank()) screenshot.title else "Untitled Media",
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
                     )
+
                     if (screenshot.aiProcessed) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Icon(
-                            imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = "AI",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(14.dp)
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                            shape = EmrehShapes.ExtraSmall,
+                            border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(9.dp)
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text(
+                                    text = "AI",
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = dateStr,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (sizeStr.isNotBlank()) {
+                        Text(
+                            text = "·",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = sizeStr,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(3.dp))
-
-                Text(
-                    text = listOfNotNull(
-                        dateStr,
-                        sizeStr.takeIf { it.isNotBlank() },
-                        if (screenshot.isVideo) "Video" else "Photo"
-                    ).joinToString(" • "),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                if (showTags && screenshot.tags.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(4.dp))
+                if (screenshot.description.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = screenshot.tags.take(3).joinToString("  ") { "#$it" },
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.primary,
+                        text = screenshot.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
             }
 
-            // Favorite toggle
+            Spacer(modifier = Modifier.width(EmrehSpacing.xs))
+
+            // Tactile Favorite Toggle
             IconButton(
                 onClick = onToggleFavorite,
-                modifier = Modifier.testTag("list_fav_${screenshot.id}")
+                modifier = Modifier.size(36.dp)
             ) {
                 Icon(
                     imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     contentDescription = "Favorite",
-                    tint = if (screenshot.isFavorite) Color(0xFFFF5252) else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
+                    tint = if (screenshot.isFavorite) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.size(16.dp)
                 )
             }
         }

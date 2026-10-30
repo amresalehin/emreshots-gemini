@@ -32,8 +32,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -41,6 +39,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.amresalehin.emreshots.ui.theme.EmrehShapes
+import com.amresalehin.emreshots.ui.theme.tactileBorder
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
@@ -87,12 +87,12 @@ fun GalleryScrollBar(
 
     val isActive = isDragging || isScrollInProgress
     val thumbAlpha by animateFloatAsState(
-        targetValue = if (isActive) 1f else 0.55f,
+        targetValue = if (isActive) 1f else 0.45f,
         animationSpec = tween(durationMillis = 200),
         label = "thumb_alpha"
     )
     val thumbWidth by animateDpAsState(
-        targetValue = if (isActive) 8.dp else 5.dp,
+        targetValue = if (isActive) 6.dp else 4.dp,
         animationSpec = tween(durationMillis = 200),
         label = "thumb_width"
     )
@@ -104,7 +104,7 @@ fun GalleryScrollBar(
             .testTag("gallery_scrollbar")
     ) {
         val trackHeightPx = with(density) { maxHeight.toPx() }
-        val thumbHeightDp = 52.dp
+        val thumbHeightDp = 48.dp
         val thumbHeightPx = with(density) { thumbHeightDp.toPx() }
         val availableTrackPx = (trackHeightPx - thumbHeightPx).coerceAtLeast(0f)
 
@@ -118,9 +118,9 @@ fun GalleryScrollBar(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .padding(end = 4.dp)
-                    .width(2.dp)
+                    .width(1.5.dp)
                     .fillMaxHeight()
-                    .alpha(if (isActive) 0.3f else 0.15f)
+                    .alpha(if (isActive) 0.25f else 0.1f)
                     .background(MaterialTheme.colorScheme.onSurface, RoundedCornerShape(1.dp))
             )
 
@@ -130,24 +130,24 @@ fun GalleryScrollBar(
                     .offset { IntOffset(x = 0, y = thumbOffsetY) }
                     .fillMaxSize()
             ) {
-                // Floating bubble indicator when dragging
+                // Floating bubble indicator when dragging (Soft, tactile pill)
                 if (isDragging) {
                     val currentItemNumber = ((totalItemsCount - 1) * effectiveFraction).roundToInt() + 1
                     Surface(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(end = 18.dp)
-                            .offset(y = 8.dp)
-                            .shadow(4.dp, RoundedCornerShape(16.dp)),
-                        shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        tonalElevation = 6.dp
+                            .padding(end = 16.dp)
+                            .offset(y = 8.dp),
+                        shape = EmrehShapes.Pill,
+                        color = MaterialTheme.colorScheme.surface,
+                        border = tactileBorder(),
+                        tonalElevation = 2.dp
                     ) {
                         Text(
                             text = "$currentItemNumber / $totalItemsCount",
                             fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                         )
                     }
@@ -158,7 +158,7 @@ fun GalleryScrollBar(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(end = 2.dp)
-                        .size(width = 20.dp, height = thumbHeightDp)
+                        .size(width = 24.dp, height = thumbHeightDp)
                         .pointerInput(totalItemsCount, availableTrackPx) {
                             detectVerticalDragGestures(
                                 onDragStart = {
@@ -191,7 +191,7 @@ fun GalleryScrollBar(
                             .clip(CircleShape)
                             .background(
                                 if (isActive) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                             )
                     )
                 }

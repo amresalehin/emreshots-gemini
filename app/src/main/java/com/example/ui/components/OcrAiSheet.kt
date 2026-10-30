@@ -62,6 +62,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.amresalehin.emreshots.data.model.ScreenshotItem
+import com.amresalehin.emreshots.ui.theme.EmrehShapes
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -84,6 +85,7 @@ fun OcrAiSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        shape = EmrehShapes.BottomSheet,
         containerColor = MaterialTheme.colorScheme.surface,
         dragHandle = null
     ) {

@@ -21,7 +21,6 @@ class DeviceMediaScanner(private val context: Context) {
                 list.add(Manifest.permission.READ_MEDIA_IMAGES)
                 list.add(Manifest.permission.READ_MEDIA_VIDEO)
                 list.add(Manifest.permission.ACCESS_MEDIA_LOCATION)
-                list.add(Manifest.permission.POST_NOTIFICATIONS)
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 list.add(Manifest.permission.READ_EXTERNAL_STORAGE)
                 list.add(Manifest.permission.ACCESS_MEDIA_LOCATION)

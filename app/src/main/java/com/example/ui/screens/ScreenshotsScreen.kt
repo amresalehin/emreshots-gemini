@@ -1,7 +1,6 @@
 package com.amresalehin.emreshots.ui.screens
 
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -47,7 +46,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
@@ -65,6 +64,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -122,6 +122,10 @@ import com.amresalehin.emreshots.ui.components.ScreenshotListItem
 import com.amresalehin.emreshots.ui.components.ScreenshotMasonryCard
 import com.amresalehin.emreshots.viewmodel.ScreenshotFilter
 import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
+import com.amresalehin.emreshots.ui.theme.EmrehShapes
+import com.amresalehin.emreshots.ui.theme.EmrehSpacing
+import com.amresalehin.emreshots.ui.theme.tactileBorder
+import com.amresalehin.emreshots.ui.theme.EmrehEmptyState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -199,11 +203,12 @@ fun ScreenshotsScreen(
         viewModel.onPermissionsResult(isGranted)
     }
 
-    val mediaPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        if (uri != null) {
-            viewModel.importMediaFromUri(uri)
+    // Automatically request all media permissions on initial launch if not yet granted
+    var hasRequestedPermissionsInitially by remember { mutableStateOf(false) }
+    LaunchedEffect(hasMediaPermissions) {
+        if (!hasMediaPermissions && !hasRequestedPermissionsInitially) {
+            hasRequestedPermissionsInitially = true
+            permissionLauncher.launch(DeviceMediaScanner.getRequiredPermissions())
         }
     }
 
@@ -246,8 +251,8 @@ fun ScreenshotsScreen(
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = { viewModel.setSearchQuery(it) },
-                            placeholder = { Text("Search screenshots…", fontSize = 14.sp) },
-                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                            placeholder = { Text("Search photos, text, tags…", fontSize = 14.sp) },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary) },
                             trailingIcon = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     if (searchQuery.isNotEmpty()) {
@@ -261,41 +266,51 @@ fun ScreenshotsScreen(
                                 }
                             },
                             singleLine = true,
-                            shape = RoundedCornerShape(24.dp),
+                            shape = EmrehShapes.Pill,
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                                unfocusedBorderColor = Color.Transparent
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
                             ),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                             keyboardActions = KeyboardActions(onSearch = { }),
                             modifier = Modifier.fillMaxWidth().focusRequester(searchFocusRequester).testTag("input_gallery_search")
                         )
                     } else {
-                        Box {
-                            Surface(
-                                onClick = { showFolderMenu = true },
-                                shape = RoundedCornerShape(20.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Emreh",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(end = EmrehSpacing.md)
+                            )
+                            Box {
+                                Surface(
+                                    onClick = { showFolderMenu = true },
+                                    shape = EmrehShapes.Pill,
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
+                                    border = tactileBorder(width = 0.5.dp)
                                 ) {
-                                    Icon(Icons.Default.Collections, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(7.dp))
-                                    Text(selectedFolder ?: "All media", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                                    Spacer(modifier = Modifier.width(5.dp))
-                                    Text(totalDisplayCount.toString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.Collections, contentDescription = null, modifier = Modifier.size(15.dp), tint = MaterialTheme.colorScheme.primary)
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(selectedFolder ?: "All media", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(totalDisplayCount.toString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
                                 }
-                            }
-                            DropdownMenu(expanded = showFolderMenu, onDismissRequest = { showFolderMenu = false }) {
-                                DropdownMenuItem(text = { Text("All media") }, trailingIcon = { if (selectedFolder == null) Text("✓") }, onClick = { selectedFolder = null; showFolderMenu = false })
-                                if (availableFolders.isNotEmpty()) {
-                                    androidx.compose.material3.HorizontalDivider()
-                                    availableFolders.take(24).forEach { folder ->
-                                        DropdownMenuItem(text = { Text(folder, maxLines = 1) }, trailingIcon = { if (selectedFolder == folder) Text("✓") }, onClick = { selectedFolder = folder; showFolderMenu = false })
+                                DropdownMenu(expanded = showFolderMenu, onDismissRequest = { showFolderMenu = false }) {
+                                    DropdownMenuItem(text = { Text("All media") }, trailingIcon = { if (selectedFolder == null) Text("✓") }, onClick = { selectedFolder = null; showFolderMenu = false })
+                                    if (availableFolders.isNotEmpty()) {
+                                        androidx.compose.material3.HorizontalDivider()
+                                        availableFolders.take(24).forEach { folder ->
+                                            DropdownMenuItem(text = { Text(folder, maxLines = 1) }, trailingIcon = { if (selectedFolder == folder) Text("✓") }, onClick = { selectedFolder = folder; showFolderMenu = false })
+                                        }
                                     }
                                 }
                             }
@@ -402,14 +417,19 @@ fun ScreenshotsScreen(
                                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
                             )
                         },
-                        shape = RoundedCornerShape(20.dp),
+                        shape = EmrehShapes.Pill,
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = MaterialTheme.colorScheme.primary,
                             selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                             labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                         ),
-                        border = null,
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = isSelected,
+                            borderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                            selectedBorderColor = MaterialTheme.colorScheme.primary
+                        ),
                         modifier = Modifier.testTag("filter_chip_${filter.name.lowercase()}")
                     )
                  }
@@ -419,14 +439,19 @@ fun ScreenshotsScreen(
                          selected = isSelected,
                          onClick = { selectedMediaType = if (isSelected) null else type },
                          label = { Text(type.uppercase(Locale.ROOT), fontSize = 12.sp, fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal) },
-                         shape = RoundedCornerShape(20.dp),
+                         shape = EmrehShapes.Pill,
                          colors = FilterChipDefaults.filterChipColors(
                              selectedContainerColor = MaterialTheme.colorScheme.primary,
                              selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
                              containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                              labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                          ),
-                         border = null,
+                         border = FilterChipDefaults.filterChipBorder(
+                             enabled = true,
+                             selected = isSelected,
+                             borderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                             selectedBorderColor = MaterialTheme.colorScheme.primary
+                         ),
                          modifier = Modifier.testTag("filter_chip_type_${type}")
                      )
                  }
@@ -435,8 +460,9 @@ fun ScreenshotsScreen(
              // Compact, non-intrusive permission card (only if not granted and not dismissed)
             if (!hasMediaPermissions && !hidePermissionBanner) {
                 Surface(
-                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
-                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = EmrehShapes.Medium,
+                    border = tactileBorder(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -470,13 +496,16 @@ fun ScreenshotsScreen(
                                 onClick = {
                                     permissionLauncher.launch(DeviceMediaScanner.getRequiredPermissions())
                                 },
-                                shape = RoundedCornerShape(12.dp),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                shape = EmrehShapes.Pill,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary
+                                ),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
                                 modifier = Modifier
-                                    .height(28.dp)
+                                    .height(30.dp)
                                     .testTag("btn_grant_media_permission")
                             ) {
-                                Text("Allow", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text("Allow", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                             }
                             IconButton(
                                 onClick = { hidePermissionBanner = true },
@@ -561,60 +590,54 @@ fun ScreenshotsScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(32.dp),
+                            .padding(EmrehSpacing.xxl),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Surface(
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                modifier = Modifier.size(72.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Default.Collections,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                        modifier = Modifier.size(32.dp)
-                                    )
+                        if (!hasMediaPermissions) {
+                            EmrehEmptyState(
+                                icon = Icons.Default.PermMedia,
+                                title = "Media access required",
+                                description = "Grant media permissions to automatically scan and organize all photos, screenshots, and videos on this device without picking them one by one.",
+                                actionButton = {
+                                    Button(
+                                        onClick = {
+                                            permissionLauncher.launch(DeviceMediaScanner.getRequiredPermissions())
+                                        },
+                                        shape = EmrehShapes.Pill,
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary
+                                        ),
+                                        modifier = Modifier.testTag("btn_grant_all_media_permission")
+                                    ) {
+                                        Icon(Icons.Default.PermMedia, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Grant Media Permission")
+                                    }
                                 }
-                            }
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Text(
-                                text = if (searchQuery.isNotEmpty()) "No media matching \"$searchQuery\""
-                                else if (selectedFilter != ScreenshotFilter.ALL) "No ${selectedFilter.displayName} found"
-                                else "No photos or videos yet",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center
                             )
-
-                            Spacer(modifier = Modifier.height(6.dp))
-
-                            Text(
-                                text = "Import photos or videos, or sync device media to get started.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
+                        } else {
+                            EmrehEmptyState(
+                                icon = if (searchQuery.isNotEmpty()) Icons.Default.Search else Icons.Default.Collections,
+                                title = if (searchQuery.isNotEmpty()) "No media matching \"$searchQuery\""
+                                        else if (selectedFilter != ScreenshotFilter.ALL) "No ${selectedFilter.displayName} found"
+                                        else "No photos or videos yet",
+                                description = if (searchQuery.isNotEmpty()) "Try searching for a different keyword, date, or tag."
+                                              else "Your photos and videos will appear here automatically. Pull down or tap below to scan device media.",
+                                actionButton = {
+                                    Button(
+                                        onClick = { viewModel.syncDeviceMedia() },
+                                        shape = EmrehShapes.Pill,
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary
+                                        ),
+                                        modifier = Modifier.testTag("btn_empty_sync")
+                                    ) {
+                                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Scan Device Media")
+                                    }
+                                }
                             )
-
-                            Spacer(modifier = Modifier.height(20.dp))
-
-                            Button(
-                                onClick = {
-                                    mediaPickerLauncher.launch(
-                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
-                                    )
-                                },
-                                shape = RoundedCornerShape(20.dp),
-                                modifier = Modifier.testTag("btn_empty_import")
-                            ) {
-                                Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Pick Photos or Videos")
-                            }
                         }
                     }
                 } else {
@@ -913,12 +936,14 @@ fun ScreenshotsScreen(
             }
         }
 
-        // Clean, Compact Floating Action Button
+        // Clean, Compact Floating Action Button for gallery sync / permission request
         FloatingActionButton(
             onClick = {
-                mediaPickerLauncher.launch(
-                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
-                )
+                if (hasMediaPermissions) {
+                    viewModel.syncDeviceMedia()
+                } else {
+                    permissionLauncher.launch(DeviceMediaScanner.getRequiredPermissions())
+                }
             },
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -928,15 +953,17 @@ fun ScreenshotsScreen(
                 .navigationBarsPadding()
                 .padding(16.dp)
                 .size(56.dp)
-                .testTag("fab_import_screenshot")
+                .testTag("fab_sync_media")
         ) {
-            Icon(Icons.Default.Add, contentDescription = "Add Media")
+            Icon(Icons.Default.Refresh, contentDescription = "Sync device media")
         }
     }
 
     if (showSortDialog) {
         AlertDialog(
             onDismissRequest = { showSortDialog = false },
+            shape = EmrehShapes.Large,
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
@@ -986,6 +1013,8 @@ fun ScreenshotsScreen(
     if (showGroupDialog) {
         AlertDialog(
             onDismissRequest = { showGroupDialog = false },
+            shape = EmrehShapes.Large,
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.GridView, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
@@ -1035,6 +1064,8 @@ fun ScreenshotsScreen(
     if (showBatchRenameDialog) {
         AlertDialog(
             onDismissRequest = { showBatchRenameDialog = false },
+            shape = EmrehShapes.Large,
+            containerColor = MaterialTheme.colorScheme.surface,
             title = { Text("Batch rename visible items") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1050,10 +1081,15 @@ fun ScreenshotsScreen(
                 }
             },
             confirmButton = {
-                Button(onClick = {
-                    viewModel.batchRename(groupedScreenshots.values.flatten(), renameTemplate)
-                    showBatchRenameDialog = false
-                }, enabled = groupedScreenshots.values.flatten().isNotEmpty() && renameTemplate.isNotBlank()) {
+                Button(
+                    onClick = {
+                        viewModel.batchRename(groupedScreenshots.values.flatten(), renameTemplate)
+                        showBatchRenameDialog = false
+                    },
+                    shape = EmrehShapes.Pill,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    enabled = groupedScreenshots.values.flatten().isNotEmpty() && renameTemplate.isNotBlank()
+                ) {
                     Text("Rename ${groupedScreenshots.values.sumOf { it.size }}")
                 }
             },

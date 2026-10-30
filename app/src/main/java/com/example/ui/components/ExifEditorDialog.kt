@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -45,6 +46,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.amresalehin.emreshots.data.model.ExifData
 import com.amresalehin.emreshots.data.model.ScreenshotItem
+import com.amresalehin.emreshots.ui.theme.EmrehShapes
+import com.amresalehin.emreshots.ui.theme.tactileBorder
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -69,6 +72,8 @@ fun ExifEditorDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = EmrehShapes.Large,
+        containerColor = MaterialTheme.colorScheme.surface,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -295,6 +300,8 @@ fun ExifEditorDialog(
                     )
                     onSave(updated)
                 },
+                shape = EmrehShapes.Pill,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 modifier = Modifier.testTag("btn_save_exif")
             ) {
                 Icon(imageVector = Icons.Default.Check, contentDescription = null)
@@ -305,6 +312,7 @@ fun ExifEditorDialog(
         dismissButton = {
             OutlinedButton(
                 onClick = onDismiss,
+                shape = EmrehShapes.Pill,
                 modifier = Modifier.testTag("btn_cancel_exif")
             ) {
                 Icon(imageVector = Icons.Default.Close, contentDescription = null)

@@ -171,6 +171,7 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     val isLocalOcrLlmInstalled: StateFlow<Boolean> = localOcrLlmManager.isModelInstalled
     val isDownloadingLocalOcrLlm: StateFlow<Boolean> = localOcrLlmManager.isDownloading
     val localOcrLlmDownloadProgress: StateFlow<Float> = localOcrLlmManager.downloadProgress
+    val localOcrLlmStatusMessage: StateFlow<String?> = localOcrLlmManager.statusMessage
 
     private val _ocrLanguage = MutableStateFlow("eng")
     val ocrLanguage: StateFlow<String> = _ocrLanguage.asStateFlow()

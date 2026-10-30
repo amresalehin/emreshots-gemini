@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 
 package com.amresalehin.emreshots.ui.screens
 
@@ -9,8 +9,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,6 +24,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -133,13 +133,14 @@ internal fun GalleryFilters(
     selectedMediaType: String?,
     onSelectedMediaTypeChange: (String?) -> Unit
 ) {
-// Wrapping filter pills keep both filter and file-type chips accessible without a horizontal-only row.
-FlowRow(
+// Keep every filter pill on one compact, horizontally scrollable line.
+Row(
     modifier = Modifier
         .fillMaxWidth()
+        .horizontalScroll(rememberScrollState())
         .padding(horizontal = 16.dp, vertical = 4.dp),
     horizontalArrangement = Arrangement.spacedBy(6.dp),
-    verticalArrangement = Arrangement.spacedBy(4.dp)
+    verticalAlignment = Alignment.CenterVertically
 ) {
     ScreenshotFilter.entries.filter { it != ScreenshotFilter.ALL }.forEach { filter ->
         val isSelected = selectedFilter == filter

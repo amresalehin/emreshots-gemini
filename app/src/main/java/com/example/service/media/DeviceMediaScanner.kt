@@ -20,14 +20,10 @@ class DeviceMediaScanner(private val context: Context) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 list.add(Manifest.permission.READ_MEDIA_IMAGES)
                 list.add(Manifest.permission.READ_MEDIA_VIDEO)
-                list.add(Manifest.permission.ACCESS_MEDIA_LOCATION)
-                list.add(Manifest.permission.POST_NOTIFICATIONS)
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 list.add(Manifest.permission.READ_EXTERNAL_STORAGE)
-                list.add(Manifest.permission.ACCESS_MEDIA_LOCATION)
             } else {
                 list.add(Manifest.permission.READ_EXTERNAL_STORAGE)
-                list.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
             }
             return list.toTypedArray()
         }
@@ -52,10 +48,7 @@ class DeviceMediaScanner(private val context: Context) {
             return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 val hasImages = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED
                 val hasVideos = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_VIDEO) == PackageManager.PERMISSION_GRANTED
-                val hasPartial = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) == PackageManager.PERMISSION_GRANTED
-                } else false
-                hasImages || hasVideos || hasPartial
+                hasImages && hasVideos
             } else {
                 ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
             }

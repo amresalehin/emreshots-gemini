@@ -25,6 +25,10 @@ class DeviceMediaScanner(private val context: Context) {
             } else {
                 list.add(Manifest.permission.READ_EXTERNAL_STORAGE)
             }
+            // Required by the existing metadata workflow to read unredacted EXIF location.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                list.add(Manifest.permission.ACCESS_MEDIA_LOCATION)
+            }
             return list.toTypedArray()
         }
 

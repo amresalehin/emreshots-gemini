@@ -13,6 +13,9 @@ concurrency:
   group: android-build-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -62,10 +65,40 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: "9.3.1"
-          # Gradle User Home caching is enabled by default.
+          # The repository default is main-archive, but this workflow's release
+          # branch is main. Let trusted same-repository PRs cache within their
+          # PR scope and let pushes to main seed the cache used by future PRs.
+          # Fork PRs stay read-only so untrusted code cannot poison shared caches.
+          cache-read-only: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
+          # Set this GitHub Actions secret to persist Gradle's encrypted
+          # project-local configuration cache between ephemeral runners.
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
       - name: Build, test, and assemble release APK
-        run: gradle --build-cache --configuration-cache --parallel --stacktrace :app:testDebugUnitTest :app:assembleRelease
+        shell: bash
+        env:
+          GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+        run: |
+          set -euo pipefail
+          GRADLE_ARGS=(
+            --build-cache
+            --parallel
+            --console=plain
+            --stacktrace
+            --profile
+          )
+
+          # Configuration cache only saves CI time when setup-gradle can
+          # securely restore it using a stable encryption key. Without that
+          # secret, avoid paying the cost of writing a cache that cannot be reused.
+          if [[ -n "${GRADLE_ENCRYPTION_KEY:-}" ]]; then
+            GRADLE_ARGS+=(--configuration-cache)
+          else
+            echo "GRADLE_ENCRYPTION_KEY is not configured; skipping the non-reusable CI configuration cache."
+            GRADLE_ARGS+=(--no-configuration-cache)
+          fi
+
+          gradle "${GRADLE_ARGS[@]}" :app:testDebugUnitTest :app:assembleRelease
 
       - name: Verify APK signature and alignment
         shell: bash
@@ -80,6 +113,15 @@ jobs:
             "$BT/zipalign" -c -v 4 "$apk"
             "$BT/apksigner" verify --verbose "$apk"
           done
+
+      - name: Upload Gradle performance profile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-performance-profile
+          path: build/reports/profile/*.html
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Upload release APK
         uses: actions/upload-artifact@v4

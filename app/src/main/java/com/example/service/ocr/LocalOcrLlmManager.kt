@@ -20,6 +20,7 @@ import org.nehuatl.llamacpp.LlamaHelper
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 
 /**
@@ -60,7 +61,7 @@ class LocalOcrLlmManager(
     private val _isModelInstalled = MutableStateFlow(false)
     val isModelInstalled: StateFlow<Boolean> = _isModelInstalled.asStateFlow()
 
-    private val _statusMessage = MutableStateFlow<String?>("Local AI ready")
+    private val _statusMessage = MutableStateFlow<String?>("Optional local OCR AI is not installed")
     val statusMessage: StateFlow<String?> = _statusMessage.asStateFlow()
 
     init {
@@ -70,6 +71,7 @@ class LocalOcrLlmManager(
     fun checkInstalledState(): Boolean {
         val ready = isInstalledOnDisk() || hasBundledAsset()
         _isModelInstalled.value = ready
+        _statusMessage.value = if (ready) "Local OCR AI installed and ready" else "Optional local OCR AI is not installed"
         return ready
     }
 
@@ -197,6 +199,7 @@ class LocalOcrLlmManager(
             false
         } finally {
             _isDownloading.value = false
+            if (!_isModelInstalled.value) _downloadProgress.value = 0f
         }
     }
 
@@ -316,6 +319,18 @@ $promptText
         }
     }
 
+    private fun sha256(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(64 * 1024)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                digest.update(buffer, 0, count)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
     /**
      * Parses the LLM's JSON response, falling back gracefully if format differs.
      */

@@ -116,7 +116,8 @@ fun ScreenshotDetailScreen(
     screenshotId: String,
     viewModel: ScreenshotsViewModel,
     onNavigateBack: () -> Unit,
-    onNavigateToScreenshot: (String) -> Unit
+    onNavigateToScreenshot: (String) -> Unit,
+    onNavigateToPhotoEditor: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
@@ -376,10 +377,14 @@ fun ScreenshotDetailScreen(
         onDismiss = onNavigateBack,
         onToggleFavorite = { viewModel.toggleFavorite(it) },
         onEdit = { currentItem ->
-            editTitle = currentItem.title
-            editDescription = currentItem.description
-            editNotes = currentItem.notes ?: ""
-            showEditDetailsDialog = true
+            if (!currentItem.isVideo) {
+                onNavigateToPhotoEditor(currentItem.id)
+            } else {
+                editTitle = currentItem.title
+                editDescription = currentItem.description
+                editNotes = currentItem.notes ?: ""
+                showEditDetailsDialog = true
+            }
         },
         onDelete = {
             showDeleteConfirm = true
@@ -440,6 +445,16 @@ fun ScreenshotDetailScreen(
             )
         },
         overflowMenuContent = { currentItem, dismissMenu ->
+            if (!currentItem.isVideo) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.photo_editor)) },
+                    leadingIcon = { Icon(AppIcons.Tune, contentDescription = null) },
+                    onClick = {
+                        dismissMenu()
+                        onNavigateToPhotoEditor(currentItem.id)
+                    }
+                )
+            }
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.edit_details)) },
                 leadingIcon = {

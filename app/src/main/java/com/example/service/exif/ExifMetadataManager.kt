@@ -195,9 +195,11 @@ class ExifMetadataManager(private val appContext: Context? = null) {
      */
     /** Uses ExifTool against a private working copy, then writes the result back to the URI. */
     fun writeExifToUri(context: Context, uri: Uri, data: ExifData): Result<Unit> {
-        exifToolService?.let {
-            val result = it.writeUri(context, uri, data)
-            if (result.isSuccess) return result
+        if (com.amresalehin.emreshots.service.exiftool.ExifToolRunner.isInstalled(context)) {
+            exifToolService?.let {
+                val result = it.writeUri(context, uri, data)
+                if (result.isSuccess) return result
+            }
         }
         return writeExifToUriFallback(context, uri, data)
     }

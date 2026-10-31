@@ -384,8 +384,8 @@ TopAppBar(
                             Text(
                                 when {
                                     !ocrEnabled -> stringResource(R.string.ocr_disabled_in_settings)
-                                    ocrPendingCount > 0 -> "stringResource(R.string.media_waiting_for_ocr, ocrPendingCount)"
-                                    else -> "All media has OCR text"
+                                    ocrPendingCount > 0 -> stringResource(R.string.media_waiting_for_ocr, ocrPendingCount)
+                                    else -> stringResource(R.string.all_media_has_ocr_text)
                                 },
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant

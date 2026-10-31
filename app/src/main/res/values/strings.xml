@@ -20,6 +20,7 @@
     <string name="clear_gps">Clear GPS</string>
     <string name="delete">Delete</string>
     <string name="edit">Edit</string>
+    <string name="photo_editor">Photo Editor</string>
     <string name="no_failed_items_to_retry">There are no failed media items to retry.</string>
     <string name="search">Search</string>
     <string name="more_options">More options</string>

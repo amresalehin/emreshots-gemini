@@ -16,4 +16,7 @@ sealed class Screen(val route: String) {
     data object ScreenshotDetail : Screen("screenshot_detail/{screenshotId}") {
         fun createRoute(screenshotId: String) = "screenshot_detail/$screenshotId"
     }
+    data object PhotoEditor : Screen("photo_editor/{screenshotId}") {
+        fun createRoute(screenshotId: String) = "photo_editor/$screenshotId"
+    }
 }

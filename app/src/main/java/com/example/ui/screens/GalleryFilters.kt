@@ -127,11 +127,22 @@ Row(
     horizontalArrangement = Arrangement.spacedBy(6.dp),
     verticalAlignment = Alignment.CenterVertically
 ) {
-    ScreenshotFilter.entries.filter { it != ScreenshotFilter.ALL }.forEach { filter ->
-        val isSelected = selectedFilter == filter
+    ScreenshotFilter.entries.forEach { filter ->
+        val isSelected = if (filter == ScreenshotFilter.ALL) {
+            selectedFilter == ScreenshotFilter.ALL && selectedMediaType == null
+        } else {
+            selectedFilter == filter
+        }
         FilterChip(
             selected = isSelected,
-            onClick = { viewModel.setFilter(filter) },
+            onClick = {
+                if (filter == ScreenshotFilter.ALL) {
+                    viewModel.setFilter(ScreenshotFilter.ALL)
+                    onSelectedMediaTypeChange(null)
+                } else {
+                    viewModel.setFilter(filter)
+                }
+            },
             label = {
                 Text(
                     text = filter.displayName,

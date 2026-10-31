@@ -58,6 +58,7 @@ import com.amresalehin.emreshots.ui.screens.OnDeviceVisionScreen
 import com.amresalehin.emreshots.ui.screens.OcrSettingsScreen
 import com.amresalehin.emreshots.ui.screens.BackupRestoreScreen
 import com.amresalehin.emreshots.ui.screens.CollectionsScreen
+import com.amresalehin.emreshots.ui.screens.PhotoEditorScreen
 import com.amresalehin.emreshots.ui.theme.EmreShotsTheme
 import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
 import com.amresalehin.emreshots.service.media.BackgroundSyncScheduler
@@ -114,6 +115,13 @@ class MainActivity : ComponentActivity() {
                             mediaPermissionLauncher.launch(DeviceMediaScanner.getRequiredPermissions())
                         }) {
                             Text("Allow full media access")
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        androidx.compose.material3.OutlinedButton(onClick = {
+                            preferences.edit().putBoolean("media_setup_complete", true).apply()
+                            setupComplete = true
+                        }) {
+                            Text("Continue with limited access")
                         }
                     }
                 } else {
@@ -277,6 +285,23 @@ class MainActivity : ComponentActivity() {
                                         }
                                         launchSingleTop = true
                                     }
+                                },
+                                onNavigateToPhotoEditor = { id ->
+                                    navController.navigate(Screen.PhotoEditor.createRoute(id))
+                                }
+                            )
+                        }
+
+                        composable(
+                            route = Screen.PhotoEditor.route,
+                            arguments = listOf(navArgument("screenshotId") { type = NavType.StringType })
+                        ) { backStackEntry ->
+                            val screenshotId = backStackEntry.arguments?.getString("screenshotId") ?: ""
+                            PhotoEditorScreen(
+                                screenshotId = screenshotId,
+                                onNavigateBack = { navController.popBackStack() },
+                                onSaveComplete = {
+                                    navController.popBackStack()
                                 }
                             )
                         }

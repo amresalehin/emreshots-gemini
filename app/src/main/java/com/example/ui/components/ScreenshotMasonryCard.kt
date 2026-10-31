@@ -72,8 +72,9 @@ fun ScreenshotMasonryCard(
     screenshot: ScreenshotItem,
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit,
-    showFileName: Boolean = true,
-    showTags: Boolean = true,
+    showFileName: Boolean = false,
+    showTags: Boolean = false,
+    showFavoriteButton: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -223,42 +224,44 @@ fun ScreenshotMasonryCard(
             }
 
             // Top Right Favorite Button
-            IconButton(
-                onClick = onToggleFavorite,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(2.dp)
-                    .size(36.dp)
-                    .testTag("btn_fav_${screenshot.id}")
-            ) {
-                if (screenshot.isFavorite) {
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.Black.copy(alpha = 0.45f),
-                        modifier = Modifier.size(28.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.Favorite,
-                                contentDescription = if (screenshot.isFavorite) stringResource(R.string.remove_from_favorites) else stringResource(R.string.add_to_favorites),
-                                tint = Color(0xFFF43F5E),
-                                modifier = Modifier.size(16.dp)
-                            )
+            if (showFavoriteButton) {
+                IconButton(
+                    onClick = onToggleFavorite,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(2.dp)
+                        .size(36.dp)
+                        .testTag("btn_fav_${screenshot.id}")
+                ) {
+                    if (screenshot.isFavorite) {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.Black.copy(alpha = 0.45f),
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Favorite,
+                                    contentDescription = if (screenshot.isFavorite) stringResource(R.string.remove_from_favorites) else stringResource(R.string.add_to_favorites),
+                                    tint = Color(0xFFF43F5E),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
-                    }
-                } else {
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.Black.copy(alpha = 0.48f),
-                        modifier = Modifier.size(28.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.FavoriteBorder,
-                                contentDescription = stringResource(R.string.add_to_favorites),
-                                tint = Color.White.copy(alpha = 0.96f),
-                                modifier = Modifier.size(16.dp)
-                            )
+                    } else {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.Black.copy(alpha = 0.48f),
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.FavoriteBorder,
+                                    contentDescription = stringResource(R.string.add_to_favorites),
+                                    tint = Color.White.copy(alpha = 0.96f),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
                     }
                 }

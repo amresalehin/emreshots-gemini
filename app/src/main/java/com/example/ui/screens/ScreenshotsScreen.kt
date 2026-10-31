@@ -136,6 +136,7 @@ fun ScreenshotsScreen(
     val ocrEnabled by viewModel.ocrEnabled.collectAsStateWithLifecycle()
     val showFileNames by viewModel.showFileNames.collectAsStateWithLifecycle()
     val showTags by viewModel.showTags.collectAsStateWithLifecycle()
+    val showFavoriteButton by viewModel.showFavoriteButton.collectAsStateWithLifecycle()
     val isPullToRefreshInProgress by viewModel.isPullToRefreshInProgress.collectAsStateWithLifecycle()
 
     var isSearchExpanded by remember { mutableStateOf(false) }
@@ -258,6 +259,7 @@ fun ScreenshotsScreen(
                 viewMode = viewMode,
                 showFileNames = showFileNames,
                 showTags = showTags,
+                showFavoriteButton = showFavoriteButton,
                 aiVisionPendingCount = aiVisionPendingCount,
                 isAnalyzing = isAnalyzing,
                 allScreenshots = allScreenshots,
@@ -295,6 +297,7 @@ fun ScreenshotsScreen(
                 gridColumns = gridColumns,
                 showFileNames = showFileNames,
                 showTags = showTags,
+                showFavoriteButton = showFavoriteButton,
                 gridState = gridState,
                 staggeredGridState = staggeredGridState,
                 navBarBottom = navBarBottom,

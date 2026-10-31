@@ -149,10 +149,12 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     val visionCaptionTagProviderId: StateFlow<String> = _visionCaptionTagProviderId.asStateFlow()
     val onDeviceVisionModel: StateFlow<String> = _onDeviceVisionModel.asStateFlow()
 
-    private val _showFileNames = MutableStateFlow(true)
+    private val _showFileNames = MutableStateFlow(false)
     val showFileNames: StateFlow<Boolean> = _showFileNames.asStateFlow()
-    private val _showTags = MutableStateFlow(true)
+    private val _showTags = MutableStateFlow(false)
     val showTags: StateFlow<Boolean> = _showTags.asStateFlow()
+    private val _showFavoriteButton = MutableStateFlow(false)
+    val showFavoriteButton: StateFlow<Boolean> = _showFavoriteButton.asStateFlow()
 
     private val _gridColumns = MutableStateFlow(3)
     val gridColumns: StateFlow<Int> = _gridColumns.asStateFlow()
@@ -450,6 +452,9 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             appPreferences.showTags.collect { _showTags.value = it }
         }
+        viewModelScope.launch {
+            appPreferences.showFavoriteButton.collect { _showFavoriteButton.value = it }
+        }
 
         viewModelScope.launch { appPreferences.ocrEnabled.collect { _ocrEnabled.value = it } }
         viewModelScope.launch { appPreferences.ocrLanguage.collect { _ocrLanguage.value = it } }
@@ -651,6 +656,15 @@ class ScreenshotsViewModel(application: Application) : AndroidViewModel(applicat
     fun setShowTags(value: Boolean) {
         _showTags.value = value
         viewModelScope.launch { appPreferences.setShowTags(value) }
+    }
+
+    fun setShowFavoriteButton(value: Boolean) {
+        _showFavoriteButton.value = value
+        viewModelScope.launch { appPreferences.setShowFavoriteButton(value) }
+    }
+
+    fun setHideFavoriteButton(value: Boolean) {
+        setShowFavoriteButton(!value)
     }
 
     fun showMessage(msg: String) {

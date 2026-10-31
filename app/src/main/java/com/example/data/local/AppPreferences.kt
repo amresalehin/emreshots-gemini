@@ -26,6 +26,7 @@ class AppPreferences(private val context: Context) {
         val visionCaptionTagProviderId = stringPreferencesKey("vision_caption_tag_provider_id")
         val showFileNames = booleanPreferencesKey("gallery_show_file_names")
         val showTags = booleanPreferencesKey("gallery_show_tags")
+        val showFavoriteButton = booleanPreferencesKey("gallery_show_favorite_button")
         val ocrLanguage = stringPreferencesKey("ocr_language")
     }
 
@@ -41,8 +42,9 @@ class AppPreferences(private val context: Context) {
     val onDeviceVisionMode: Flow<String> = context.appPreferencesDataStore.data.map { it[Keys.onDeviceVisionMode] ?: "Automatic" }
     val onDeviceVisionModel: Flow<String> = context.appPreferencesDataStore.data.map { it[Keys.onDeviceVisionModel] ?: "auto" }
     val visionCaptionTagProviderId: Flow<String> = context.appPreferencesDataStore.data.map { it[Keys.visionCaptionTagProviderId] ?: "" }
-    val showFileNames: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.showFileNames] ?: true }
-    val showTags: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.showTags] ?: true }
+    val showFileNames: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.showFileNames] ?: false }
+    val showTags: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.showTags] ?: false }
+    val showFavoriteButton: Flow<Boolean> = context.appPreferencesDataStore.data.map { it[Keys.showFavoriteButton] ?: false }
 
     suspend fun setOcrEnabled(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.ocrEnabled] = value }
     suspend fun setOcrLanguage(value: String) = context.appPreferencesDataStore.edit { it[Keys.ocrLanguage] = value }
@@ -54,6 +56,7 @@ class AppPreferences(private val context: Context) {
     suspend fun setGridColumns(value: Int) = context.appPreferencesDataStore.edit { it[Keys.gridColumns] = value.coerceIn(2, 5) }
     suspend fun setShowFileNames(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.showFileNames] = value }
     suspend fun setShowTags(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.showTags] = value }
+    suspend fun setShowFavoriteButton(value: Boolean) = context.appPreferencesDataStore.edit { it[Keys.showFavoriteButton] = value }
     suspend fun setOnDeviceVisionMode(value: String) = context.appPreferencesDataStore.edit { it[Keys.onDeviceVisionMode] = value }
     suspend fun setOnDeviceVisionModel(value: String) = context.appPreferencesDataStore.edit { it[Keys.onDeviceVisionModel] = value }
     suspend fun setVisionCaptionTagProviderId(value: String) = context.appPreferencesDataStore.edit { it[Keys.visionCaptionTagProviderId] = value }

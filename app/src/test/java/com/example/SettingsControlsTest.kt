@@ -53,4 +53,34 @@ class SettingsControlsTest {
     fun testGalleryDefaultsToThreeColumns() {
         assertEquals(3, viewModel.gridColumns.value)
     }
+
+    @Test
+    fun testFavoriteButtonOverlayToggle() {
+        assertFalse(viewModel.showFavoriteButton.value)
+        viewModel.setShowFavoriteButton(true)
+        assertTrue(viewModel.showFavoriteButton.value)
+        viewModel.setShowFavoriteButton(false)
+        assertFalse(viewModel.showFavoriteButton.value)
+
+        // Test hide helper
+        viewModel.setHideFavoriteButton(false)
+        assertTrue(viewModel.showFavoriteButton.value)
+        viewModel.setHideFavoriteButton(true)
+        assertFalse(viewModel.showFavoriteButton.value)
+    }
+
+    @Test
+    fun testThumbnailOverlayToggles() {
+        assertFalse(viewModel.showFileNames.value)
+        viewModel.setShowFileNames(true)
+        assertTrue(viewModel.showFileNames.value)
+        viewModel.setShowFileNames(false)
+        assertFalse(viewModel.showFileNames.value)
+
+        assertFalse(viewModel.showTags.value)
+        viewModel.setShowTags(true)
+        assertTrue(viewModel.showTags.value)
+        viewModel.setShowTags(false)
+        assertFalse(viewModel.showTags.value)
+    }
 }

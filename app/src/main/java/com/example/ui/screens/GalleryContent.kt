@@ -132,8 +132,9 @@ internal fun ColumnScope.GalleryContent(
     selectedFilter: ScreenshotFilter,
     viewMode: GalleryViewMode,
     gridColumns: Int,
-    showFileNames: Boolean,
-    showTags: Boolean,
+    showFileNames: Boolean = false,
+    showTags: Boolean = false,
+    showFavoriteButton: Boolean = false,
     gridState: LazyGridState,
     staggeredGridState: LazyStaggeredGridState,
     navBarBottom: Dp,
@@ -252,7 +253,8 @@ PullToRefreshBox(
                             onClick = { onNavigateToDetail(item.id) },
                             onToggleFavorite = { viewModel.toggleFavorite(item) },
                             showFileName = showFileNames,
-                                 showTags = showTags
+                            showTags = showTags,
+                            showFavoriteButton = showFavoriteButton
                         )
                     }
                 }
@@ -345,29 +347,33 @@ PullToRefreshBox(
                                 onClick = { onNavigateToDetail(item.id) },
                                 onToggleFavorite = { viewModel.toggleFavorite(item) },
                                 showFileName = showFileNames,
-                                showTags = showTags
+                                showTags = showTags,
+                                showFavoriteButton = showFavoriteButton
                             )
                             GalleryViewMode.FEED -> ScreenshotFeedCard(
                                 screenshot = item,
                                 onClick = { onNavigateToDetail(item.id) },
                                 onToggleFavorite = { viewModel.toggleFavorite(item) },
                                 showFileName = showFileNames,
-                                 showTags = showTags
+                                showTags = showTags,
+                                showFavoriteButton = showFavoriteButton
                             )
                             GalleryViewMode.LIST -> ScreenshotListItem(
                                 screenshot = item,
                                 onClick = { onNavigateToDetail(item.id) },
                                 onToggleFavorite = { viewModel.toggleFavorite(item) },
                                 showFileName = showFileNames,
-                                 showTags = showTags
+                                showTags = showTags,
+                                showFavoriteButton = showFavoriteButton
                             )
                             GalleryViewMode.MASONRY -> ScreenshotMasonryCard(
-                            screenshot = item,
-                            onClick = { onNavigateToDetail(item.id) },
-                            onToggleFavorite = { viewModel.toggleFavorite(item) },
-                            showFileName = showFileNames,
-                                 showTags = showTags
-                        )
+                                screenshot = item,
+                                onClick = { onNavigateToDetail(item.id) },
+                                onToggleFavorite = { viewModel.toggleFavorite(item) },
+                                showFileName = showFileNames,
+                                showTags = showTags,
+                                showFavoriteButton = showFavoriteButton
+                            )
                         }
                     }
                 }

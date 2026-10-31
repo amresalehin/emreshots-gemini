@@ -29,6 +29,7 @@
     <string name="view">View</string>
     <string name="show_file_names">Show file names</string>
     <string name="show_tags">Show tags</string>
+    <string name="show_favorite_button">Show favorite button</string>
     <string name="ai_vision">AI Vision</string>
     <string name="media_waiting_for_analysis">%1$d media waiting for analysis</string>
     <string name="everything_is_analyzed">Everything is analyzed</string>

@@ -375,6 +375,34 @@ fun ScreenshotDetailScreen(
         exifDataMap = exifDataMap,
         onDismiss = onNavigateBack,
         onToggleFavorite = { viewModel.toggleFavorite(it) },
+        onEdit = { currentItem ->
+            editTitle = currentItem.title
+            editDescription = currentItem.description
+            editNotes = currentItem.notes ?: ""
+            showEditDetailsDialog = true
+        },
+        onDelete = {
+            showDeleteConfirm = true
+        },
+        onShare = { currentItem ->
+            val uri = currentItem.uriString?.let(Uri::parse)
+            if (uri == null) {
+                viewModel.showMessage(context.getString(R.string.sharing_unavailable_for_item))
+            } else {
+                runCatching {
+                    val type = context.contentResolver.getType(uri)
+                        ?: if (currentItem.isVideo) "video/*" else "image/*"
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        this.type = type
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    context.startActivity(Intent.createChooser(intent, context.getString(R.string.share_media)))
+                }.onFailure {
+                    viewModel.showMessage(context.getString(R.string.unable_to_share_item))
+                }
+            }
+        },
         drawerContent = { item ->
             val itemFile = File(item.filePath)
             ScreenshotDetailContent(

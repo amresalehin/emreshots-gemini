@@ -144,8 +144,9 @@ internal fun GalleryHeader(
     groupByOption: MediaGroupBy,
     onShowGroupDialog: (Boolean) -> Unit,
     viewMode: GalleryViewMode,
-    showFileNames: Boolean,
-    showTags: Boolean,
+    showFileNames: Boolean = false,
+    showTags: Boolean = false,
+    showFavoriteButton: Boolean = false,
     aiVisionPendingCount: Int,
     isAnalyzing: Boolean,
     allScreenshots: List<ScreenshotItem>,
@@ -341,12 +342,20 @@ TopAppBar(
                 GalleryMenuToggle(
                     label = stringResource(R.string.show_file_names),
                     checked = showFileNames,
-                    onCheckedChange = viewModel::setShowFileNames
+                    onCheckedChange = viewModel::setShowFileNames,
+                    switchTag = "toggle_show_file_names"
                 )
                 GalleryMenuToggle(
                     label = stringResource(R.string.show_tags),
                     checked = showTags,
-                    onCheckedChange = viewModel::setShowTags
+                    onCheckedChange = viewModel::setShowTags,
+                    switchTag = "toggle_show_tags"
+                )
+                GalleryMenuToggle(
+                    label = stringResource(R.string.show_favorite_button),
+                    checked = showFavoriteButton,
+                    onCheckedChange = viewModel::setShowFavoriteButton,
+                    switchTag = "toggle_favorite_button"
                 )
                 androidx.compose.material3.HorizontalDivider()
                 DropdownMenuItem(
@@ -412,13 +421,25 @@ TopAppBar(
 }
 
 @Composable
-internal fun GalleryMenuToggle(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+internal fun GalleryMenuToggle(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    switchTag: String? = null
+) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp, vertical = 2.dp)
+            .then(if (switchTag != null) Modifier.testTag("row_$switchTag") else Modifier),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = if (switchTag != null) Modifier.testTag(switchTag) else Modifier
+        )
     }
 }
 

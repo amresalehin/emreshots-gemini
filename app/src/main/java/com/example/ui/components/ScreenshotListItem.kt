@@ -74,6 +74,7 @@ fun ScreenshotListItem(
     onToggleFavorite: () -> Unit,
     showFileName: Boolean = true,
     showTags: Boolean = true,
+    showFavoriteButton: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -235,16 +236,18 @@ fun ScreenshotListItem(
             }
 
             // Favorite toggle
-            IconButton(
-                onClick = onToggleFavorite,
-                modifier = Modifier.testTag("list_fav_${screenshot.id}")
-            ) {
-                Icon(
-                    imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = if (screenshot.isFavorite) stringResource(R.string.remove_from_favorites) else stringResource(R.string.add_to_favorites),
-                    tint = if (screenshot.isFavorite) DangerRose else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
-                )
+            if (showFavoriteButton) {
+                IconButton(
+                    onClick = onToggleFavorite,
+                    modifier = Modifier.testTag("list_fav_${screenshot.id}")
+                ) {
+                    Icon(
+                        imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = if (screenshot.isFavorite) stringResource(R.string.remove_from_favorites) else stringResource(R.string.add_to_favorites),
+                        tint = if (screenshot.isFavorite) DangerRose else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }

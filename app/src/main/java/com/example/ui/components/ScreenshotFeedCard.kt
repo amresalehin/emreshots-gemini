@@ -76,8 +76,9 @@ fun ScreenshotFeedCard(
     screenshot: ScreenshotItem,
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit,
-    showFileName: Boolean = true,
-    showTags: Boolean = true,
+    showFileName: Boolean = false,
+    showTags: Boolean = false,
+    showFavoriteButton: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -213,21 +214,23 @@ fun ScreenshotFeedCard(
                     }
 
                     // Favorite button
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.Black.copy(alpha = 0.45f),
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        IconButton(
-                            onClick = onToggleFavorite,
-                            modifier = Modifier.testTag("feed_fav_${screenshot.id}")
+                    if (showFavoriteButton) {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.Black.copy(alpha = 0.45f),
+                            modifier = Modifier.size(36.dp)
                         ) {
-                            Icon(
-                                imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                contentDescription = if (screenshot.isFavorite) stringResource(R.string.remove_from_favorites) else stringResource(R.string.add_to_favorites),
-                                tint = if (screenshot.isFavorite) DangerRose else MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(18.dp)
-                            )
+                            IconButton(
+                                onClick = onToggleFavorite,
+                                modifier = Modifier.testTag("feed_fav_${screenshot.id}")
+                            ) {
+                                Icon(
+                                    imageVector = if (screenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                    contentDescription = if (screenshot.isFavorite) stringResource(R.string.remove_from_favorites) else stringResource(R.string.add_to_favorites),
+                                    tint = if (screenshot.isFavorite) DangerRose else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
                     }
                 }

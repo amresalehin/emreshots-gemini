@@ -6,6 +6,7 @@ import com.amresalehin.emreshots.ui.theme.DangerRose
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -31,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -44,6 +46,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
@@ -105,6 +108,10 @@ fun ZoomableImageViewer(
     exifDataMap: Map<String, ExifData> = emptyMap(),
     onDismiss: () -> Unit,
     onToggleFavorite: (ScreenshotItem) -> Unit = {},
+    onEdit: (ScreenshotItem) -> Unit = {},
+    onDelete: (ScreenshotItem) -> Unit = {},
+    onShare: ((ScreenshotItem) -> Unit)? = null,
+    showDetailsButton: Boolean = false,
     drawerContent: (@Composable (ScreenshotItem) -> Unit)? = null,
     onMore: (ScreenshotItem) -> Unit = {},
     overflowMenuContent: (@Composable (ScreenshotItem, onDismissMenu: () -> Unit) -> Unit)? = null
@@ -417,138 +424,96 @@ fun ZoomableImageViewer(
                 }
             }
 
-            // Top HUD Bar
+            // Top Floating Controls
             AnimatedVisibility(
                 visible = showControls && dismissOffsetY.value == 0f,
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier.align(Alignment.TopCenter)
+                enter = fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)),
+                exit = fadeOut(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                Surface(
-                    color = Color.Black.copy(alpha = 0.65f),
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            IconButton(
-                                onClick = onDismiss,
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .testTag("btn_close_fullscreen_image")
-                                    .testTag("btn_detail_back")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = stringResource(R.string.back),
-                                    tint = Color.White
-                                )
-                            }
+                    FloatingCircleIconButton(
+                        icon = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.back),
+                        testTag = "btn_detail_back",
+                        onClick = onDismiss
+                    )
 
-                            Column {
-                                Text(
-                                    text = currentScreenshot.title.ifBlank {
-                                        if (currentScreenshot.isVideo) stringResource(R.string.video) else stringResource(R.string.photo)
-                                    },
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = if (screenshots.size > 1) {
-                                        "${pagerState.currentPage + 1} / ${screenshots.size} · " +
-                                            if (currentScreenshot.width > 0 && currentScreenshot.height > 0)
-                                                "${currentScreenshot.width} × ${currentScreenshot.height} px"
-                                            else "High Resolution"
-                                    } else {
-                                        if (currentScreenshot.width > 0 && currentScreenshot.height > 0)
-                                            "${currentScreenshot.width} × ${currentScreenshot.height} px"
-                                        else "High Resolution"
-                                    },
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White.copy(alpha = 0.7f)
-                                )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (scaleAnim.value > 1.1f) {
+                            Surface(
+                                onClick = { resetZoomAnimated() },
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primary,
+                                shadowElevation = 4.dp,
+                                modifier = Modifier.size(44.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                                    Text(
+                                        text = "${(scaleAnim.value * 100).toInt()}%",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                }
                             }
                         }
 
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            if (scaleAnim.value > 1.1f) {
-                                Surface(
-                                    shape = MaterialTheme.shapes.medium,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(end = 4.dp)
-                                ) {
-                                    IconButton(
-                                        onClick = { resetZoomAnimated() },
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Text(
-                                            text = "${(scaleAnim.value * 100).toInt()}%",
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onPrimary
-                                        )
+                        FloatingCircleIconButton(
+                            icon = Icons.Default.Share,
+                            contentDescription = stringResource(R.string.share),
+                            testTag = "btn_detail_top_share",
+                            onClick = {
+                                if (onShare != null) {
+                                    onShare(currentScreenshot)
+                                } else {
+                                    shareScreenshot(currentScreenshot, context)
+                                }
+                            }
+                        )
+
+                        FloatingCircleIconButton(
+                            icon = if (currentScreenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = if (currentScreenshot.isFavorite) stringResource(R.string.remove_from_favorites) else stringResource(R.string.add_to_favorites),
+                            tint = if (currentScreenshot.isFavorite) DangerRose else Color.White,
+                            testTag = "btn_detail_favorite",
+                            onClick = { onToggleFavorite(currentScreenshot) }
+                        )
+
+                        var showOverflowMenu by remember { mutableStateOf(false) }
+
+                        Box {
+                            FloatingCircleIconButton(
+                                icon = Icons.Default.MoreVert,
+                                contentDescription = stringResource(R.string.more_actions),
+                                testTag = "btn_detail_overflow",
+                                onClick = {
+                                    if (overflowMenuContent != null) {
+                                        showOverflowMenu = true
+                                    } else {
+                                        onMore(currentScreenshot)
                                     }
                                 }
-                            }
+                            )
 
-                            IconButton(
-                                onClick = { onToggleFavorite(currentScreenshot) },
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .testTag("btn_detail_favorite")
-                            ) {
-                                Icon(
-                                    imageVector = if (currentScreenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                    contentDescription = if (currentScreenshot.isFavorite) stringResource(R.string.remove_from_favorites) else stringResource(R.string.add_to_favorites),
-                                    tint = if (currentScreenshot.isFavorite) DangerRose else Color.White
-                                )
-                            }
-
-                            var showOverflowMenu by remember { mutableStateOf(false) }
-
-                            Box {
-                                IconButton(
-                                    onClick = {
-                                        if (overflowMenuContent != null) {
-                                            showOverflowMenu = true
-                                        } else {
-                                            onMore(currentScreenshot)
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .testTag("btn_detail_overflow")
+                            if (overflowMenuContent != null) {
+                                DropdownMenu(
+                                    expanded = showOverflowMenu,
+                                    onDismissRequest = { showOverflowMenu = false }
                                 ) {
-                                    Icon(
-                                        Icons.Default.MoreVert,
-                                        contentDescription = stringResource(R.string.more_actions),
-                                        tint = Color.White
-                                    )
-                                }
-
-                                if (overflowMenuContent != null) {
-                                    DropdownMenu(
-                                        expanded = showOverflowMenu,
-                                        onDismissRequest = { showOverflowMenu = false }
-                                    ) {
-                                        overflowMenuContent(currentScreenshot) {
-                                            showOverflowMenu = false
-                                        }
+                                    overflowMenuContent(currentScreenshot) {
+                                        showOverflowMenu = false
                                     }
                                 }
                             }
@@ -682,149 +647,69 @@ fun ZoomableImageViewer(
                 }
             }
 
-            // Bottom HUD Bar
+            // Bottom Floating Action Buttons
             AnimatedVisibility(
                 visible = showControls && drawerHeightFraction <= 0.04f && dismissOffsetY.value == 0f,
-                enter = fadeIn(),
-                exit = fadeOut(),
+                enter = fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)),
+                exit = fadeOut(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)),
                 modifier = Modifier.align(Alignment.BottomCenter)
             ) {
-                Surface(
-                    color = Color.Black.copy(alpha = 0.7f),
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier
+                        .navigationBarsPadding()
+                        .padding(bottom = 28.dp)
+                        .testTag("viewer_bottom_toolbar"),
+                    horizontalArrangement = Arrangement.spacedBy(64.dp, Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().testTag("viewer_bottom_toolbar"),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                            verticalAlignment = Alignment.CenterVertically
+                    FloatingActionButtonWithLabel(
+                        icon = AppIcons.Tune,
+                        label = stringResource(R.string.edit),
+                        contentDescription = stringResource(R.string.edit),
+                        testTag = "btn_detail_floating_edit",
+                        onClick = { onEdit(currentScreenshot) }
+                    )
+
+                    if (showDetailsButton && drawerContent != null) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                IconButton(onClick = { onToggleFavorite(currentScreenshot) }) {
+                            Surface(
+                                onClick = {
+                                    animateDrawerTo(0.62f)
+                                    showControls = false
+                                },
+                                shape = CircleShape,
+                                color = Color(0xFF262628).copy(alpha = 0.85f),
+                                shadowElevation = 6.dp,
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .testTag("btn_detail_floating_details")
+                            ) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
                                     Icon(
-                                        imageVector = if (currentScreenshot.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                        contentDescription = if (currentScreenshot.isFavorite) "Remove from favorites" else "Add to favorites",
-                                        tint = if (currentScreenshot.isFavorite) DangerRose else Color.White
-                                    )
-                                }
-                                Text("Favorite", color = Color.White, fontSize = 12.sp)
-                            }
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                IconButton(
-                                    onClick = {
-                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                            type = "text/plain"
-                                            putExtra(Intent.EXTRA_SUBJECT, currentScreenshot.title)
-                                            putExtra(Intent.EXTRA_TEXT, "${currentScreenshot.title}\n${currentScreenshot.description}")
-                                        }
-                                        runCatching {
-                                            context.startActivity(Intent.createChooser(shareIntent, "Share media"))
-                                        }
-                                    }
-                                ) {
-                                    Icon(Icons.Default.Share, contentDescription = stringResource(R.string.share), tint = Color.White)
-                                }
-                                Text("Share", color = Color.White, fontSize = 12.sp)
-                            }
-                            if (drawerContent != null) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    IconButton(onClick = {
-                                        animateDrawerTo(0.62f)
-                                        showControls = false
-                                    }) {
-                                        Icon(AppIcons.ExpandLess, contentDescription = "Show details", tint = Color.White)
-                                    }
-                                    Text("Details", color = Color.White, fontSize = 12.sp)
-                                }
-                            }
-                        }
-
-                        // Quick metadata chips row
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (currentScreenshot.aiProcessed) {
-                                Surface(
-                                    shape = MaterialTheme.shapes.medium,
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            AppIcons.AutoAwesome,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(12.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            text = currentScreenshot.aiModelUsed ?: "AI Indexed",
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = Color.White
-                                        )
-                                    }
-                                }
-                            }
-
-                            if (currentScreenshot.fileSize > 0) {
-                                val mb = currentScreenshot.fileSize.toDouble() / (1024 * 1024)
-                                Surface(
-                                    shape = MaterialTheme.shapes.medium,
-                                    color = Color.White.copy(alpha = 0.15f)
-                                ) {
-                                    Text(
-                                        text = String.format(Locale.US, "%.2f MB", mb),
-                                        fontSize = 11.sp,
-                                        color = Color.White,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        imageVector = AppIcons.ExpandLess,
+                                        contentDescription = "Details",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(24.dp)
                                     )
                                 }
                             }
-
-                            if (exifData.cameraModel != null) {
-                                Surface(
-                                    shape = MaterialTheme.shapes.medium,
-                                    color = Color.White.copy(alpha = 0.15f)
-                                ) {
-                                    Text(
-                                        text = exifData.cameraModel,
-                                        fontSize = 11.sp,
-                                        color = Color.White,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.weight(1f))
-
-                            Text(
-                                text = "Swipe down to exit · Swipe to browse",
-                                fontSize = 11.sp,
-                                color = Color.White.copy(alpha = 0.6f)
-                            )
-                        }
-
-                        if (currentScreenshot.description.isNotBlank()) {
-                            Text(
-                                text = currentScreenshot.description,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.9f),
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                            Text("Details", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                         }
                     }
+
+                    FloatingActionButtonWithLabel(
+                        icon = Icons.Default.Delete,
+                        label = stringResource(R.string.delete),
+                        contentDescription = stringResource(R.string.delete),
+                        testTag = "btn_detail_floating_delete",
+                        onClick = { onDelete(currentScreenshot) }
+                    )
                 }
             }
         }
@@ -838,6 +723,10 @@ fun ZoomableImageViewer(
     exifData: ExifData = ExifData(),
     onDismiss: () -> Unit,
     onToggleFavorite: (ScreenshotItem) -> Unit = {},
+    onEdit: (ScreenshotItem) -> Unit = {},
+    onDelete: (ScreenshotItem) -> Unit = {},
+    onShare: ((ScreenshotItem) -> Unit)? = null,
+    showDetailsButton: Boolean = false,
     drawerContent: (@Composable () -> Unit)? = null,
     onMore: () -> Unit = {},
     overflowMenuContent: (@Composable (ScreenshotItem, onDismissMenu: () -> Unit) -> Unit)? = null
@@ -848,8 +737,109 @@ fun ZoomableImageViewer(
         exifDataMap = mapOf(screenshot.id to exifData),
         onDismiss = onDismiss,
         onToggleFavorite = onToggleFavorite,
+        onEdit = onEdit,
+        onDelete = onDelete,
+        onShare = onShare,
+        showDetailsButton = showDetailsButton,
         drawerContent = if (drawerContent != null) { { _ -> drawerContent() } } else null,
         onMore = { onMore() },
         overflowMenuContent = overflowMenuContent
     )
+}
+
+@Composable
+private fun FloatingCircleIconButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    testTag: String,
+    tint: Color = Color.White,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = Color(0xFF262628).copy(alpha = 0.85f),
+        shadowElevation = 6.dp,
+        modifier = Modifier
+            .size(46.dp)
+            .testTag(testTag)
+            .testTag("btn_close_fullscreen_image")
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = tint,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun FloatingActionButtonWithLabel(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    contentDescription: String,
+    testTag: String,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Surface(
+            onClick = onClick,
+            shape = CircleShape,
+            color = Color(0xFF262628).copy(alpha = 0.85f),
+            shadowElevation = 6.dp,
+            modifier = Modifier
+                .size(56.dp)
+                .testTag(testTag)
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = contentDescription,
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+        Text(
+            text = label,
+            color = Color.White,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+private fun shareScreenshot(item: ScreenshotItem, context: Context) {
+    val uri = item.uriString?.let { runCatching { Uri.parse(it) }.getOrNull() }
+    val intent = if (uri != null) {
+        val type = context.contentResolver.getType(uri) ?: if (item.isVideo) "video/*" else "image/*"
+        Intent(Intent.ACTION_SEND).apply {
+            this.type = type
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_SUBJECT, item.title)
+            putExtra(Intent.EXTRA_TEXT, item.description.ifBlank { item.title })
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+    } else {
+        Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, item.title)
+            putExtra(Intent.EXTRA_TEXT, "${item.title}\n${item.description}")
+        }
+    }
+    runCatching {
+        context.startActivity(Intent.createChooser(intent, "Share media"))
+    }
 }

@@ -141,7 +141,7 @@ private fun VideoPlayerSurface(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(Color.Black)
             .pointerInput(videoUri) {
                 detectTapGestures(
                     onTap = {
@@ -160,6 +160,8 @@ private fun VideoPlayerSurface(
                         FrameLayout.LayoutParams.MATCH_PARENT
                     )
                     setVideoURI(videoUri)
+                    isClickable = false
+                    isFocusable = false
                     setOnPreparedListener { mp ->
                         mediaPlayerRef = mp
                         isPrepared = true

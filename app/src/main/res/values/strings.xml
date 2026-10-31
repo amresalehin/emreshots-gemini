@@ -250,4 +250,6 @@
     <string name="photo">Photo</string>
     <string name="gallery_search_placeholder">Search titles, notes, tags…</string>
     <string name="settings">Settings</string>
+    <string name="fit_to_screen">Fit to screen</string>
+    <string name="fill_screen">Fill screen</string>
 </resources>

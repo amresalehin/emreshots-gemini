@@ -116,4 +116,42 @@ class ViewerDrawerStructureTest {
         assertFalse(screen.contains("MaterialTheme.shapes.extraLarge"))
         assertFalse(screen.contains("padding(horizontal = 12.dp, vertical = 12.dp)"))
     }
+
+    @Test
+    fun mediaViewerContainerIsSimplifiedAndUnboxed() {
+        val viewerSource = File("src/main/java/com/example/ui/components/ZoomableImageViewer.kt").readText()
+        val videoSource = File("src/main/java/com/example/ui/components/InAppVideoPlayer.kt").readText()
+
+        // No blurred duplicate image box framing the media
+        assertFalse(viewerSource.contains("blur(30.dp)"))
+        assertFalse(viewerSource.contains("Soft-focus backdrop"))
+
+        // Video container uses black background instead of white letterboxing box
+        assertFalse(videoSource.contains(".background(Color.White)"))
+        assertTrue(videoSource.contains(".background(Color.Black)"))
+
+        // Provides unboxed fill vs fit screen toggle
+        assertTrue(viewerSource.contains("btn_detail_aspect_toggle"))
+        assertTrue(viewerSource.contains("isFillMode"))
+    }
+
+    @Test
+    fun sidewaysPagingGesturesArePreservedInMediaViewer() {
+        val viewerSource = File("src/main/java/com/example/ui/components/ZoomableImageViewer.kt").readText()
+        val videoSource = File("src/main/java/com/example/ui/components/InAppVideoPlayer.kt").readText()
+
+        // Pager is enabled when not zoomed
+        assertTrue(viewerSource.contains("val canPage = scaleAnim.value <= 1.05f && drawerHeightFraction <= 0.04f && dismissOffsetY.value == 0f"))
+        assertTrue(viewerSource.contains("HorizontalPager("))
+        assertTrue(viewerSource.contains("userScrollEnabled = canPage"))
+
+        // Uses smart multi-touch check so single-touch horizontal swipes pass to HorizontalPager
+        assertTrue(viewerSource.contains("pointerCount >= 2"))
+        assertTrue(viewerSource.contains("pointerCount == 1 && isZoomed"))
+        assertFalse(viewerSource.contains("detectTransformGestures {"))
+
+        // Native video view does not consume touch events
+        assertTrue(videoSource.contains("isClickable = false"))
+        assertTrue(videoSource.contains("isFocusable = false"))
+    }
 }

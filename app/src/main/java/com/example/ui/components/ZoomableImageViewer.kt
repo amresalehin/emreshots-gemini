@@ -18,9 +18,14 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -134,6 +139,7 @@ fun ZoomableImageViewer(
     val dismissOffsetY = remember { Animatable(0f) }
 
     var showControls by remember { mutableStateOf(true) }
+    var isFillMode by remember { mutableStateOf(false) }
     val drawerAnim = remember(currentScreenshot.id) { Animatable(0f) }
     val drawerHeightFraction = drawerAnim.value
 
@@ -247,19 +253,6 @@ fun ZoomableImageViewer(
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = scrimAlpha))
         ) {
-            // Soft-focus backdrop
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(if (imageFile.exists()) imageFile else currentScreenshot.uriString)
-                    .build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .blur(30.dp)
-            )
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.50f * scrimAlpha)))
-
             // Horizontal Pager with native two-way swipe when unzoomed
             val canPage = scaleAnim.value <= 1.05f && drawerHeightFraction <= 0.04f && dismissOffsetY.value == 0f
 
@@ -305,19 +298,56 @@ fun ZoomableImageViewer(
                         }
                         .pointerInput(isCurrent, pageItem.isVideo) {
                             if (!isCurrent || pageItem.isVideo) return@pointerInput
-                            detectTransformGestures { _, pan, zoom, _ ->
-                                coroutineScope.launch {
-                                    val newScale = (scaleAnim.value * zoom).coerceIn(0.70f, 6.0f)
-                                    scaleAnim.snapTo(newScale)
+                            awaitEachGesture {
+                                awaitFirstDown(requireUnconsumed = false)
+                                do {
+                                    val event = awaitPointerEvent()
+                                    val pointerCount = event.changes.count { it.pressed }
+                                    val isZoomed = scaleAnim.value > 1.05f
 
-                                    if (newScale > 1f) {
-                                        val maxOffsetX = (size.width * (newScale - 1f)) / 2f
-                                        val maxOffsetY = (size.height * (newScale - 1f)) / 2f
-                                        offsetXAnim.snapTo((offsetXAnim.value + pan.x * newScale).coerceIn(-maxOffsetX, maxOffsetX))
-                                        offsetYAnim.snapTo((offsetYAnim.value + pan.y * newScale).coerceIn(-maxOffsetY, maxOffsetY))
-                                    } else {
-                                        offsetXAnim.snapTo(0f)
-                                        offsetYAnim.snapTo(0f)
+                                    if (pointerCount >= 2) {
+                                        val zoomChange = event.calculateZoom()
+                                        val panChange = event.calculatePan()
+                                        if (zoomChange != 1f || panChange != Offset.Zero) {
+                                            coroutineScope.launch {
+                                                val newScale = (scaleAnim.value * zoomChange).coerceIn(0.70f, 6.0f)
+                                                scaleAnim.snapTo(newScale)
+
+                                                if (newScale > 1f) {
+                                                    val maxOffsetX = (size.width * (newScale - 1f)) / 2f
+                                                    val maxOffsetY = (size.height * (newScale - 1f)) / 2f
+                                                    offsetXAnim.snapTo((offsetXAnim.value + panChange.x * newScale).coerceIn(-maxOffsetX, maxOffsetX))
+                                                    offsetYAnim.snapTo((offsetYAnim.value + panChange.y * newScale).coerceIn(-maxOffsetY, maxOffsetY))
+                                                } else {
+                                                    offsetXAnim.snapTo(0f)
+                                                    offsetYAnim.snapTo(0f)
+                                                }
+                                            }
+                                            event.changes.forEach { it.consume() }
+                                        }
+                                    } else if (pointerCount == 1 && isZoomed) {
+                                        val change = event.changes.firstOrNull { it.pressed }
+                                        if (change != null) {
+                                            val dragAmount = change.positionChange()
+                                            val currentScale = scaleAnim.value
+                                            val maxOffsetX = (size.width * (currentScale - 1f)) / 2f
+                                            val maxOffsetY = (size.height * (currentScale - 1f)) / 2f
+                                            coroutineScope.launch {
+                                                offsetXAnim.snapTo((offsetXAnim.value + dragAmount.x).coerceIn(-maxOffsetX, maxOffsetX))
+                                                offsetYAnim.snapTo((offsetYAnim.value + dragAmount.y).coerceIn(-maxOffsetY, maxOffsetY))
+                                            }
+                                            change.consume()
+                                        }
+                                    }
+                                    // When pointerCount == 1 and !isZoomed:
+                                    // Do NOT consume pointer events! HorizontalPager handles sideways gestures cleanly.
+                                } while (event.changes.any { it.pressed })
+
+                                if (scaleAnim.value < 1.0f) {
+                                    coroutineScope.launch {
+                                        scaleAnim.animateTo(1.0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+                                        offsetXAnim.animateTo(0f)
+                                        offsetYAnim.animateTo(0f)
                                     }
                                 }
                             }
@@ -410,7 +440,7 @@ fun ZoomableImageViewer(
                                 .crossfade(true)
                                 .build(),
                             contentDescription = pageItem.title,
-                            contentScale = ContentScale.Fit,
+                            contentScale = if (isFillMode) ContentScale.Crop else ContentScale.Fit,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .graphicsLayer(
@@ -469,6 +499,14 @@ fun ZoomableImageViewer(
                                 }
                             }
                         }
+
+                        FloatingCircleIconButton(
+                            icon = AppIcons.FitScreen,
+                            contentDescription = if (isFillMode) stringResource(R.string.fit_to_screen) else stringResource(R.string.fill_screen),
+                            testTag = "btn_detail_aspect_toggle",
+                            tint = if (isFillMode) MaterialTheme.colorScheme.primary else Color.White,
+                            onClick = { isFillMode = !isFillMode }
+                        )
 
                         FloatingCircleIconButton(
                             icon = Icons.Default.Share,
@@ -604,45 +642,6 @@ fun ZoomableImageViewer(
                                 }
                             }
                         }
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(88.dp)
-                                .pointerInput(maxHeightPx) {
-                                    var totalVerticalDrag = 0f
-                                    var startedWithDrawerClosed = drawerHeightFraction <= 0.04f
-                                    var dragVelocity = 0f
-                                    detectVerticalDragGestures(
-                                        onDragStart = {
-                                            totalVerticalDrag = 0f
-                                            startedWithDrawerClosed = drawerHeightFraction <= 0.04f
-                                            dragVelocity = 0f
-                                        },
-                                        onVerticalDrag = { change, dragAmount ->
-                                            if (drawerContent != null && (drawerHeightFraction > 0.04f || dragAmount < 0f)) {
-                                                change.consume()
-                                                totalVerticalDrag += dragAmount
-                                                dragVelocity = dragAmount
-                                                coroutineScope.launch {
-                                                    drawerAnim.snapTo(
-                                                        (drawerAnim.value - dragAmount / maxHeightPx).coerceIn(0f, 0.86f)
-                                                    )
-                                                }
-                                            }
-                                        },
-                                        onDragEnd = {
-                                            if (startedWithDrawerClosed && totalVerticalDrag < -48.dp.toPx()) {
-                                                animateDrawerTo(0.62f)
-                                            } else if (drawerHeightFraction > 0.04f) {
-                                                settleDrawer(dragVelocity * 10f)
-                                            }
-                                            totalVerticalDrag = 0f
-                                        },
-                                        onDragCancel = { totalVerticalDrag = 0f }
-                                    )
-                                }
-                        )
                     }
                 }
             }

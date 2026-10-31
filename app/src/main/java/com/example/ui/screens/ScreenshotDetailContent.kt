@@ -1,0 +1,465 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
+package com.amresalehin.emreshots.ui.screens
+
+import com.example.ui.icons.AppIcons
+
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.amresalehin.emreshots.R
+import com.amresalehin.emreshots.data.model.ExifData
+import com.amresalehin.emreshots.data.model.ScreenshotItem
+import com.amresalehin.emreshots.service.media.DeviceMediaScanner
+import com.amresalehin.emreshots.viewmodel.ScreenshotsViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+@Composable
+private fun DetailContentRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+    }
+}
+
+@Composable
+internal fun ScreenshotDetailContent(
+    viewModel: ScreenshotsViewModel,
+    screenshot: ScreenshotItem,
+    screenshotId: String,
+    context: Context,
+    imageFile: java.io.File,
+    galleryHeight: Dp,
+    detailScrollState: androidx.compose.foundation.ScrollState,
+    previousScreenshotId: String?,
+    nextScreenshotId: String?,
+    onNavigateToScreenshot: (String) -> Unit,
+    hasMediaLocationPermission: Boolean,
+    permissionLauncher: ManagedActivityResultLauncher<Array<String>, Map<String, Boolean>>,
+    exifData: ExifData,
+    isAnalyzing: Boolean,
+    isExtractingOcr: Boolean = false,
+    showOcrSheet: Boolean,
+    onShowOcrSheetChange: (Boolean) -> Unit,
+    showExifEditor: Boolean,
+    onShowExifEditorChange: (Boolean) -> Unit,
+    isEditingDetails: Boolean,
+    onEditingDetailsChange: (Boolean) -> Unit,
+    editTitle: String,
+    onEditTitleChange: (String) -> Unit,
+    editDescription: String,
+    onEditDescriptionChange: (String) -> Unit,
+    editNotes: String,
+    onEditNotesChange: (String) -> Unit,
+    showAddTagDialog: Boolean,
+    onShowAddTagDialogChange: (Boolean) -> Unit,
+    showDrawerHandle: Boolean = true,
+    inlineTools: Boolean = false
+) {
+    if (!hasMediaLocationPermission) {
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).testTag("banner_detail_permission")
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("Location metadata permission is required to read precise GPS/EXIF details.", style = MaterialTheme.typography.bodySmall)
+                }
+                TextButton(onClick = { permissionLauncher.launch(DeviceMediaScanner.getRequiredPermissions()) }) {
+                    Text(stringResource(R.string.grant))
+                }
+            }
+        }
+    }
+
+    var selectedDetailsTab by remember(screenshotId) { mutableStateOf("Overview") }
+    var showMetadata by remember(screenshotId) { mutableStateOf(false) }
+    var showInlineOcr by remember(screenshotId) { mutableStateOf(false) }
+    var showInlineExif by remember(screenshotId) { mutableStateOf(false) }
+    var inlineOcrText by remember(screenshotId, screenshot.ocrText) { mutableStateOf(screenshot.ocrText.orEmpty()) }
+    var exifDescription by remember(screenshotId, exifData.imageDescription) { mutableStateOf(exifData.imageDescription.orEmpty()) }
+    var exifComment by remember(screenshotId, exifData.userComment) { mutableStateOf(exifData.userComment.orEmpty()) }
+    var exifMake by remember(screenshotId, exifData.cameraMake) { mutableStateOf(exifData.cameraMake.orEmpty()) }
+    var exifModel by remember(screenshotId, exifData.cameraModel) { mutableStateOf(exifData.cameraModel.orEmpty()) }
+    var exifSoftware by remember(screenshotId, exifData.software) { mutableStateOf(exifData.software.orEmpty()) }
+    var exifArtist by remember(screenshotId, exifData.artist) { mutableStateOf(exifData.artist.orEmpty()) }
+    var exifDate by remember(screenshotId, exifData.dateTaken) { mutableStateOf(exifData.dateTaken.orEmpty()) }
+    var exifLatitude by remember(screenshotId, exifData.latitude) { mutableStateOf(exifData.latitude?.toString().orEmpty()) }
+    var exifLongitude by remember(screenshotId, exifData.longitude) { mutableStateOf(exifData.longitude?.toString().orEmpty()) }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+            .then(if (showDrawerHandle) Modifier.navigationBarsPadding() else Modifier)
+            .testTag("viewer_details_drawer"),
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            if (showDrawerHandle) {
+                Spacer(Modifier.height(1.dp))
+                androidx.compose.foundation.layout.Box(
+                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 9.dp).size(width = 36.dp, height = 4.dp)
+                        .clip(CircleShape).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.24f))
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        screenshot.title.ifBlank { if (screenshot.isVideo) "Untitled video" else "Untitled screenshot" },
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        buildString {
+                            append(SimpleDateFormat("d MMM yyyy · h:mm a", Locale.getDefault()).format(Date(screenshot.addedOn)))
+                            append(" · ")
+                            append(String.format(Locale.US, "%.1f MB", screenshot.fileSize / (1024f * 1024f)))
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                IconButton(
+                    onClick = {
+                        if (isEditingDetails) {
+                            viewModel.updateScreenshot(
+                                screenshot.copy(
+                                    title = editTitle.ifBlank { screenshot.title },
+                                    description = editDescription,
+                                    notes = editNotes.ifBlank { null }
+                                )
+                            )
+                            onEditingDetailsChange(false)
+                        } else {
+                            onEditingDetailsChange(true)
+                        }
+                    },
+                    modifier = Modifier.testTag("btn_toggle_edit_details")
+                ) {
+                    Icon(if (isEditingDetails) Icons.Default.Check else Icons.Default.Edit, contentDescription = if (isEditingDetails) "Save details" else "Edit details")
+                }
+            }
+
+            if (isEditingDetails) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(editTitle, onEditTitleChange, label = { Text("Title") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(editDescription, onEditDescriptionChange, label = { Text("Description") }, minLines = 2, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(editNotes, onEditNotesChange, label = { Text("Personal notes") }, minLines = 2, modifier = Modifier.fillMaxWidth())
+                }
+            } else {
+                if (screenshot.description.isNotBlank()) Text(screenshot.description, style = MaterialTheme.typography.bodyMedium)
+                if (!screenshot.notes.isNullOrBlank()) Text("Notes · ${screenshot.notes}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                listOf("Overview", "Actions").forEach { tab ->
+                    Column(
+                        modifier = Modifier.weight(1f).clickable { selectedDetailsTab = tab }.padding(vertical = 8.dp).testTag("drawer_tab_${tab.lowercase()}"),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(tab, fontWeight = if (selectedDetailsTab == tab) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (selectedDetailsTab == tab) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(8.dp))
+                        HorizontalDivider(color = if (selectedDetailsTab == tab) MaterialTheme.colorScheme.onSurface else Color.Transparent, thickness = 2.dp)
+                    }
+                }
+            }
+
+            if (selectedDetailsTab == "Overview") {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.collections), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    if (screenshot.collectionIds.isEmpty()) {
+                        Text("Not in any collection", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            screenshot.collectionIds.forEach { collectionId ->
+                                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(14.dp)) {
+                                    Text(collectionId, modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp), style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("Tags", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        TextButton(onClick = { onShowAddTagDialogChange(true) }) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Add")
+                        }
+                    }
+                    if (screenshot.tags.isEmpty()) {
+                        Text("No tags", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            screenshot.tags.forEach { tag ->
+                                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(16.dp)) {
+                                    Row(Modifier.padding(start = 10.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Text(tag, style = MaterialTheme.typography.bodySmall)
+                                        IconButton(onClick = { viewModel.removeTag(screenshot, tag) }, modifier = Modifier.size(28.dp)) {
+                                            Icon(Icons.Default.Close, contentDescription = "Remove $tag", modifier = Modifier.size(14.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Location", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    if (exifData.latitude != null && exifData.longitude != null) {
+                        DetailContentRow("Coordinates", String.format(Locale.US, "%.5f, %.5f", exifData.latitude, exifData.longitude))
+                    } else {
+                        Text("No location data", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.fillMaxWidth().clickable { showMetadata = !showMetadata }.padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("Metadata", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        Icon(if (showMetadata) Icons.Default.Close else Icons.Default.Add,
+                            contentDescription = if (showMetadata) "Collapse metadata" else "Expand metadata", modifier = Modifier.size(18.dp))
+                    }
+                    if (showMetadata) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            DetailContentRow("Media type", if (screenshot.isVideo) "Video" else "Image")
+                            DetailContentRow("File size", String.format(Locale.US, "%.2f MB", screenshot.fileSize / (1024.0 * 1024.0)))
+                            if (screenshot.width > 0 && screenshot.height > 0) DetailContentRow("Resolution", "${screenshot.width} × ${screenshot.height}")
+                            DetailContentRow("Date added", SimpleDateFormat("d MMM yyyy, h:mm a", Locale.getDefault()).format(Date(screenshot.addedOn)))
+                            DetailContentRow("Camera", exifData.cameraModel ?: exifData.cameraMake ?: "Unknown")
+                            if (exifData.dateTaken != null) DetailContentRow("Date taken", exifData.dateTaken)
+                            if (exifData.iso != null) DetailContentRow("ISO", exifData.iso.toString())
+                            if (exifData.fNumber != null) DetailContentRow("Aperture", "ƒ/${exifData.fNumber}")
+                            if (exifData.software != null) DetailContentRow("Software", exifData.software)
+                            if (screenshot.aiModelUsed != null) DetailContentRow("Analysis model", screenshot.aiModelUsed)
+                        }
+                    }
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text("Image tools", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        Button(
+                            onClick = { viewModel.analyzeScreenshot(screenshot, autoWriteExif = false) },
+                            enabled = !isAnalyzing,
+                            modifier = Modifier.weight(1f).testTag("btn_analyze_now"),
+                            shape = RoundedCornerShape(18.dp)
+                        ) {
+                            if (isAnalyzing) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                            else Icon(AppIcons.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(if (screenshot.aiProcessed) "Re-analyze" else "AI description")
+                        }
+                        OutlinedButton(onClick = { if (inlineTools) showInlineOcr = !showInlineOcr else onShowOcrSheetChange(true) }, modifier = Modifier.weight(1f).testTag("btn_open_ocr_sheet"), shape = RoundedCornerShape(18.dp)) {
+                            Icon(AppIcons.DocumentScanner, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Extract text")
+                        }
+                    }
+                    if (!screenshot.isVideo) {
+                        OutlinedButton(
+                            onClick = {
+                                if (!hasMediaLocationPermission) permissionLauncher.launch(DeviceMediaScanner.getRequiredPermissions())
+                                if (inlineTools) showInlineExif = !showInlineExif else onShowExifEditorChange(true)
+                            },
+                            modifier = Modifier.fillMaxWidth().testTag("btn_open_exif_editor"),
+                            shape = RoundedCornerShape(18.dp)
+                        ) {
+                            Icon(AppIcons.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.edit_exif))
+                        }
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("OCR text", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        if (!screenshot.ocrText.isNullOrBlank()) {
+                            Text(screenshot.ocrText, style = MaterialTheme.typography.bodyMedium, maxLines = 5)
+                            TextButton(onClick = { if (inlineTools) showInlineOcr = true else onShowOcrSheetChange(true) }) { Text("View or edit extracted text") }
+                        } else {
+                            Text("No text extracted yet", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            TextButton(onClick = { if (inlineTools) showInlineOcr = true else onShowOcrSheetChange(true) }) { Text("Extract text") }
+                        }
+                    }
+                    if (inlineTools && showInlineOcr) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth().testTag("inline_ocr_editor")) {
+                            Text("Extract text", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                            OutlinedTextField(inlineOcrText, { inlineOcrText = it }, modifier = Modifier.fillMaxWidth().testTag("input_inline_ocr"), minLines = 4, maxLines = 8, label = { Text("Recognized text") })
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = {
+                                    viewModel.extractOcr(screenshot) { extracted ->
+                                        if (!extracted.isNullOrBlank()) {
+                                            inlineOcrText = extracted
+                                            viewModel.updateScreenshot(screenshot.copy(ocrText = extracted))
+                                        }
+                                    }
+                                }, modifier = Modifier.weight(1f), enabled = !isExtractingOcr) { if (isExtractingOcr) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp) else Text("Run OCR") }
+                                OutlinedButton(onClick = {
+                                    viewModel.updateScreenshot(screenshot.copy(ocrText = inlineOcrText))
+                                    showInlineOcr = false
+                                }, modifier = Modifier.weight(1f)) { Text("Save text") }
+                            }
+                            if (inlineOcrText.isNotBlank()) {
+                                OutlinedButton(
+                                    onClick = {
+                                        viewModel.writeOcrAndAiToMetadata(
+                                            screenshot, inlineOcrText, screenshot.title, screenshot.description, screenshot.tags
+                                        )
+                                    },
+                                    modifier = Modifier.fillMaxWidth().testTag("btn_inline_write_ocr_metadata")
+                                ) { Text("Write OCR and insights to metadata") }
+                            }
+                            TextButton(onClick = { showInlineOcr = false }) { Text("Close") }
+                        }
+                    }
+
+                    if (inlineTools && showInlineExif) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth().testTag("inline_exif_editor")) {
+                            Text("Edit EXIF metadata", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                            Text("Changes are written to the media file.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            OutlinedTextField(exifDescription, { exifDescription = it }, label = { Text("Image description") }, modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(exifComment, { exifComment = it }, label = { Text("Comment") }, minLines = 2, modifier = Modifier.fillMaxWidth())
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedTextField(exifMake, { exifMake = it }, label = { Text("Camera make") }, modifier = Modifier.weight(1f))
+                                OutlinedTextField(exifModel, { exifModel = it }, label = { Text("Camera model") }, modifier = Modifier.weight(1f))
+                            }
+                            OutlinedTextField(exifSoftware, { exifSoftware = it }, label = { Text("Software") }, modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(exifArtist, { exifArtist = it }, label = { Text("Artist") }, modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(exifDate, { exifDate = it }, label = { Text("Date taken") }, modifier = Modifier.fillMaxWidth())
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedTextField(exifLatitude, { exifLatitude = it }, label = { Text("Latitude") }, modifier = Modifier.weight(1f))
+                                OutlinedTextField(exifLongitude, { exifLongitude = it }, label = { Text("Longitude") }, modifier = Modifier.weight(1f))
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = {
+                                    val lat = exifLatitude.toDoubleOrNull()?.takeIf { it in -90.0..90.0 }
+                                    val lon = exifLongitude.toDoubleOrNull()?.takeIf { it in -180.0..180.0 }
+                                    viewModel.saveExif(screenshot, exifData.copy(
+                                        imageDescription = exifDescription.ifBlank { null },
+                                        userComment = exifComment.ifBlank { null },
+                                        cameraMake = exifMake.ifBlank { null },
+                                        cameraModel = exifModel.ifBlank { null },
+                                        software = exifSoftware.ifBlank { null },
+                                        artist = exifArtist.ifBlank { null },
+                                        dateTaken = exifDate.ifBlank { null },
+                                        latitude = if (lat != null && lon != null) lat else null,
+                                        longitude = if (lat != null && lon != null) lon else null
+                                    )) { success -> if (success) showInlineExif = false }
+                                }, modifier = Modifier.weight(1f)) { Text("Save EXIF") }
+                                OutlinedButton(onClick = { showInlineExif = false }, modifier = Modifier.weight(1f)) { Text("Cancel") }
+                            }
+                        }
+                    }
+
+                    if (screenshot.links.isNotEmpty()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Detected links", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                            screenshot.links.forEach { link ->
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    Text(link, modifier = Modifier.weight(1f), maxLines = 2, style = MaterialTheme.typography.bodySmall)
+                                    IconButton(onClick = {
+                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                        clipboard.setPrimaryClip(ClipData.newPlainText("Link", link))
+                                        viewModel.showMessage("Copied to clipboard!")
+                                    }) { Icon(AppIcons.ContentCopy, contentDescription = "Copy link") }
+                                    if (link.startsWith("http://") || link.startsWith("https://")) {
+                                        IconButton(onClick = { runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link))) } }) {
+                                            Icon(AppIcons.OpenInBrowser, contentDescription = "Open link")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    OutlinedButton(
+                        onClick = { viewModel.deleteScreenshot(screenshot) },
+                        modifier = Modifier.fillMaxWidth().testTag("btn_delete_media"),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.delete))
+                    }
+                }
+            }
+            Spacer(Modifier.height(24.dp))
+        }
+    }
+}
